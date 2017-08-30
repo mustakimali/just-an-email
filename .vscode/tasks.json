@@ -7,7 +7,7 @@
         {
             "taskName": "build",
             "args": [
-                "${workspaceRoot}/JustSending/JustSending.csproj"
+                "${workspaceRoot}/src/JustSending/JustSending.csproj"
             ],
             "isBuildCommand": true,
             "problemMatcher": "$msCompile"
