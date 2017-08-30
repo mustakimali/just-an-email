@@ -19,7 +19,20 @@ namespace JustSending.Data
             _random = new Random();
         }
 
-        public LiteDatabase Database => _db ?? (_db = new LiteDatabase(Path.Combine(_env.ContentRootPath, "App_Data", "AppDb.ldb")));
+        public LiteDatabase Database {
+            get
+            {
+                if(_db == null) 
+                {
+                    var dataDirectory = Path.Combine(_env.ContentRootPath, "App_Data");
+                    if(!Directory.Exists(dataDirectory)) Directory.CreateDirectory(dataDirectory);
+
+                    _db = new LiteDatabase(Path.Combine(dataDirectory, "AppDb.ldb"));
+                }
+
+                return _db;
+            }
+        }
 
         public LiteCollection<Session> Sessions => Database.GetCollection<Session>();
         public LiteCollection<ShareToken> ShareTokens => Database.GetCollection<ShareToken>();
