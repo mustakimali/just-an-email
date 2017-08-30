@@ -1,0 +1,53 @@
+﻿@{
+    ViewData["Title"] = "Need to send something quick?";
+}
+
+@section AboveBody
+    {
+    <div class="jumbotron">
+        <div class="container">
+            <h1>Need to send something quick?</h1>
+            <form asp-controller="App" asp-action="CreateNewSession" method="POST">
+                <button type="submit" class="btn btn-lg btn-primary">Send</button>
+                <a class="btn btn-lg btn-primary" asp-action="Connect" asp-controller="App">Receive</a>
+            </form>
+        </div>
+    </div>
+}
+<div class="text-center" style="color: #888;">
+    <h2 class="text-lowercase">Simplest way to send files/URL or any text to another device!</h2>
+    
+    <div class="row">
+       
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title"><i class="fa fa-bolt"></i> Fast</h3>
+                </div>
+                <div class="panel-body text-left">
+                    <ul>
+                        <li>No login/registration required.</li>
+                        <li>All you need is a browser.</li>
+                        <li>Share File, URL or arbitrary text.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title"><i class="fa fa-lock"></i> Secure</h3>
+                </div>
+                <div class="panel-body text-left">
+                    <ul>
+                        <li>Secure Encrypted connection.</li>
+                        <li>Connect to other devices securely using a single use PIN.</li>
+                        <li>Everything is erased as soon as you close the window.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>

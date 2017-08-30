@@ -1,0 +1,41 @@
+﻿@using JustSending.Data
+@using Microsoft.AspNetCore.Mvc.Rendering
+@model System.Collections.Generic.IEnumerable<Message>
+@{
+    Layout = null;
+}
+
+@foreach (var message in Model)
+{
+    <div class="msg">
+        <div class="time" title="@message.DateSent.ToString("G")" data-val="@message.DateSent.ToString("s")">@message.DateSent.ToString()</div>
+        <div class="content">
+        @if(message.HasFile){
+            <div class="file">
+                <i class="fa fa-2x fa-paperclip"></i> @message.Text
+                
+                <a class="btn btn-success" 
+                    asp-controller="App" 
+                    asp-action="DownloadFile" 
+                    asp-route-sessionId="@message.SessionId" 
+                    asp-route-id="@message.Id"
+                    asp-route-fileName="@message.Text"
+                    target="_blank"><i class="fa fa-download"></i> Download</a>
+            </div>
+        } else {
+            <div class="text">
+                @message.Text
+            </div>
+        }
+        </div>
+    </div>
+}
+<div class="alert alert-info">
+    @Html.Partial("_ConnectInstructions")
+    <hr/>
+    Share something to see them here.
+    <br/>
+    A PIN can be used to connect exactly one device. Generate multiple PIN to connect more devices.
+    <br/>
+    <strong>Everything will be securely erased when you close this window from every devices.</strong>
+</div>

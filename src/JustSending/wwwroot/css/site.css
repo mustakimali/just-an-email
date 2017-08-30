@@ -1,0 +1,259 @@
+﻿body {
+    padding-top: 50px;
+    padding-bottom: 20px;
+}
+
+/* Wrapping element */
+/* Set some basic padding to keep content from hitting the edges */
+.body-content {
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+/* Carousel */
+.carousel-caption p {
+    font-size: 20px;
+    line-height: 1.4;
+}
+
+/* Make .svg files in the carousel display properly in older browsers */
+.carousel-inner .item img[src$=".svg"] {
+    width: 100%;
+}
+
+/* QR code generator */
+#qrCode {
+    margin: 15px;
+}
+
+/* Hide/rearrange for smaller screens */
+@media screen and (max-width: 767px) {
+    /* Hide captions */
+    .carousel-caption {
+        display: none;
+    }
+}
+
+.navbar-inverse {
+    background-color: #607D8B;
+    border-color: transparent;
+}
+
+    .navbar-inverse .navbar-brand {
+        color: #fff;
+    }
+
+    .navbar-inverse .navbar-nav > li > a {
+        color: #fff;
+    }
+
+.jumbotron .h1, .jumbotron h1 {
+    color: #fff;
+}
+
+.jumbotron {
+    background-color: #607d8b;
+    margin-bottom: 0;
+    text-align: center;
+}
+
+.btn {
+    border-radius: 0;
+    border-color: #6d6a95;
+    color: white;
+    text-transform: uppercase;
+}
+
+.btn-primary {
+    background-color: #6d6a95;
+    font-size: 250%;
+}
+
+.msg {
+    padding: 5px 0;
+    color: #555;
+}
+
+
+    .msg .text-d:first-line,
+    .msg .file:first-line {
+        font-size: 150%;
+    }
+
+    .msg .time {
+        font-size: 10pt;
+        display: block;
+        color: #555;
+        background-color: #eee;
+        padding: 5px 10px;
+    }
+
+#conversation {
+    margin-bottom: 30px;
+    margin-top: 30px;
+}
+
+footer {
+    text-align: center;
+    font-size: 9pt;
+    color: #aaa;
+    text-transform: uppercase;
+    margin-top: -10px;
+    margin-bottom: 20px;
+}
+
+    footer a {
+        color: #555;
+    }
+
+.ejs-instagram iframe {
+    width: inherit;
+}
+
+.msg .content {
+    border: 5px solid #eee;
+    border-top-width: 0;
+    padding: 10px;
+}
+
+.msg:hover .content {
+    border-color: rgba(96, 125, 139, 0.36);
+}
+.msg:hover .time {
+    background-color: rgba(96, 125, 139, 0.36);
+    color: white;
+}
+span.field-validation-error {
+    text-transform: uppercase;
+    color: white;
+}
+.sticky-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    padding: 0;
+}
+.instruction {
+    text-align: left;
+    color: #ddd;
+    padding: 10px;
+    float: right;
+}
+.instruction a {
+    text-decoration: none;
+    color: #eee;
+    text-decoration: underline;
+}
+.instruction h2 {
+    font-size: 10pt;
+    padding: 0;
+    margin: 0;
+    text-transform: uppercase;
+    color: #fff;
+}
+.instruction li {
+    list-style: none;
+}
+.instruction ul {
+    padding: 0;
+}
+#share-actions,
+#share-panel {
+    display: none;
+}
+.navbar {
+    border-top: 3px solid #4caf50;
+}
+.alert {
+    border-radius: 0;
+}
+.alert h2 {
+    margin-top: 0;
+    text-transform: uppercase;
+}
+strong {
+    text-transform: uppercase;
+}
+.sweet-alert button {
+    border-radius: 0;
+}
+.sweet-alert {
+    border-radius: 0;
+}
+.navbar-toggle {
+    display: none;
+}
+#connectedDevices {
+    display: none;
+    border-color: #f0ad4e;
+}
+#connectedDevices span {
+    background-color: black;
+    color: #fff;
+}
+.btn {
+    border: none;
+}
+.panel {
+    border-radius: 0;
+}
+#forkongithub a {
+    background: #4caf50;
+    color: #fff;
+    text-decoration: none;
+    font-family: arial,sans-serif;
+    text-align: center;
+    font-weight: bold;
+    padding: 5px 40px;
+    font-size: 1rem;
+    line-height: 2rem;
+    position: relative;
+    transition: 0.5s;
+}
+
+    #forkongithub a:hover {
+        background: #6d6a95;
+        color: #fff;
+    }
+
+    #forkongithub a::before, #forkongithub a::after {
+        content: "";
+        width: 100%;
+        display: block;
+        position: absolute;
+        top: 1px;
+        left: 0;
+        height: 1px;
+        background: #fff;
+    }
+
+    #forkongithub a::after {
+        bottom: 1px;
+        top: auto;
+    }
+
+#forkongithub {
+    position: absolute;
+    display: block;
+    top: 0;
+    right: 0;
+    width: 200px;
+    overflow: hidden;
+    height: 200px;
+    z-index: 9999;
+}
+
+    #forkongithub a {
+        width: 200px;
+        position: absolute;
+        top: 42px;
+        right: -45px;
+        transform: rotate(45deg);
+        -webkit-transform: rotate(45deg);
+        -ms-transform: rotate(45deg);
+        -moz-transform: rotate(45deg);
+        -o-transform: rotate(45deg);
+        box-shadow: 4px 4px 10px rgba(0,0,0,0.8);
+    }

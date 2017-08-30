@@ -1,0 +1,93 @@
+﻿@model JustSending.Models.SessionModel
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration config
+@{
+    ViewBag.Title = "Conversation";
+}
+
+@section AboveBody {
+    <div class="jumbotron">
+        <div class="container">
+            <div class="conversation">
+                <div class="composer">
+                    <form id="form"
+                          asp-action="Post"
+                          asp-controller="App"
+                          data-max-b="@config["MaxUploadSizeBytes"]"
+                          data-max-mb="@config["MaxUploadSizeMiB"]"
+                          method="POST">
+
+                        <div class="input-group input-group-lg">
+                            @Html.TextBoxFor(x => x.ComposerText, null, new { @class = "form-control", placeholder = "Send text, URL etc.", onfocus="this.select()" })
+                            <span class="input-group-btn">
+                                <button id="clearSelectedFileBtn" class="btn btn-danger" type="submit" title="Clear selected file" style="display: none;"><i class="fa fa-remove"></i></button>
+                                <button id="selectFileBtn" class="btn btn-success" type="submit" title="Select a file to send"><i class="fa fa-paperclip"></i></button>
+                                <button id="sendBtn" class="btn btn-primary" type="submit">Send</button>
+                            </span>
+                        </div>
+                        @Html.ValidationMessageFor(x => x.ComposerText)
+                        <input id="file" name="file" type="file" style="display: none;" />
+                        <input id="fileData" name="FileData" type="hidden" />
+                        @Html.HiddenFor(x => x.SessionId)
+                        @Html.HiddenFor(x => x.SessionVarification)
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="share" class="jumbotron sticky-footer">
+        <div class="container">
+            <div id="share-actions">
+                <a id="shareBtn" href="#" class="btn btn-success pull-left">Connect another Device</a>
+                <a id="deleteBtn" href="#" class="btn btn-danger pull-right" title="Finish and Erase Everything"><i class="fa fa-trash-o"></i></a>
+                <span id="connectedDevices" class="btn btn-warning" title="Number of devices connected"><span class="badge">2</span></span>
+                <div class="clearfix"></div>
+            </div>
+            <div id="share-panel" class="row">
+                <div class="col-xs-7">
+                    <h1 title="Use this PIN to securely connect to this session from another device"><span id="token">xxxx</span> <a href="#" class="cancelShareBtn btn btn-wide btn-danger hidden-xs" title="Dispose this PIN">Cancel</a></h1>
+                    <a href="#" class="cancelShareBtn btn btn-block btn-danger hidden-sm hidden-md hidden-lg" title="Dispose this PIN">Cancel</a>
+                </div>
+                <div class="col-xs-5">
+                    <div class="instruction">
+                        @Html.Partial("_ConnectInstructions")
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+}
+<div id="conversation">
+    <div id="please-wait" style="display: none;">
+        <div class="alert alert-danger">
+            Sending, please wait... <strong id="percent"></strong>
+        </div>
+    </div>
+
+    <div id="conversation-list">
+        <div class="alert alert-info">
+            Loading...
+        </div>
+    </div>
+</div>
+
+@section Scripts
+{
+    <script src="https://ajax.aspnetcdn.com/ajax/jquery.validate/1.14.0/jquery.validate.min.js"></script>
+    <script src="https://ajax.aspnetcdn.com/ajax/jquery.validation.unobtrusive/3.2.6/jquery.validate.unobtrusive.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.2.2/jquery.form.min.js"></script>
+    <script src="https://platform.twitter.com/widgets.js "></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/embed-js/4.2.3/embed.min.js"></script>
+    <script src="//ajax.aspnetcdn.com/ajax/signalr/jquery.signalr-2.2.1.min.js"></script>
+    <script src="~/signalr/hubs" asp-append-version="true"></script>
+    <script src="~/js/JustSendingApp.js" asp-append-version="true"></script>
+    <style>
+        #forkongithub { display: none;}
+    </style>
+}
+@section Head
+{
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/embed-js/4.2.3/embed.min.css" />
+}
