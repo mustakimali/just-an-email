@@ -11,7 +11,8 @@
 * `dotnet run` or `dotnet watch run`
 
 ## Roadmap
-- [ ] Completely bypass server when devices are in the same network
+- [ ] End-to-end encrytion for both texts and files.
+- [ ] Completely bypass server when devices are in the same network / WebRTC
 
 ## Preview
 
