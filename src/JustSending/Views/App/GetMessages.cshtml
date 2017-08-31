@@ -8,7 +8,10 @@
 @foreach (var message in Model)
 {
     <div class="msg">
-        <div class="time" title="@message.DateSent.ToString("G")" data-val="@message.DateSent.ToString("s")">@message.DateSent.ToString()</div>
+        <div class="time" title="@message.DateSent.ToString("G")" data-val="@message.DateSent.ToString("s")">
+            @message.DateSent.ToString()
+            <span data-id="@message.Id" class="source btn btn-info" title="View Original Text"><i class="fa fa-code"></i></span>
+        </div>
         <div class="content">
         @if(message.HasFile){
             <div class="file">
@@ -24,7 +27,7 @@
             </div>
         } else {
             <div class="text">
-                @message.Text
+                @Html.Raw(CommonMark.CommonMarkConverter.Convert(message.Text))
             </div>
         }
         </div>

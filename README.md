@@ -11,6 +11,7 @@
 * `dotnet run` or `dotnet watch run`
 
 ## Roadmap
+- [x] Multiline composer, Markdown + Syntax highlighter, View Orginal text (Suggested by [DasBeasto in Reddit](https://www.reddit.com/r/SideProject/comments/6wzotn/justaml_a_website_to_share_fileurltext_to_another/dme5bmh/))
 - [ ] End-to-end encrytion for both texts and files.
 - [ ] Completely bypass server when devices are in the same network / WebRTC
 

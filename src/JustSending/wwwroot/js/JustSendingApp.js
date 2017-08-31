@@ -28,7 +28,33 @@ var JustSendingApp = {
         this.initWebSocket();
         this.switchView(false);
         this.initFileShare();
+        this.initAutoSizeComposer();
+        
     },
+    initAutoSizeComposer: function () {
+        autosize($('textarea'));
+    },
+
+    initViewSource: function () {
+        $(".msg .source").on("click", function () {
+            var $modal = $("#sourceModal");
+            var $cnt = $("#source-pre");
+
+            $cnt.html("");
+            $modal.modal("show");
+
+            var id = $(this).data("id");
+            var sid = $("#SessionId").val();
+            var data = {
+                messageId: id,
+                sessionId: sid
+            };
+            ajax_service.sendPostRequest("/a/message", data, function (data) {
+                $cnt.html(data.content);
+            });
+        });
+    },
+
     initFileShare: function () {
         var $file = $("#file");
         var $text = $("#ComposerText");
@@ -37,7 +63,7 @@ var JustSendingApp = {
         var $form = $("#form");
 
         $text.keypress(function (e) {
-            if (e.which == 13) {
+            if (e.which == 13 && e.ctrlKey) {
                 $('#sendBtn').trigger("click");
                 return false;
             }
@@ -76,8 +102,10 @@ var JustSendingApp = {
             $clearBtn.hide();
             $text.removeAttr("readonly");
             $text.val("");
+            autosize.update($text);
             $fileData.val("");
             JustSendingApp.beforeSubmit = null;
+            JustSendingApp.initAutoSizeComposer();
             return false;
         })
     },
@@ -187,6 +215,7 @@ var JustSendingApp = {
             function (response) {
                 $("#conversation-list").html(response);
                 JustSendingApp.convertLinks();
+                JustSendingApp.initViewSource();
             },
             true,
             "text/html");
@@ -199,13 +228,16 @@ var JustSendingApp = {
     },
 
     convertLinks: function () {
-        $.each($(".msg .text"),
+        $.each($(".msg .text p"),
             function (idx, itm) {
+
+                if ($(itm).children().length)
+                    return;
                 //$(itm).html(JustSendingApp.replaceURLWithHTMLLinks($(itm).text()));
                 $(itm)
                     .removeClass("text")
                     .addClass("text-d");
-
+                
                 var x = new EmbedJS({
                     input: $(itm)[0],
                     tweetsEmbed: true,
@@ -215,8 +247,12 @@ var JustSendingApp = {
 
                 x.render();
             });
+        
+            $('pre code').each(function(i, block) {
+                hljs.highlightBlock(block);
+            });
     },
-
+    
     replaceURLWithHTMLLinks: function (text) {
         var re = /(\(.*?)?\b((?:https?|ftp|file):\/\/[-a-z0-9+&@#\/%?=~_()|!:,.;]*[-a-z0-9+&@#\/%=~_()|])/ig;
         return text.replace(re, function (match, lParens, url) {

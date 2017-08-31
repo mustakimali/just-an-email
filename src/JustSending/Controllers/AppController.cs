@@ -194,6 +194,20 @@ namespace JustSending.Controllers
             return Session(session.Id, session.IdVerification);
         }
 
+        [HttpPost]
+        [Route("message")]
+        public IActionResult GetMessage(string messageId, string sessionId)
+        {
+            var msg = _db.Messages.FindById(messageId);
+            if (msg == null || msg.SessionId != sessionId)
+                return NotFound();
+
+            return Json(new
+            {
+                Content = msg.Text
+            });
+        }
+
         private IActionResult GetMessagesInternal(string id, string id2)
         {
             var session = _db.Sessions.FindById(id);

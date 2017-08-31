@@ -257,3 +257,16 @@ strong {
         -o-transform: rotate(45deg);
         box-shadow: 4px 4px 10px rgba(0,0,0,0.8);
     }
+.input-group-btn {
+    vertical-align: top;
+}
+pre {
+    background-color: white;
+}
+
+.source {
+    padding: 2px 5px;
+    float: right;
+    margin-right: -5px;
+    margin-top: -2px;
+}
