@@ -17,5 +17,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="wwwroot\images\"/>
+    <None Include="*.ps1" CopyToPublishDirectory="Always" />
   </ItemGroup>
 </Project>

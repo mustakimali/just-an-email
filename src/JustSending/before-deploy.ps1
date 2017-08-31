@@ -1,0 +1,1 @@
+Stop-WebAppPool -Name "justa.ml"
