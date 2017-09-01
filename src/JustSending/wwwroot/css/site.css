@@ -258,7 +258,7 @@ strong {
         box-shadow: 4px 4px 10px rgba(0,0,0,0.8);
     }
 .input-group-btn {
-    vertical-align: top;
+    vertical-align: bottom;
 }
 pre {
     background-color: white;
