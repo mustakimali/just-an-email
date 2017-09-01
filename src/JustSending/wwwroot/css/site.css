@@ -196,7 +196,27 @@ strong {
     color: #fff;
 }
 .btn {
-    border: none;
+    color: rgba(255,255,255,0.7);
+    border-color: rgba(255,255,255,0.2);
+    border-style: solid;
+    border-width: 1px;
+    transition: color 0.2s, background-color 0.2s, border-color 0.2s;
+}
+.btn:hover, 
+.btn:active,
+.btn:focus {
+    color: rgba(255,255,255,0.8);
+    text-decoration: none;
+    border-color: rgba(255,255,255,0.3) !important;
+}
+.btn.btn-primary {
+    background-color: rgba(255,255,255,0.08);
+}
+.btn.btn-primary:hover {
+    background-color: rgba(255,255,255,0.2);
+}
+#ComposerText {
+    height: 42px;
 }
 .panel {
     border-radius: 0;
