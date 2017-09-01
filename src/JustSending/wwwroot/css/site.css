@@ -36,6 +36,7 @@
 
 .navbar-inverse {
     background-color: #607D8B;
+    background-image: linear-gradient(120deg, #155799, #159957);
     border-color: transparent;
 }
 
@@ -53,6 +54,7 @@
 
 .jumbotron {
     background-color: #607d8b;
+    background-image: linear-gradient(120deg, #155799, #159957);
     margin-bottom: 0;
     text-align: center;
 }
