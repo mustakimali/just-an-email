@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using JustSending.Data;
 using JustSending.Models;
@@ -97,7 +98,7 @@ namespace JustSending.Controllers
                 Id = _db.NewGuid(),
                 SessionId = model.SessionId,
                 DateSent = DateTime.UtcNow,
-                Text = model.ComposerText,
+                Text = System.Net.WebUtility.HtmlEncode(model.ComposerText),
                 HasFile = Request.Form.Files.Any()
             };
 
@@ -109,8 +110,16 @@ namespace JustSending.Controllers
                 }
                 var uploadDir = GetUploadFolder(model.SessionId, _env.WebRootPath);
                 if (!Directory.Exists(uploadDir)) Directory.CreateDirectory(uploadDir);
-                var fileName = Path.GetFileNameWithoutExtension(message.Text) + "_" + message.Id.Substring(0, 6) + Path.GetExtension(message.Text);
+
+                // Use original file name
+                var fileName = message.Text;
+                if (System.IO.File.Exists(Path.Combine(uploadDir, fileName)))
+                {
+                    // if exist then append digits from the session id
+                    fileName = Path.GetFileNameWithoutExtension(message.Text) + "_" + message.Id.Substring(0, 6) + Path.GetExtension(message.Text);
+                }
                 var path = Path.Combine(uploadDir, fileName);
+
                 message.Text = fileName;
 
                 using (var fileStream = System.IO.File.OpenWrite(path))

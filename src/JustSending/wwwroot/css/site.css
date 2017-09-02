@@ -161,8 +161,8 @@ span.field-validation-error {
 .instruction ul {
     padding: 0;
 }
-#share-actions,
-#share-panel {
+.share-actions,
+.share-panel {
     display: none;
 }
 .navbar {
@@ -291,4 +291,8 @@ pre {
     float: right;
     margin-right: -5px;
     margin-top: -2px;
+}
+.input-group .fa-2x { font-size: 1.5ex; }
+.msg .content {
+    word-wrap: break-word;
 }

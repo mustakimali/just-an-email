@@ -21,7 +21,7 @@
                             @Html.TextAreaFor(x => x.ComposerText, new { @class = "form-control", placeholder = "Send file, text, URL etc. (Ctrl+Enter to send)", onfocus="this.select()" })
                             <span class="input-group-btn">
                                 <button id="clearSelectedFileBtn" class="btn btn-danger" type="submit" title="Clear selected file" style="display: none;"><i class="fa fa-remove"></i></button>
-                                <button id="selectFileBtn" class="btn btn-success" type="submit" title="Select a file to send"><i class="fa fa-paperclip"></i></button>
+                                <button id="selectFileBtn" class="btn btn-success" type="submit" title="Select a file to send"><i class="fa fa-paperclip"></i><span class="hidden-xs">&nbsp; File</span></button>
                                 <button id="sendBtn" class="btn btn-primary" type="submit">Send</button>
                             </span>
                         </div>
@@ -38,13 +38,13 @@
     
     <div id="share" class="jumbotron sticky-footer">
         <div class="container">
-            <div id="share-actions">
+            <div class="share-actions">
                 <a id="shareBtn" href="#" class="btn btn-success pull-left">Connect another Device</a>
                 <a id="deleteBtn" href="#" class="btn btn-danger pull-right" title="Finish and Erase Everything"><i class="fa fa-trash-o"></i></a>
                 <span id="connectedDevices" class="btn btn-warning" title="Number of devices connected"><span class="badge">2</span></span>
                 <div class="clearfix"></div>
             </div>
-            <div id="share-panel" class="row">
+            <div class="share-panel" class="row">
                 <div class="col-xs-7">
                     <h1 title="Use this PIN to securely connect to this session from another device"><span id="token">xxxx</span> <a href="#" class="cancelShareBtn btn btn-wide btn-danger hidden-xs" title="Dispose this PIN">Cancel</a></h1>
                     <a href="#" class="cancelShareBtn btn btn-block btn-danger hidden-sm hidden-md hidden-lg" title="Dispose this PIN">Cancel</a>
@@ -69,6 +69,27 @@
     <div id="conversation-list">
         <div class="alert alert-info">
             Loading...
+        </div>
+    </div>
+
+    <div class="welcome-note">
+        <div class="alert alert-info alert-dismissible" role="alert">
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h2>Connect another Device</h2>
+            <div class="share-actions">
+                Click <strong>Connect another Device</strong> on the panel at the bottom of the screen to generate an unique PIN to let other device connect.
+            </div>
+            <div class="share-panel">
+                <ul>
+                    <li>Go to <a href="@Context.Request.Scheme://@Context.Request.Host" target="_blank">@Context.Request.Scheme://@Context.Request.Host</a></li>
+                    <li>Click RECEIVE</li>
+                    <li>Use the PIN (usually 6 digit number) you see at the bottom of this screen to connect and start sharing!</li>
+                </ul>
+            </div>
+            <hr/>
+            A PIN can be used to connect exactly one device. Generate multiple PIN to connect more devices.
+            <br/>
+            <strong>Everything shared here will be erased when you close this window from every devices.</strong>
         </div>
     </div>
 </div>
