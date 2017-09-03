@@ -59,6 +59,10 @@
     text-align: center;
 }
 
+.jumbotron p {
+    color: #ccc;
+}
+
 .btn {
     border-radius: 0;
     border-color: #6d6a95;

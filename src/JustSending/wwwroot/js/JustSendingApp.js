@@ -87,6 +87,7 @@ var JustSendingApp = {
                 }
                 $text.val(file.name);
                 $text.attr("readonly", "readonly");
+                $clearBtn.show();                
             } else {
                 $clearBtn.trigger("click");
             }
