@@ -2,7 +2,7 @@
 @using Microsoft.Extensions.Configuration
 @inject IConfiguration config
 @{
-    ViewBag.Title = "Just sending something!";
+    ViewBag.Title = "Sharing session";
 }
 
 @section AboveBody {
@@ -46,7 +46,7 @@
             </div>
             <div class="share-panel" class="row">
                 <div class="col-xs-7">
-                    <h1 title="Use this PIN to securely connect to this session from another device"><span id="token">xxxx</span> <a href="#" class="cancelShareBtn btn btn-wide btn-danger hidden-xs" title="Dispose this PIN">Cancel</a></h1>
+                    <h1 title="Use this PIN to securely connect to this session from another device"><i class="fa fa-lock text-"></i>&nbsp;<span id="token">xxxx</span> <a href="#" class="cancelShareBtn btn btn-wide btn-danger hidden-xs" title="Dispose this PIN">Cancel</a></h1>
                     <a href="#" class="cancelShareBtn btn btn-block btn-danger hidden-sm hidden-md hidden-lg" title="Dispose this PIN">Cancel</a>
                 </div>
                 <div class="col-xs-5">
@@ -81,15 +81,15 @@
             </div>
             <div class="share-panel">
                 <ul>
-                    <li>Go to <a href="@Context.Request.Scheme://@Context.Request.Host" target="_blank">@Context.Request.Scheme://@Context.Request.Host</a></li>
-                    <li>Click RECEIVE</li>
-                    <li>Use the PIN (usually 6 digit number) you see at the bottom of this screen to connect and start sharing!</li>
+                    <li>On another device, go to <a style="font-weight: bold;" href="@Context.Request.Scheme://@Context.Request.Host" target="_blank">@Context.Request.Scheme://@Context.Request.Host</a></li>
+                    <li>Click CONNECT</li>
+                    <li>Use the <i class="fa fa-lock"></i> PIN (usually 6 digit number) you see at the bottom of this screen!</li>
+                    <li>Start sharing between connected devices!</li>
+                    <li>Close this window from all devices to erase everything shared here.</li>
                 </ul>
             </div>
             <hr/>
             A PIN can be used to connect exactly one device. Generate multiple PIN to connect more devices.
-            <br/>
-            <strong>Everything shared here will be erased when you close this window from every devices.</strong>
         </div>
     </div>
 </div>

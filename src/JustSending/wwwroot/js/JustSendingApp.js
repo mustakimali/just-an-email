@@ -63,7 +63,7 @@ var JustSendingApp = {
         var $form = $("#form");
 
         $text.keypress(function (e) {
-            if (e.which == 13 && e.ctrlKey) {
+            if ((e.which == 13 || e.which == 10) && e.ctrlKey) {
                 $('#sendBtn').trigger("click");
                 return false;
             }
