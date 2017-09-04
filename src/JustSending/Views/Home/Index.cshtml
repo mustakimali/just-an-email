@@ -1,7 +1,9 @@
 ﻿@{
     ViewData["Title"] = "Quickly send files, URL or any texts across your devices!";
 }
-
+@section Head {
+    <link rel="stylesheet" href="~/css/share.css" asp-append-version="true" />
+}
 @section AboveBody
 {
     <div class="jumbotron">
@@ -12,6 +14,11 @@
                 <button type="submit" class="btn btn-lg btn-primary">Start</button>
                 <a class="btn btn-lg btn-primary" asp-action="Connect" asp-controller="App">Connect</a>
             </form>
+        </div>
+    </div>
+    <div class="jumbotron share">
+        <div class="container">
+            @Html.Partial("_Share")
         </div>
     </div>
 }
