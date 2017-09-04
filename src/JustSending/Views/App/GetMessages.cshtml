@@ -7,29 +7,29 @@
 
 @foreach (var message in Model)
 {
-    <div class="msg">
-        <div class="time" title="@message.DateSent.ToString("G")" data-val="@message.DateSent.ToString("s")">
-            @message.DateSent.ToString()
-            <span data-id="@message.Id" class="source btn btn-info" title="View Original Text"><i class="fa fa-code"></i></span>
-        </div>
-        <div class="content">
-        @if(message.HasFile){
-            <div class="file">
-                <i class="fa fa-2x fa-paperclip"></i> @message.Text
-                
-                <a class="btn btn-success" 
-                    asp-controller="App" 
-                    asp-action="DownloadFile" 
-                    asp-route-sessionId="@message.SessionId" 
-                    asp-route-id="@message.Id"
-                    asp-route-fileName="@message.Text"
-                    target="_blank"><i class="fa fa-download"></i> Download</a>
-            </div>
-        } else {
-            <div class="text">
-                @Html.Raw(CommonMark.CommonMarkConverter.Convert(message.Text))
-            </div>
-        }
-        </div>
+<div class="msg">
+    <div class="time" title="@message.DateSent.ToString("R")" data-val="@message.DateSent.ToString("u")">
+        <i class="fa fa-clock-o"></i> <span class="val">@message.DateSent.ToString()</span>
+        <span data-id="@message.Id" class="source btn btn-info" title="View Original Text"><i class="fa fa-code"></i></span>
     </div>
+    <div class="content">
+    @if(message.HasFile){
+        <div class="file">
+            <i class="fa fa-2x fa-paperclip"></i> @message.Text
+            
+            <a class="btn btn-success" 
+                asp-controller="App" 
+                asp-action="DownloadFile" 
+                asp-route-sessionId="@message.SessionId" 
+                asp-route-id="@message.Id"
+                asp-route-fileName="@message.Text"
+                target="_blank"><i class="fa fa-download"></i> Download</a>
+        </div>
+    } else {
+        <div class="text">
+            @Html.Raw(CommonMark.CommonMarkConverter.Convert(message.Text))
+        </div>
+    }
+    </div>
+</div>
 }

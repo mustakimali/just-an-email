@@ -9,7 +9,6 @@ namespace JustSending.Models
 
         [Required(AllowEmptyStrings = false, ErrorMessage = "Nothing to send!")]
         public string ComposerText { get; set; }
-        public int? ActiveShareToken { get; internal set; }
     }
 
     public class ConnectViewModel

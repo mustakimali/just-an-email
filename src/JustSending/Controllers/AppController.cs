@@ -75,13 +75,6 @@ namespace JustSending.Controllers
                 SessionVarification = id2
             };
 
-            // Find OpenConnection
-            var shareToken = _db.ShareTokens.FindOne(x => x.SessionId == id);
-            if (shareToken != null)
-            {
-                vm.ActiveShareToken = shareToken.Id;
-            }
-
             return View("Session", vm);
         }
 

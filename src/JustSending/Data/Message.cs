@@ -12,7 +12,7 @@ namespace JustSending.Data
 
         public string Text { get; set; }
 
-        public DateTime DateSent { get; set; }
+        public DateTimeOffset DateSent { get; set; }
         public bool HasFile { get; internal set; }
     }
 }

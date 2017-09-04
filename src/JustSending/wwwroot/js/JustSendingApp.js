@@ -1,18 +1,18 @@
-﻿$(function() {
+﻿$(function () {
     JustSendingApp.init();
     $("*[title]").tooltip();
 
     var options = {
-        success: function() {
+        success: function () {
             JustSendingApp.onSendComplete();
             $("#please-wait").slideUp(250);
         },
-        beforeSubmit: function() {
+        beforeSubmit: function () {
             $("#please-wait").slideDown(250);
             $("#percent").text("");
             return true;
         },
-        uploadProgress: function(e, pos, t, per) {
+        uploadProgress: function (e, pos, t, per) {
             $("#percent").text(per + "%");
         },
 
@@ -29,7 +29,7 @@ var JustSendingApp = {
         this.switchView(false);
         this.initFileShare();
         this.initAutoSizeComposer();
-        
+
     },
     initAutoSizeComposer: function () {
         autosize($('textarea'));
@@ -87,7 +87,7 @@ var JustSendingApp = {
                 }
                 $text.val(file.name);
                 $text.attr("readonly", "readonly");
-                $clearBtn.show();                
+                $clearBtn.show();
             } else {
                 $clearBtn.trigger("click");
             }
@@ -184,8 +184,8 @@ var JustSendingApp = {
                 hub.server.eraseSession();
 
                 swal("Erasing...", "You will be taken to the homepage when it's done.", "success");
-                });
-            
+            });
+
             return false;
         });
 
@@ -215,11 +215,12 @@ var JustSendingApp = {
         var id2 = $("#SessionVarification").val();
 
         ajax_service.sendRequest("POST",
-            "/a/messages?id={0}&id2={1}".format(id, id2),
-            null,
+            "/a/messages",
+            { id: id, id2: id2 },
             function (response) {
                 $("#conversation-list").html(response);
                 JustSendingApp.convertLinks();
+                JustSendingApp.processTime();
                 JustSendingApp.initViewSource();
             },
             true,
@@ -232,6 +233,14 @@ var JustSendingApp = {
         JustSendingApp.convertLinks();
     },
 
+    processTime: function () {
+        $.each($(".msg .time"), function (idx, itm) {
+            var $this = $(itm);
+            var gmt = new Date($this.data("val"));
+            $this.find(".val").text(gmt.toLocaleTimeString());
+        });
+    },
+
     convertLinks: function () {
         $.each($(".msg .text p"),
             function (idx, itm) {
@@ -242,7 +251,7 @@ var JustSendingApp = {
                 $(itm)
                     .removeClass("text")
                     .addClass("text-d");
-                
+
                 var x = new EmbedJS({
                     input: $(itm)[0],
                     tweetsEmbed: true,
@@ -252,12 +261,12 @@ var JustSendingApp = {
 
                 x.render();
             });
-        
-            $('pre code').each(function(i, block) {
-                hljs.highlightBlock(block);
-            });
+
+        $('pre code').each(function (i, block) {
+            hljs.highlightBlock(block);
+        });
     },
-    
+
     replaceURLWithHTMLLinks: function (text) {
         var re = /(\(.*?)?\b((?:https?|ftp|file):\/\/[-a-z0-9+&@#\/%?=~_()|!:,.;]*[-a-z0-9+&@#\/%=~_()|])/ig;
         return text.replace(re, function (match, lParens, url) {
