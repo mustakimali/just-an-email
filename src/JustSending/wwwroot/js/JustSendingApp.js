@@ -139,9 +139,6 @@ var JustSendingApp = {
             if (num > 1) {
                 $("#connectedDevices span").text(num - 1);
                 $el.css("display", "inline-block");
-
-                window.onbeforeunload = null;
-                window.onunload = null;
             } else {
                 $el.css("display", "none");
 
@@ -152,10 +149,6 @@ var JustSendingApp = {
                         type: "warning"
                     });
                 }
-
-                window.onbeforeunload = function () {
-                    return true;
-                };
             }
         };
 
