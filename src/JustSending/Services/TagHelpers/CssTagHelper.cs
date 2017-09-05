@@ -2,20 +2,26 @@ using Microsoft.AspNetCore.Razor.TagHelpers;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using System;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.IO;
+using Microsoft.Extensions.Caching.Memory;
+using System.Text.RegularExpressions;
 
 namespace JustSending.Services.TagHelpers
 {
     public class CssTagHelper : TagHelper
     {
         private readonly IHostingEnvironment _env;
+        private readonly IMemoryCache _cache;
 
-        public CssTagHelper(IHostingEnvironment env)
+        public CssTagHelper(IHostingEnvironment env, IMemoryCache cache)
         {
             _env = env;
+            _cache = cache;
         }
         public string Files { get; set; }
+
         public override void Process(TagHelperContext context, TagHelperOutput output)
         {
             var files = Files
@@ -23,10 +29,11 @@ namespace JustSending.Services.TagHelpers
                         .Select(x => x.Replace("~", _env.WebRootPath));
 
             output.TagName = "style";
-            
-            foreach (var file in files)
+
+            foreach (var path in files)
             {
-                output.Content.AppendHtml(File.ReadAllText(file));
+                var css = _cache.GetOrCreate(path, _ => Regex.Replace(File.ReadAllText(path), "(\r\n|\r|\n)", string.Empty));
+                output.Content.AppendHtml(css);
             }
         }
     }

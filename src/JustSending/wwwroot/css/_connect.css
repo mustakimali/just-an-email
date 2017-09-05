@@ -36,6 +36,7 @@ h1{font-size:36px;}
 p{margin:0 0 10px;}
 ul{margin-top:0;margin-bottom:10px;}
 .container{padding-right:15px;padding-left:15px;margin-right:auto;margin-left:auto;}
+.fa-heart:before {content: "\f004";}
 @media (min-width: 768px){
 .container{width:750px;}
 }
@@ -145,5 +146,4 @@ span.field-validation-error{text-transform:uppercase;color:white;}
 .btn.btn-primary:hover{background-color:rgba(255,255,255,0.2);}
 .input-group-btn{vertical-align:bottom;}
 /*! CSS Used fontfaces */
-@font-face{font-family:'Glyphicons Halflings';src:url(http://localhost:61452/lib/bootstrap/dist/fonts/glyphicons-halflings-regular.eot);src:url(http://localhost:61452/lib/bootstrap/dist/fonts/glyphicons-halflings-regular.eot#iefix) format('embedded-opentype'), url(http://localhost:61452/lib/bootstrap/dist/fonts/glyphicons-halflings-regular.woff2) format('woff2'), url(http://localhost:61452/lib/bootstrap/dist/fonts/glyphicons-halflings-regular.woff) format('woff'), url(http://localhost:61452/lib/bootstrap/dist/fonts/glyphicons-halflings-regular.ttf) format('truetype'), url(http://localhost:61452/lib/bootstrap/dist/fonts/glyphicons-halflings-regular.svg#glyphicons_halflingsregular) format('svg');}
 @font-face{font-family:'FontAwesome';src:url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/fonts/fontawesome-webfont.eot?v=4.7.0);src:url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/fonts/fontawesome-webfont.eot#iefix&v=4.7.0) format('embedded-opentype'),url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/fonts/fontawesome-webfont.woff2?v=4.7.0) format('woff2'),url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/fonts/fontawesome-webfont.woff?v=4.7.0) format('woff'),url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/fonts/fontawesome-webfont.ttf?v=4.7.0) format('truetype'),url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/fonts/fontawesome-webfont.svg?v=4.7.0#fontawesomeregular) format('svg');font-weight:normal;font-style:normal;}

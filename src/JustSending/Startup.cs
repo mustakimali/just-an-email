@@ -23,6 +23,7 @@ namespace JustALink
             
             services.AddMvc();
             services.AddSignalR();
+            services.AddMemoryCache();
 
             services.AddSingleton<AppDbContext>();
             services.AddSingleton<ConversationHub>();

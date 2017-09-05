@@ -139,6 +139,7 @@ ul{margin-top:0;margin-bottom:10px;}
 .fa-lock:before{content:"\f023";}
 .fa-bolt:before{content:"\f0e7";}
 .fa-send:before{content:"\f1d8";}
+.fa-heart:before {content: "\f004";}
 /*! CSS Used from: https://justa.ml/css/share.css?v=lsM6KFNhZmC4H5-1ndf1BmhUrZX0ZGFTt69PpiqmVgw */
 .resp-sharing-button__link,.resp-sharing-button__icon{display:inline-block;}
 .resp-sharing-button__link{text-decoration:none;color:#fff;margin:0.5em;}
@@ -196,7 +197,6 @@ footer a{color:#555;}
 #forkongithub{position:absolute;display:block;top:0;right:0;width:200px;overflow:hidden;height:200px;z-index:9999;}
 #forkongithub a{width:200px;position:absolute;top:42px;right:-45px;transform:rotate(45deg);-webkit-transform:rotate(45deg);-ms-transform:rotate(45deg);-moz-transform:rotate(45deg);-o-transform:rotate(45deg);box-shadow:4px 4px 10px rgba(0,0,0,0.8);}
 /*! CSS Used fontfaces */
-@font-face{font-family:'Glyphicons Halflings';src:url(https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/fonts/glyphicons-halflings-regular.eot);src:url(https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/fonts/glyphicons-halflings-regular.eot#iefix) format('embedded-opentype'),url(https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/fonts/glyphicons-halflings-regular.woff2) format('woff2'),url(https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/fonts/glyphicons-halflings-regular.woff) format('woff'),url(https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/fonts/glyphicons-halflings-regular.ttf) format('truetype'),url(https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/fonts/glyphicons-halflings-regular.svg#glyphicons_halflingsregular) format('svg');}
 @font-face{font-family:'FontAwesome';src:url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/fonts/fontawesome-webfont.eot?v=4.7.0);src:url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/fonts/fontawesome-webfont.eot#iefix&v=4.7.0) format('embedded-opentype'),url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/fonts/fontawesome-webfont.woff2?v=4.7.0) format('woff2'),url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/fonts/fontawesome-webfont.woff?v=4.7.0) format('woff'),url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/fonts/fontawesome-webfont.ttf?v=4.7.0) format('truetype'),url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/fonts/fontawesome-webfont.svg?v=4.7.0#fontawesomeregular) format('svg');font-weight:normal;font-style:normal;}
 .tooltip {
     position: absolute;
