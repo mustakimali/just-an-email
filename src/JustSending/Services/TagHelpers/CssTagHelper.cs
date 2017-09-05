@@ -16,20 +16,17 @@ namespace JustSending.Services.TagHelpers
             _env = env;
         }
         public string Files { get; set; }
-        public override async void Process(TagHelperContext context, TagHelperOutput output)
+        public override void Process(TagHelperContext context, TagHelperOutput output)
         {
             var files = Files
                         .Split(",", StringSplitOptions.RemoveEmptyEntries)
                         .Select(x => x.Replace("~", _env.WebRootPath));
 
             output.TagName = "style";
-            output.Content.SetContent(Path.Combine(_env.WebRootPath, @"css\_home.css"));
-
-            return;
-            var content = await output.GetChildContentAsync();
+            
             foreach (var file in files)
             {
-                content.SetContent(await File.ReadAllTextAsync(file));
+                output.Content.AppendHtml(File.ReadAllText(file));
             }
         }
     }

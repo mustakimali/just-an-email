@@ -4,7 +4,6 @@
 @{
     ViewBag.Title = "Sharing session";
 }
-
 @section AboveBody {
     <div class="jumbotron">
         <div class="container">
@@ -125,6 +124,7 @@
 }
 @section Head
 {
+    @Html.Partial("_CommonHead")
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/embed-js/4.2.3/embed.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/2.4.1/github-markdown.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/styles/github-gist.min.css" />
