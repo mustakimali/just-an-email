@@ -11,8 +11,11 @@
             <h1 class="text-lowercase">Pass files or <span title="Long URL, unfinished facebook status, code blocks!" style="border-bottom: 1px dotted #fff;cursor: help;">any texts</span> between your devices</h1>
             
             <form asp-controller="App" asp-action="CreateNewSession" method="POST">
-                <button type="submit" class="btn btn-lg btn-primary">Start</button>
-                <a class="btn btn-lg btn-primary" asp-action="Connect" asp-controller="App">Connect</a>
+                <div>
+                    <button type="submit" class="btn btn-lg btn-primary btn-block" style="margin-bottom: 5px">Start</button>
+                    <a style="opacity: 0.7" class="btn btn-lg btn-primary btn-block" asp-action="Connect" asp-controller="App">Connect</a>
+                </div>
+                
             </form>
         </div>
     </div>

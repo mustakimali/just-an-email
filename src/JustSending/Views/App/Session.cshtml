@@ -18,11 +18,12 @@
 
                         <div class="input-group input-group-lg">
                             @Html.TextAreaFor(x => x.ComposerText, new { @class = "form-control", placeholder = "Send file, text, URL etc. (Ctrl+Enter to send)", onfocus="this.select()" })
-                            <span class="input-group-btn">
-                                <button id="clearSelectedFileBtn" class="btn btn-danger" type="submit" title="Clear selected file" style="display: none;"><i class="fa fa-remove"></i></button>
-                                <button id="selectFileBtn" class="btn btn-success" type="submit" title="Select a file to send"><i class="fa fa-paperclip"></i><span class="hidden-xs">&nbsp; File</span></button>
-                                <button id="sendBtn" class="btn btn-primary" type="submit">Send</button>
+                            <span class="input-group-btn hidden-xs">
+                                @Html.Partial("_ActionButtons")
                             </span>
+                        </div>
+                        <div class="bg btn-group hidden-sm hidden-md hidden-lg" role="group" aria-label="Action buttons">
+                            @Html.Partial("_ActionButtons")
                         </div>
                         @Html.ValidationMessageFor(x => x.ComposerText)
                         <input id="file" name="file" type="file" style="display: none;" />
@@ -44,11 +45,11 @@
                 <div class="clearfix"></div>
             </div>
             <div class="share-panel" class="row">
-                <div class="col-xs-7">
+                <div class="col-sm-7 col-xs-12" style="margin-bottom: 5px;">
                     <h1 title="Use this PIN to securely connect to this session from another device"><i class="fa fa-lock text-"></i>&nbsp;<span id="token">xxxx</span> <a href="#" class="cancelShareBtn btn btn-wide btn-danger hidden-xs" title="Dispose this PIN">Cancel</a></h1>
                     <a href="#" class="cancelShareBtn btn btn-block btn-danger hidden-sm hidden-md hidden-lg" title="Dispose this PIN">Cancel</a>
                 </div>
-                <div class="col-xs-5">
+                <div class="col-sm-5 hidden-xs">
                     <div class="instruction">
                         @Html.Partial("_ConnectInstructions")
                     </div>

@@ -58,13 +58,13 @@ var JustSendingApp = {
     initFileShare: function () {
         var $file = $("#file");
         var $text = $("#ComposerText");
-        var $clearBtn = $("#clearSelectedFileBtn");
+        var $clearBtn = $(".clearSelectedFileBtn");
         var $fileData = $("#fileData");
         var $form = $("#form");
 
         $text.keypress(function (e) {
             if ((e.which == 13 || e.which == 10) && e.ctrlKey) {
-                $('#sendBtn').trigger("click");
+                $('.sendBtn').trigger("click");
                 return false;
             }
             return true;
@@ -93,7 +93,7 @@ var JustSendingApp = {
             }
         });
 
-        $("#selectFileBtn").on("click", function () {
+        $(".selectFileBtn").on("click", function () {
             $file.trigger("click");
             return false;
         });
@@ -222,7 +222,7 @@ var JustSendingApp = {
 
     onSendComplete: function () {
         $("#ComposerText").select();
-        $("#clearSelectedFileBtn").trigger("click");
+        $(".clearSelectedFileBtn").trigger("click");
         JustSendingApp.convertLinks();
     },
 

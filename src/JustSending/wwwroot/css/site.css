@@ -300,3 +300,44 @@ pre {
 .msg .content {
     word-wrap: break-word;
 }
+
+@media screen and (min-width: 0px) {
+    .input-group {
+        display: block;
+    }
+    .input-group-lg > .form-control {
+        font-size: 14px;
+        border-radius: 0;
+        padding: 5px 8px;
+    }
+    h2 {
+        font-size: 20px;
+    }
+}
+@media screen and (min-width: 600px) {
+    .input-group {
+        display: table;
+    }
+    .input-group-lg > .form-control {
+        font-size: 18px;
+        border-radius: 6px;
+        padding: 10px 16px;
+    }
+    h2 {
+        font-size: 30px;
+    }
+}
+
+.bg {
+    padding: 5px 0px;
+    float: right;
+}
+.bg button {
+    font-size: initial;
+}
+.bg:after {
+    clear: both;
+}
+.btn {
+    background-image: linear-gradient(120deg, rgba(0,0,0,0), rgba(0,0,0,0.15));
+}

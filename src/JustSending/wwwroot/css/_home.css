@@ -261,3 +261,7 @@ footer a{color:#555;}
     border-width: 5px 5px 0;
     border-top-color: #000;
   }
+.btn-block {
+  display: block;
+  width: 100%;
+}
