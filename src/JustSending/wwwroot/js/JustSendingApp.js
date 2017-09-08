@@ -63,7 +63,7 @@ var JustSendingApp = {
         var $form = $("#form");
 
         $text.keypress(function (e) {
-            if ((e.which == 13 || e.which == 10) && e.ctrlKey) {
+            if (e.which == 13 && e.ctrlKey) {
                 $('.sendBtn').trigger("click");
                 return false;
             }
@@ -76,9 +76,9 @@ var JustSendingApp = {
                 var file = $file[0].files[0];
 
                 if (file.size > maxFileSize) {
-                    var maxFileSizeMb = parseInt($form.data("max-mb"));
+                    var maxFileSizeDisplay = $form.data("max-display");
                     swal({
-                        title: "Maximum " + maxFileSizeMb + "MB",
+                        title: "Maximum " + maxFileSizeDisplay,
                         text: "This file is too big to share.",
                         type: "error"
                     });

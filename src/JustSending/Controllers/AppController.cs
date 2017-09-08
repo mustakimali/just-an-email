@@ -78,7 +78,9 @@ namespace JustSending.Controllers
             return View("Session", vm);
         }
 
-        [Route("post"), HttpPost]
+        [Route("post")]
+        [HttpPost]
+        [RequestSizeLimit(1_083_741_824)]
         public async Task<IActionResult> Post(SessionModel model)
         {
             if (!ModelState.IsValid)
@@ -97,7 +99,8 @@ namespace JustSending.Controllers
 
             if (message.HasFile)
             {
-                if (Request.Form.Files.First().Length > Convert.ToInt64(_config["MaxUploadSizeBytes"]))
+                var file = Request.Form.Files.First();
+                if (file.Length > Convert.ToInt64(_config["MaxUploadSizeBytes"]))
                 {
                     return BadRequest();
                 }
@@ -114,10 +117,11 @@ namespace JustSending.Controllers
                 var path = Path.Combine(uploadDir, fileName);
 
                 message.Text = fileName;
+                message.FileSizeBytes = file.Length;
 
                 using (var fileStream = System.IO.File.OpenWrite(path))
                 {
-                    await Request.Form.Files.First().CopyToAsync(fileStream);
+                    await file.CopyToAsync(fileStream);
                 }
             }
 

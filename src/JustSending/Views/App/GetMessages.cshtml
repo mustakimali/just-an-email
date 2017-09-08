@@ -1,4 +1,5 @@
 ﻿@using JustSending.Data
+@using JustSending;
 @using Microsoft.AspNetCore.Mvc.Rendering
 @model System.Collections.Generic.IEnumerable<Message>
 @{
@@ -16,14 +17,14 @@
     @if(message.HasFile){
         <div class="file">
             <i class="fa fa-2x fa-paperclip"></i> @message.Text
-            
-            <a class="btn btn-success" 
+            <br/>
+            <a class="btn btn-success download" 
                 asp-controller="App" 
                 asp-action="DownloadFile" 
                 asp-route-sessionId="@message.SessionId" 
                 asp-route-id="@message.Id"
                 asp-route-fileName="@message.Text"
-                target="_blank"><i class="fa fa-download"></i> Download</a>
+                target="_blank"><i class="fa fa-download"></i> Download (@Helper.ToFileSizeString(message.FileSizeBytes))</a>
         </div>
     } else {
         <div class="text">

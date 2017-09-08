@@ -1,4 +1,5 @@
-﻿@{
+﻿@inject Microsoft.Extensions.Configuration.IConfiguration config
+@{
     ViewData["Title"] = "Quickly send files, URL or any texts across your devices!";
 }
 @section Head {
@@ -41,7 +42,7 @@
                     <ul>
                         <li>No login/registration required.</li>
                         <li>All you need is a browser.</li>
-                        <li>Share File, URL or arbitrary text.</li>
+                        <li>Share Files <strong>upto @config["MaxUploadSizeDisplay"]</strong>, URL or arbitrary text.</li>
                     </ul>
                 </div>
             </div>
