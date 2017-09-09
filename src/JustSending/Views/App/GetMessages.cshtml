@@ -11,7 +11,10 @@
 <div class="msg">
     <div class="time" title="@message.DateSent.ToString("R")" data-val="@message.DateSent.ToString("u")">
         <i class="fa fa-clock-o"></i> <span class="val">@message.DateSent.ToString()</span>
-        <span data-id="@message.Id" class="source btn btn-info" title="View Original Text"><i class="fa fa-code"></i></span>
+        @if(!message.HasFile)
+        {
+        <span data-id="@message.Id" class="source btn btn-info" title="View Original Text"><i class="fa fa-code"></i> Copy</span>
+        }
     </div>
     <div class="content">
     @if(message.HasFile){
@@ -28,7 +31,7 @@
         </div>
     } else {
         <div class="text">
-            @Html.Raw(CommonMark.CommonMarkConverter.Convert(message.Text))
+            @Html.Raw(message.TextMarkdownProcessed)
         </div>
     }
     </div>

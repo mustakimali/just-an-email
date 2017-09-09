@@ -102,9 +102,18 @@
         <h4 class="modal-title">Original Text</h4>
       </div>
       <div class="modal-body">
-        <pre id="source-pre">
+        <textarea 
+            id="source-pre"
+            readonly="readonly"
+            class="form-control"
+            onfocus="this.select()"
+            rows="10"
+            style="width: 100%;max-width: 100%;">
 
-        </pre>
+        </textarea>
+      </div>
+      <div class="modal-footer">
+          <button onclick="return JustSendingApp.copySource();" class="btn btn-success"><i class="fa fa-copy"></i> Copy</button>
       </div>
     </div>
   </div>

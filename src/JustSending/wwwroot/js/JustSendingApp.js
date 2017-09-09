@@ -32,7 +32,40 @@ var JustSendingApp = {
 
     },
     initAutoSizeComposer: function () {
-        autosize($('textarea'));
+        autosize($("#ComposerText"));
+    },
+    
+    copySource: function () {
+        var $el = $("#source-pre");
+        $el.focus();
+        $el.select();
+
+        try {
+            
+            var successful = document.execCommand('copy');
+            
+            if (successful) {
+                swal({
+                    title: "Copied!",
+                    text: "Copied to your clipboard.",
+                    timer: 2000,
+                    type: "success"
+                });
+                $("#sourceModal").modal("toggle");
+            } else {
+                throw "up";
+            }
+
+        } catch (err) {
+
+            swal({
+                title: "Not supported in this browser",
+                text: "Please select the text above and manually copy.",
+                type: "error"
+            });
+        }
+        
+        return false;
     },
 
     initViewSource: function () {
@@ -50,7 +83,7 @@ var JustSendingApp = {
                 sessionId: sid
             };
             ajax_service.sendPostRequest("/a/message", data, function (data) {
-                $cnt.html(data.content);
+                $cnt.val(data.content);
             });
         });
     },
@@ -234,6 +267,12 @@ var JustSendingApp = {
         });
     },
 
+    htmlDecode: function(encodedString) {
+        var textArea = document.createElement('textarea');
+        textArea.innerHTML = encodedString;
+        return textArea.value;
+    },
+
     convertLinks: function () {
         $.each($(".msg .text p"),
             function (idx, itm) {
@@ -256,7 +295,11 @@ var JustSendingApp = {
             });
 
         $('pre code').each(function (i, block) {
+            
+            var $el = $(block);
+            $el.html(JustSendingApp.htmlDecode($el.html()));
             hljs.highlightBlock(block);
+            
         });
     },
 

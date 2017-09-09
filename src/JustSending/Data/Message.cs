@@ -11,6 +11,7 @@ namespace JustSending.Data
         public string SessionId { get; set; }
 
         public string Text { get; set; }
+        public string TextMarkdownProcessed { get; set; }
 
         public DateTimeOffset DateSent { get; set; }
         public bool HasFile { get; internal set; }

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Net;
 using System.Threading.Tasks;
 using JustSending.Data;
 using JustSending.Models;
@@ -10,6 +11,7 @@ using LiteDB;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using CommonMark;
 
 namespace JustSending.Controllers
 {
@@ -93,7 +95,8 @@ namespace JustSending.Controllers
                 Id = _db.NewGuid(),
                 SessionId = model.SessionId,
                 DateSent = DateTime.UtcNow,
-                Text = System.Net.WebUtility.HtmlEncode(model.ComposerText),
+                Text = model.ComposerText,
+                TextMarkdownProcessed = CommonMarkConverter.Convert(WebUtility.HtmlEncode(model.ComposerText)),
                 HasFile = Request.Form.Files.Any()
             };
 
