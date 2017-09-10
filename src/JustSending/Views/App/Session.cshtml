@@ -130,7 +130,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/autosize.js/4.0.0/autosize.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/highlight.min.js"></script>
     <script src="~/signalr/hubs" asp-append-version="true"></script>
-    <script src="~/js/JustSendingApp.js" asp-append-version="true"></script>
+    <script type="text/javascript">
+        $(function () { 
+            JustSendingApp.init(); 
+        });
+    </script>
 }
 @section Head
 {

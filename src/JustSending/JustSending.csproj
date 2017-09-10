@@ -18,6 +18,18 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="wwwroot\images\"/>
+    <Folder Include="wwwroot\lib\" CopyToPublishDirectory="Never"/>
     <None Include="*.ps1" CopyToPublishDirectory="Always"/>
   </ItemGroup>
+  <Target Name="GulpTaskClean" BeforeTargets="Clean">
+    <Exec Command="gulp clean" />
+  </Target>
+  <Target Name="GulpTaskBuild" BeforeTargets="Build">
+    <Exec Command="npm install" />
+    <Exec Command="gulp min" />
+  </Target>
+  <Target Name="PrepublishScript" BeforeTargets="PrepareForPublish">
+    <Exec Command="npm install" />
+    <Exec Command="gulp min" />
+  </Target>
 </Project>

@@ -1,28 +1,4 @@
-﻿$(function () {
-    JustSendingApp.init();
-    $("*[title]").tooltip();
-
-    var options = {
-        success: function () {
-            JustSendingApp.onSendComplete();
-            $("#please-wait").slideUp(250);
-        },
-        beforeSubmit: function () {
-            $("#please-wait").slideDown(250);
-            $("#percent").text("");
-            return true;
-        },
-        uploadProgress: function (e, pos, t, per) {
-            $("#percent").text(per + "%");
-        },
-
-        resetForm: true
-    };
-
-    $("#form").ajaxForm(options);
-});
-
-var JustSendingApp = {
+﻿var JustSendingApp = {
     init: function () {
         this.loadMessages();
         this.initWebSocket();
@@ -30,20 +6,41 @@ var JustSendingApp = {
         this.initFileShare();
         this.initAutoSizeComposer();
 
+        $("*[title]").tooltip();
+
+        var options = {
+            success: function () {
+                JustSendingApp.onSendComplete();
+                $("#please-wait").slideUp(250);
+            },
+            beforeSubmit: function () {
+                $("#please-wait").slideDown(250);
+                $("#percent").text("");
+                return true;
+            },
+            uploadProgress: function (e, pos, t, per) {
+                $("#percent").text(per + "%");
+            },
+
+            resetForm: true
+        };
+
+        $("#form").ajaxForm(options);
+
     },
     initAutoSizeComposer: function () {
         autosize($("#ComposerText"));
     },
-    
+
     copySource: function () {
         var $el = $("#source-pre");
         $el.focus();
         $el.select();
 
         try {
-            
+
             var successful = document.execCommand('copy');
-            
+
             if (successful) {
                 swal({
                     title: "Copied!",
@@ -64,7 +61,7 @@ var JustSendingApp = {
                 type: "error"
             });
         }
-        
+
         return false;
     },
 
@@ -267,7 +264,7 @@ var JustSendingApp = {
         });
     },
 
-    htmlDecode: function(encodedString) {
+    htmlDecode: function (encodedString) {
         var textArea = document.createElement('textarea');
         textArea.innerHTML = encodedString;
         return textArea.value;
@@ -295,11 +292,11 @@ var JustSendingApp = {
             });
 
         $('pre code').each(function (i, block) {
-            
+
             var $el = $(block);
             $el.html(JustSendingApp.htmlDecode($el.html()));
             hljs.highlightBlock(block);
-            
+
         });
     },
 
