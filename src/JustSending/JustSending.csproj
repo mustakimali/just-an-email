@@ -20,7 +20,9 @@
     <Folder Include="wwwroot\images\"/>
     <Folder Include="wwwroot\lib\" CopyToPublishDirectory="Never"/>
     <None Include="*.ps1" CopyToPublishDirectory="Always"/>
-    <Folder Include="wwwroot\_dev" CopyToPublishDirectory="Never"/>
+    <Folder Include="wwwroot\_dev" CopyToPublishDirectory="Never">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Folder>
   </ItemGroup>
   <Target Name="GulpTaskClean" BeforeTargets="Clean">
     <Exec Command="gulp clean" />
