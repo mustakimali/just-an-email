@@ -1,11 +1,13 @@
-﻿var JustSendingApp = {
+import * as $ from "jquery";
+
+var JustSendingApp = {
     init: function () {
         this.loadMessages();
         this.initWebSocket();
         this.switchView(false);
         this.initFileShare();
         this.initAutoSizeComposer();
-
+        
         $("*[title]").tooltip();
 
         var options = {
@@ -17,6 +19,7 @@
                 $("#please-wait").slideDown(250);
                 $("#percent").text("");
                 return true;
+                
             },
             uploadProgress: function (e, pos, t, per) {
                 $("#percent").text(per + "%");
@@ -216,7 +219,12 @@
             .hub
             .start()
             .done(function () {
-                hub.server.connect($("#SessionId").val());
+                hub
+                    .server
+                    .connect($("#SessionId").val())
+                    .then(function (socketConnectionId) {
+                        $("#SocketConnectionId").val(socketConnectionId);
+                    });
             });
     },
 

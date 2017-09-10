@@ -2,15 +2,37 @@
     {
       "outputFileName": "wwwroot/css/site.min.css",
       "inputFiles": [
-        "wwwroot/css/site.css",
-        "wwwroot/css/share.css"
+        "wwwroot/_dev/css/site.css",
+        "wwwroot/_dev/css/share.css"
+      ]
+    },
+    {
+      "outputFileName": "wwwroot/css/_connect.css",
+      "inputFiles": [
+        "wwwroot/_dev/css/_connect.css"
+      ]
+    },
+    {
+      "outputFileName": "wwwroot/css/_home.css",
+      "inputFiles": [
+        "wwwroot/_dev/css/_home.css"
       ]
     },
     {
       "outputFileName": "wwwroot/js/site.min.js",
       "inputFiles": [
-        "wwwroot/js/site.js",
-        "wwwroot/js/JustSendingApp.js"
+        "wwwroot/_dev/js/site.js"
+      ],
+      "minify": {
+        "enabled": true,
+        "renameLocals": true
+      },
+      "sourceMap": false
+    },
+    {
+      "outputFileName": "wwwroot/js/app.min.js",
+      "inputFiles": [
+        "wwwroot/_dev/js/JustSendingApp.js"
       ],
       "minify": {
         "enabled": true,

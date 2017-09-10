@@ -1,6 +1,12 @@
 {
-  "name": "justsending",
+  "name": "JustA.ML",
   "version": "1.0.0",
+  "description": "JustA.ML",
+  "repository": {
+    "type": "github",
+    "url": "https://github.com/mustakimali/JustA.ML"
+  },
+  "license": "MIT",
   "devDependencies": {
     "gulp": "3.9.1",
     "gulp-concat": "2.6.1",
@@ -8,9 +14,9 @@
     "gulp-uglify": "2.0.1",
     "gulp-htmlmin": "3.0.0",
     "merge-stream": "1.0.1",
-    "del": "3.0.0"
+    "del": "3.0.0",
+    "typescript": "2.5.2",
+    "jquery": "3.2.1"
   },
-  "dependencies": {
-    "typescript": "~2.5.2"
-  }
+  "dependencies": {}
 }

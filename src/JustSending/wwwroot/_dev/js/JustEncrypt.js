@@ -45,7 +45,7 @@ var JustEncrypt = {
 
         return start.toString(10);
     },
-
+    
     twoPrime: function () {
         return [JustEncrypt.primeOfDigit(5), JustEncrypt.primeOfDigit(6)];
     },

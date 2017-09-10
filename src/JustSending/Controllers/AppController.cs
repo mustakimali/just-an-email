@@ -82,7 +82,6 @@ namespace JustSending.Controllers
 
         [Route("post")]
         [HttpPost]
-        [RequestSizeLimit(1_083_741_824)]
         public async Task<IActionResult> Post(SessionModel model)
         {
             if (!ModelState.IsValid)
@@ -94,6 +93,7 @@ namespace JustSending.Controllers
             {
                 Id = _db.NewGuid(),
                 SessionId = model.SessionId,
+                SocketConnectionId = model.SocketConnectionId,
                 DateSent = DateTime.UtcNow,
                 Text = model.ComposerText,
                 TextMarkdownProcessed = CommonMarkConverter.Convert(WebUtility.HtmlEncode(model.ComposerText)),

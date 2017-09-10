@@ -9,6 +9,10 @@ namespace JustSending.Data
         public string Id { get; set; }
         [BsonIndex]
         public string SessionId { get; set; }
+        /// <summary>
+        /// Unique for each connected device in a particular session
+        /// </summary>
+        public string SocketConnectionId { get; internal set; }
 
         public string Text { get; set; }
         public string TextMarkdownProcessed { get; set; }
@@ -16,5 +20,6 @@ namespace JustSending.Data
         public DateTimeOffset DateSent { get; set; }
         public bool HasFile { get; internal set; }
         public long FileSizeBytes { get; internal set; }
+        
     }
 }

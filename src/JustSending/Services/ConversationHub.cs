@@ -82,7 +82,7 @@ namespace JustSending.Services
             return Task.CompletedTask;
         }
 
-        public void Connect(string sessionId)
+        public string Connect(string sessionId)
         {
             _db.TrackClient(sessionId, Context.ConnectionId);
 
@@ -91,6 +91,8 @@ namespace JustSending.Services
             CheckIfShareTokenExists(sessionId);
 
             SendNumberOfDevices(sessionId, _db.Connections.Count(x => x.SessionId == sessionId));
+
+            return Context.ConnectionId;
         }
 
         private bool CheckIfShareTokenExists(string sessionId, bool notifyIfExist = true)

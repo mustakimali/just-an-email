@@ -30,6 +30,7 @@
                         <input id="fileData" name="FileData" type="hidden" />
                         @Html.HiddenFor(x => x.SessionId)
                         @Html.HiddenFor(x => x.SessionVarification)
+                        @Html.HiddenFor(x => x.SocketConnectionId)
                     </form>
                 </div>
             </div>
@@ -129,7 +130,14 @@
     <script src="https://ajax.aspnetcdn.com/ajax/signalr/jquery.signalr-2.2.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/autosize.js/4.0.0/autosize.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bignumber.js/4.0.4/bignumber.js"></script>
     <script src="~/signalr/hubs" asp-append-version="true"></script>
+    <environment names="Development">
+        <script src="~/_dev/js/JustSendingApp.js" asp-append-version="true"></script>
+    </environment>
+    <environment names="Production">
+        <script src="~/js/app.min.js" asp-append-version="true"></script>
+    </environment>
     <script type="text/javascript">
         $(function () { 
             JustSendingApp.init(); 
