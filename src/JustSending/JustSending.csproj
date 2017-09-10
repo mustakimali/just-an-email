@@ -18,7 +18,9 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="wwwroot\images\"/>
-    <Folder Include="wwwroot\lib\" CopyToPublishDirectory="Never"/>
+    <Folder Include="wwwroot\lib\" CopyToPublishDirectory="Never">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Folder>
     <None Include="*.ps1" CopyToPublishDirectory="Always"/>
     <Folder Include="wwwroot\_dev" CopyToPublishDirectory="Never">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>

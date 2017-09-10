@@ -15,13 +15,13 @@ var JustEncrypt = {
         return s.join("");
     },
 
+    startFrom: new BigNumber(2),
+
     isPrime: function (num) {
         if (typeof (num) != "object")
             num = new BigNumber(num);
 
-        var startFrom = new BigNumber(2);
-
-        for (var i = startFrom; i.lessThan(num); i = i.add(1)) {
+        for (var i = this.startFrom; i.lessThan(num.squareRoot()); i = i.add(1)) {
             if (num.div(i).isInteger())
                 return false;
         }
@@ -33,13 +33,12 @@ var JustEncrypt = {
     },
 
     nextRandomPrimeAfter: function (startFrom) {
-        if (typeof (num) != "object")
+        if (typeof (startFrom) != "object")
             startFrom = new BigNumber(startFrom);
 
         var start = startFrom.add(1);
 
         while (!this.isPrime(start)) {
-
             start = start.add(1);
         }
 
@@ -166,3 +165,4 @@ var peer = {
 function l(s) {
     console.log(s);
 }
+

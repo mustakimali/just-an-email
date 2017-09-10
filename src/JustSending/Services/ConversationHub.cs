@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -55,11 +56,13 @@ namespace JustSending.Services
 
         private dynamic GetClients(string sessionId)
         {
-            var hub = _connectionManager.GetHubContext<ConversationHub>();
             var connectionIds = _db.FindClient(sessionId);
-
-            return hub.Clients.Clients(connectionIds.ToList());
+            return CurrentHub.Clients.Clients(connectionIds.ToList());
         }
+
+        private dynamic GetClient(string connectionId) => CurrentHub.Clients.Client(connectionId);
+
+        private IHubContext CurrentHub => _connectionManager.GetHubContext<ConversationHub>();
 
         private const string stringSessionKey = "session";
         public override Task OnConnected()
@@ -90,10 +93,72 @@ namespace JustSending.Services
             //
             CheckIfShareTokenExists(sessionId);
 
-            SendNumberOfDevices(sessionId, _db.Connections.Count(x => x.SessionId == sessionId));
+            var numDevices = _db.Connections.Count(x => x.SessionId == sessionId);
+            SendNumberOfDevices(sessionId, numDevices);
+
+            if (numDevices == 2)
+            {
+                // enable end to end encryption
+                //
+
+                var otherConnectionId =
+                    _db
+                        .Connections
+                        .FindOne(x => x.SessionId == sessionId && x.ConnectionId != Context.ConnectionId)
+                        .ConnectionId;
+
+                // request the original device to initite key-exchange
+                //
+                CurrentHub
+                    .Clients
+                    .Client(otherConnectionId)
+                    .startKeyExchange(Context.ConnectionId);
+            }
 
             return Context.ConnectionId;
         }
+
+        #region KeyExchange
+
+        public void CallPeer(string peerId, string method, string[] param) {
+            ValidateIntent(peerId);
+
+            GetClient(peerId)[method](param);
+        }
+
+        public void SetPrimes(string peerId, string p, string g)
+        {
+            ValidateIntent(peerId);
+
+            GetClient(peerId).setPrimes(p, g);
+        }
+
+        public void ComputeSecret(string peerId, string B)
+        {
+            ValidateIntent(peerId);
+
+            GetClient(peerId).computeSecret(B);
+        }
+
+        private void ValidateIntent(string peerId) {
+            // check if the peer is actually a device within the current session
+            // this is to prevent cross session communication
+            //
+
+            // Get session from connectio
+            var connection = _db.Connections.FindById(Context.ConnectionId);
+            if(connection != null) {
+                var devices = _db.FindClient(connection.SessionId);
+                if(devices.Contains(peerId)){
+                    // OK
+                    return;
+                }
+            }
+
+            throw new InvalidOperationException("Attempting of cross session communication.");
+        }
+
+        #endregion
 
         private bool CheckIfShareTokenExists(string sessionId, bool notifyIfExist = true)
         {
@@ -158,7 +223,9 @@ namespace JustSending.Services
                 {
                     Directory.Delete(folder, true);
                 }
-            } catch {
+            }
+            catch
+            {
                 // ToDo: Schedule delete later
             }
         }
