@@ -98,21 +98,7 @@ namespace JustSending.Services
 
             if (numDevices == 2)
             {
-                // enable end to end encryption
-                //
-
-                var otherConnectionId =
-                    _db
-                        .Connections
-                        .FindOne(x => x.SessionId == sessionId && x.ConnectionId != Context.ConnectionId)
-                        .ConnectionId;
-
-                // request the original device to initite key-exchange
-                //
-                CurrentHub
-                    .Clients
-                    .Client(otherConnectionId)
-                    .startKeyExchange(Context.ConnectionId);
+                InitKeyExchange(sessionId);
             }
 
             return Context.ConnectionId;
@@ -120,24 +106,46 @@ namespace JustSending.Services
 
         #region KeyExchange
 
-        public void CallPeer(string peerId, string method, string[] param) {
-            ValidateIntent(peerId);
+        private void InitKeyExchange(string sessionId)
+        {
+            // enable end to end encryption
+            //
+            var secondDeviceId = Context.ConnectionId;
+            var firstDeviceId =
+                _db
+                    .Connections
+                    .FindOne(x => x.SessionId == sessionId && x.ConnectionId != secondDeviceId)
+                    .ConnectionId;
 
-            GetClient(peerId)[method](param);
+            //
+            // Send shared p & g to both parties then
+            // request the original device to initite key-exchange
+            //
+            var p = Helper.GetPrime(1024, _env);
+            var g = Helper.GetPrime(2, _env);
+            var pka = Guid.NewGuid().ToString("N");
+
+            var initFirstDevice = (Task<object>) CurrentHub
+                .Clients
+                .Client(firstDeviceId)
+                .startKeyExchange(secondDeviceId, p, g, pka, false);
+
+            initFirstDevice.ContinueWith(x =>
+            {
+
+                CurrentHub
+                .Clients
+                .Client(secondDeviceId)
+                .startKeyExchange(firstDeviceId, p, g, pka, true);
+
+            });
+
         }
 
-        public void SetPrimes(string peerId, string p, string g)
-        {
+        public void CallPeer(string peerId, string method, string param) {
             ValidateIntent(peerId);
 
-            GetClient(peerId).setPrimes(p, g);
-        }
-
-        public void ComputeSecret(string peerId, string B)
-        {
-            ValidateIntent(peerId);
-
-            GetClient(peerId).computeSecret(B);
+            GetClient(peerId).callback(method, param);
         }
 
         private void ValidateIntent(string peerId) {

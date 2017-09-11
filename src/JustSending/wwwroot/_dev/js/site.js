@@ -3,7 +3,7 @@
         if (beforeRequest && typeof (beforeRequest) === "function") beforeRequest();
 
         app_busy(true);
-        l("Ajax {0} Request to: {1}".format(method, serviceName));
+        Log("Ajax {0} Request to: {1}".format(method, serviceName));
 
         $.ajax({
             type: method,
@@ -96,7 +96,7 @@ function showAjaxError(jqXhr, errorThrown) {
         }
     }
 
-    l(jqXhr);
+    Log(jqXhr);
     swal(
         "Error",
         message,
@@ -104,8 +104,8 @@ function showAjaxError(jqXhr, errorThrown) {
     );
 }
 
-function l(text) {
-    if (window.location.href.indexOf("localhost") > 0)
+function Log(text) {
+    if (window.location.href.indexOf("localhost") > 0 || window.location.href.indexOf("show_log") > 0)
         console.log(text);
 }
 

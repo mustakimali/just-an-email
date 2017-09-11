@@ -212,7 +212,7 @@
             return false;
         });
 
-        JustSendingApp.initKeyExchange(hub);
+        EndToEndEncryption.initKeyExchange(hub);
 
         $.connection
             .hub
@@ -222,24 +222,13 @@
                     .server
                     .connect($("#SessionId").val())
                     .then(function (socketConnectionId) {
+
                         $("#SocketConnectionId").val(socketConnectionId);
-                        l("Handshake: Id=" + socketConnectionId);
+
+                        Log("Device Id: " + socketConnectionId);
 
                     });
             });
-    },
-
-    initKeyExchange: function (hub) {
-
-        EndToEndEncryption.initCallbacks(hub);
-
-        hub.client.startKeyExchange = function (peerId) {
-
-            l("Handshake: with peer: " + peerId);
-            EndToEndEncryption.init(peerId, hub);
-
-        }
-
     },
 
     switchView: function (showSharePanel) {
@@ -257,7 +246,7 @@
 
     loadMessages: function () {
         var id = $("#SessionId").val();
-        var id2 = $("#SessionVarification").val();
+        var id2 = $("#SessionVerification").val();
 
         ajax_service.sendRequest("POST",
             "/a/messages",
@@ -351,127 +340,3 @@
     }
 };
 
-var EndToEndEncryption = {
-
-    //
-    // Diffie-Hellman key exchange specific
-    //
-    p: null,    // public prime-base
-    g: null,    // public prime-modulus
-
-
-    p_digits: 10,
-    g_digits: 2,
-
-
-    A: null, // public
-
-    b: null,    // private 1
-    b_digits: 2,
-
-    a: null,    // private 2
-    a_digits: 2,
-
-    k: null,
-
-    //
-    // Application specific
-    ///
-    hub: null,
-    peerId: null,
-
-    init: function (peerId, hub) {
-        var that = EndToEndEncryption;
-
-        l("Handshake: Generating Primes");
-        this.generatePrimes(function () {
-            l("Handshake: p=" + that.p.toString(10));
-            l("Handshake: g=" + that.g.toString(10));
-
-            hub.server.callPeer(peerId, "setPrimes", [that.p.toString(10), that.g.toString(10)]);
-
-
-            return;
-            // send
-            hub
-                .server
-                .setPrimes(peerId, that.p.toString(10), that.g.toString(10))
-                .then(function (A) {
-
-                    l("Handshake: Receive A=" + A);
-                    
-                    // receive A
-                    
-                    // compute B
-                    this.b = new BigNumber(JustEncrypt.randomNumberOfLength(that.b_digits));
-                    var B = that.g.pow(that.b).mod(that.p);
-                    
-                    l("Handshake: Computed, sending, B=" + B.toString(10));
-                    // send B
-                    // ask peer to compute secret
-                    //
-                    hub
-                        .server
-                        .computeSecret(peerId, B.toString(10))
-                        .then(function () {
-                            
-                            // let me compute the same secret
-                            // using A
-
-                            that.A = new BigNumber(A);
-                            that.k = that.A.pow(that.b).mod(that.p);
-
-                            console.info("Handshake is done. K=" + that.k.toString(10));
-                        });
-
-                });
-        })
-    },
-
-    initCallbacks: function (hub) {
-        var that = EndToEndEncryption;
-        //
-        // Set Prime
-        // Generate a,
-        // return A
-        //
-        hub.client.setPrimes = function (p, g) {
-            l("Handshake: Request Arrived");
-
-            that.p = new BigNumber(p);
-            that.g = new BigNumber(g);
-
-            l("Handshake: p=" + that.p.toString(10));
-            l("Handshake: g=" + that.g.toString(10));
-
-            that.a = JustEncrypt.randomNumberOfLength(that.a_digits);
-            var A = that.g.pow(that.a).mod(that.p);
-
-            l("Handshake: Send A=" + A.toString(10));
-
-            hub.server.callPeer()
-
-            //return A.toString(10);
-        };
-
-        hub.client.computeSecret = function (B) {
-            l("Handshake: Computing secret with B=" + B.toString(10));
-
-            that.B = new BigNumber(B);
-            that.k = that.B.pow(that.a).mod(that.p);
-
-            console.info("Handshake is done. K=" + that.k.toString(10));
-        };
-
-        l("Handshake: Listening");
-    },
-
-    // Step 1
-    //
-    generatePrimes: function (then) {
-        this.p = new BigNumber(JustEncrypt.primeOfDigit(this.p_digits));
-        this.g = new BigNumber(JustEncrypt.primeOfDigit(this.g_digits));
-        
-        then();
-    },
-}

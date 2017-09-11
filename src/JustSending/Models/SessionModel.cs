@@ -11,11 +11,13 @@ namespace JustSending.Models
         /// <summary>
         /// Secondery unique id of the session
         /// </summary>
-        public string SessionVarification { get; set; }
+        public string SessionVerification { get; set; }
         /// <summary>
         /// The connection id used to map socket connection with a session
         /// </summary>
         public string SocketConnectionId { get; set; }
+
+        public string EncryptionPublicKeyAlias { get; set; }
 
         [Required(AllowEmptyStrings = false, ErrorMessage = "Nothing to send!")]
         public string ComposerText { get; set; }

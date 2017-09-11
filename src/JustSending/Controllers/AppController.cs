@@ -74,7 +74,7 @@ namespace JustSending.Controllers
             var vm = new SessionModel
             {
                 SessionId = id,
-                SessionVarification = id2
+                SessionVerification = id2
             };
 
             return View("Session", vm);
