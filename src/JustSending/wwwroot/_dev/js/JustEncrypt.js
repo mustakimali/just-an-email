@@ -27,6 +27,10 @@ var EndToEndEncryption = {
 
     keys: [],
 
+    isEstablished: function () {
+        return this.keys.length > 0;
+    },
+
     /**
      * Initialise Key Exchance
      * Listen for command from the server 
@@ -188,7 +192,7 @@ var EndToEndEncryption = {
 
         $("#EncryptionPublicKeyAlias").val(this.public_key_alias);
 
-        this.keys[this.public_key_alias] = this.private_key;
+        this.keys.push({ Key: this.public_key_alias, Secret: this.private_key });
 
         Log("Handshake is done. K=" + this.private_key);
         console.clear();

@@ -16,8 +16,10 @@
             beforeSubmit: function () {
                 $("#please-wait").slideDown(250);
                 $("#percent").text("");
+
                 return true;
             },
+            beforeSerialize: JustSendingApp.beforeSubmit,
             uploadProgress: function (e, pos, t, per) {
                 $("#percent").text(per + "%");
             },
@@ -135,13 +137,19 @@
             $text.val("");
             autosize.update($text);
             $fileData.val("");
-            JustSendingApp.beforeSubmit = null;
             JustSendingApp.initAutoSizeComposer();
             return false;
         })
     },
 
-    beforeSubmit: null,
+    beforeSubmit: function (jqForm, options) {
+        if (!EndToEndEncryption.isEstablished())
+            return;
+        
+        var serializedForm = decodeURIComponent(jqForm.serialize());
+        options.data = serializedForm.deserializeToObject();
+        options.data.ComposerText = sjcl.encrypt(EndToEndEncryption.private_key, options.data.ComposerText); 
+    },
 
     initWebSocket: function () {
         var hub = $.connection.conversationHub;
