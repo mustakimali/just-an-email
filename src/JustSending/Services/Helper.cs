@@ -25,7 +25,7 @@ namespace JustSending
 
         public static string GetPrime(int length, IHostingEnvironment env)
         {
-            var file = Path.Combine(env.ContentRootPath, "Assets", "Primes", $"primes-{length}.txt");
+            var file = Path.Combine(env.WebRootPath, "Assets", "Primes", $"primes-{length}.txt");
             if(!File.Exists(file)) return string.Empty;
 
             var fileLines = File.ReadLines(file);

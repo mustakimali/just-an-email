@@ -32,7 +32,8 @@
     {
       "outputFileName": "wwwroot/js/app.min.js",
       "inputFiles": [
-        "wwwroot/_dev/js/JustSendingApp.js"
+        "wwwroot/_dev/js/JustSendingApp.js",
+        "wwwroot/_dev/js/JustEncrypt.js"
       ],
       "minify": {
         "enabled": true,
