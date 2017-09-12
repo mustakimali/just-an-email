@@ -11,17 +11,15 @@
         var options = {
             success: function () {
                 JustSendingApp.onSendComplete();
-                $("#please-wait").slideUp(250);
+                JustSendingApp.showStatus();
             },
             beforeSubmit: function () {
-                $("#please-wait").slideDown(250);
-                $("#percent").text("");
-
+                JustSendingApp.showStatus("Sending, please wait...");
                 return true;
             },
             beforeSerialize: JustSendingApp.beforeSubmit,
             uploadProgress: function (e, pos, t, per) {
-                $("#percent").text(per + "%");
+                JustSendingApp.showStatus(null, per);
             },
 
             resetForm: true
@@ -32,6 +30,25 @@
     },
     initAutoSizeComposer: function () {
         autosize($("#ComposerText"));
+    },
+    showStatus: function (msg, progress) {
+        if (msg == undefined) msg = null;
+        if (progress == undefined) progress = null;
+
+        var $el = $("#please-wait");
+        var $text = $("#status");
+        var $percent = $("#percent");
+
+        if (msg != null)
+            $text.html(msg);
+        
+        $percent.text(progress == null ? "" : progress + "%");
+
+        if (msg == null && progress == null) {
+            $el.slideUp(250);
+        } else if ($el.is(":hidden")) {
+            $el.slideDown(250);
+        }
     },
 
     copySource: function () {
@@ -81,7 +98,7 @@
                 messageId: id,
                 sessionId: sid
             };
-            ajax_service.sendPostRequest("/a/message", data, function (data) {
+            ajax_service.sendPostRequest("/a/message-raw", data, function (data) {
                 $cnt.val(data.content);
             });
         });
@@ -252,12 +269,13 @@
     loadMessages: function () {
         var id = $("#SessionId").val();
         var id2 = $("#SessionVerification").val();
+        var from = parseInt($(".msg-c:first").data("seq"));
 
         ajax_service.sendRequest("POST",
             "/a/messages",
-            { id: id, id2: id2 },
+            { id: id, id2: id2, from: isNaN(from) ? 0 : from },
             function (response) {
-                $("#conversation-list").html(response);
+                $("#conversation-list").prepend(response);
                 JustSendingApp.convertLinks();
                 JustSendingApp.processTime();
                 JustSendingApp.initViewSource();
@@ -313,34 +331,6 @@
             $el.html(JustSendingApp.htmlDecode($el.html()));
             hljs.highlightBlock(block);
 
-        });
-    },
-
-    replaceURLWithHTMLLinks: function (text) {
-        var re = /(\(.*?)?\b((?:https?|ftp|file):\/\/[-a-z0-9+&@#\/%?=~_()|!:,.;]*[-a-z0-9+&@#\/%=~_()|])/ig;
-        return text.replace(re, function (match, lParens, url) {
-            var rParens = '';
-            lParens = lParens || '';
-
-            // Try to strip the same number of right parens from url
-            // as there are left parens.  Here, lParenCounter must be
-            // a RegExp object.  You cannot use a literal
-            //     while (/\(/g.exec(lParens)) { ... }
-            // because an object is needed to store the lastIndex state.
-            var lParenCounter = /\(/g;
-            while (lParenCounter.exec(lParens)) {
-                var m;
-                // We want m[1] to be greedy, unless a period precedes the
-                // right parenthesis.  These tests cannot be simplified as
-                //     /(.*)(\.?\).*)/.exec(url)
-                // because if (.*) is greedy then \.? never gets a chance.
-                if (m = /(.*)(\.\).*)/.exec(url) ||
-                    /(.*)(\).*)/.exec(url)) {
-                    url = m[1];
-                    rParens = m[2] + rParens;
-                }
-            }
-            return lParens + "<a href='" + url + "'>" + url + "</a>" + rParens;
         });
     }
 };

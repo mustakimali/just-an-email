@@ -7,6 +7,9 @@ namespace JustSending.Data
     {
         [BsonId]
         public string Id { get; set; }
+        [BsonIndex()]
+        public int SessionMessageSequence { get; set; }
+
         [BsonIndex]
         public string SessionId { get; set; }
         /// <summary>
@@ -15,11 +18,17 @@ namespace JustSending.Data
         public string SocketConnectionId { get; internal set; }
 
         public string Text { get; set; }
-        public string TextMarkdownProcessed { get; set; }
+        public string TextHtml { get; set; }
 
         public DateTimeOffset DateSent { get; set; }
         public bool HasFile { get; internal set; }
         public long FileSizeBytes { get; internal set; }
         
+        /// <summary>
+        /// Indicate if this is system generated Message
+        /// Not a user sent message
+        /// </summary>
+        /// <returns></returns>
+        public bool IsNotification { get; internal set; }
     }
 }

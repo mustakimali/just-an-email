@@ -19,13 +19,14 @@ namespace JustSending.Data
             _random = new Random();
         }
 
-        public LiteDatabase Database {
+        public LiteDatabase Database
+        {
             get
             {
-                if(_db == null) 
+                if (_db == null)
                 {
                     var dataDirectory = Path.Combine(_env.ContentRootPath, "App_Data");
-                    if(!Directory.Exists(dataDirectory)) Directory.CreateDirectory(dataDirectory);
+                    if (!Directory.Exists(dataDirectory)) Directory.CreateDirectory(dataDirectory);
 
                     _db = new LiteDatabase(Path.Combine(dataDirectory, "AppDb.ldb"));
                 }
@@ -69,6 +70,14 @@ namespace JustSending.Data
             }
         }
 
+        public void MessagesInsert(Message msg)
+        {
+            var count = Messages.Count(x => x.SessionId == msg.SessionId);
+            msg.SessionMessageSequence = ++count;
+
+            Messages.Insert(msg);
+        }
+
         public void TrackClient(string sessionId, string connectionId)
         {
             var session = Sessions.FindById(sessionId);
@@ -84,7 +93,7 @@ namespace JustSending.Data
         public string UntrackClientReturnSessionId(string connectionId)
         {
             var item = Connections.FindById(connectionId);
-            if(item == null) return null;
+            if (item == null) return null;
 
             Connections.Delete(connectionId);
             return item.SessionId;

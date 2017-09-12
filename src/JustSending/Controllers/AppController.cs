@@ -96,7 +96,7 @@ namespace JustSending.Controllers
                 SocketConnectionId = model.SocketConnectionId,
                 DateSent = DateTime.UtcNow,
                 Text = model.ComposerText,
-                TextMarkdownProcessed = CommonMarkConverter.Convert(WebUtility.HtmlEncode(model.ComposerText)),
+                TextHtml = CommonMarkConverter.Convert(WebUtility.HtmlEncode(model.ComposerText)),
                 HasFile = Request.Form.Files.Any()
             };
 
@@ -128,14 +128,14 @@ namespace JustSending.Controllers
                 }
             }
 
-            _db.Messages.Insert(message);
+            _db.MessagesInsert(message);
             _hub.RequestReloadMessage(model.SessionId);
 
             return Accepted();
         }
 
         [HttpGet]
-        [Route("f/{id}/{sessionId}")]
+        [Route("file/{id}/{sessionId}")]
         public IActionResult DownloadFile(string id, string sessionId, string fileName)
         {
             var msg = _db.Messages.FindById(id);
@@ -161,10 +161,7 @@ namespace JustSending.Controllers
         }
 
         [Route("messages"), HttpPost]
-        public IActionResult GetMessages(string id, string id2)
-        {
-            return GetMessagesInternal(id, id2);
-        }
+        public IActionResult GetMessages(string id, string id2, int @from) => GetMessagesInternal(id, id2, @from);
 
         [Route("connect")]
         public IActionResult Connect()
@@ -204,7 +201,7 @@ namespace JustSending.Controllers
         }
 
         [HttpPost]
-        [Route("message")]
+        [Route("message-raw")]
         public IActionResult GetMessage(string messageId, string sessionId)
         {
             var msg = _db.Messages.FindById(messageId);
@@ -217,7 +214,7 @@ namespace JustSending.Controllers
             });
         }
 
-        private IActionResult GetMessagesInternal(string id, string id2)
+        private IActionResult GetMessagesInternal(string id, string id2, int @from)
         {
             var session = _db.Sessions.FindById(id);
             if (session == null || session.IdVerification != id2)
@@ -227,7 +224,7 @@ namespace JustSending.Controllers
 
             var messages = _db
                 .Messages
-                .Find(Query.EQ(nameof(Message.SessionId), id))
+                .Find(x=> x.SessionId == id && x.SessionMessageSequence > @from)
                 .OrderByDescending(x => x.DateSent);
             return View("GetMessages", messages);
         }

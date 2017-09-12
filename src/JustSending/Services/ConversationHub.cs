@@ -84,10 +84,27 @@ namespace JustSending.Services
                 if (numDevices == 0)
                 {
                     EraseSessionInternal(sessionId);
+                } else {
+                    AddSessionNotification(sessionId, "A device was disconnected.");
                 }
             }
 
             return Task.CompletedTask;
+        }
+
+        private void AddSessionNotification(string sessionId, string message) {
+            var msg = new Message
+            {
+                Id = _db.NewGuid(),
+                SessionId = sessionId,
+                DateSent = DateTime.UtcNow,
+                TextHtml = message,
+                SocketConnectionId = Context.ConnectionId,
+                IsNotification = true
+            };
+            
+            _db.MessagesInsert(msg);
+            RequestReloadMessage(sessionId);
         }
 
         public string Connect(string sessionId)
@@ -153,7 +170,11 @@ namespace JustSending.Services
             dynamic endpoint;
 
             if(peerId == "ALL") {
-                endpoint = GetClients(GetSessionId(), except: Context.ConnectionId);
+                var sessionId = GetSessionId();
+
+                endpoint = GetClients(sessionId, except: Context.ConnectionId);
+
+                AddSessionNotification(sessionId, "A new device connected.<br/><i class=\"fa fa-lock\"></i> Message is End to End encrypted.");
             } else {
                 endpoint = GetClient(peerId);
             }
@@ -162,8 +183,9 @@ namespace JustSending.Services
         }
 
         private void ValidateIntent(string peerId) {
-            
-            if(peerId == "ALL") return;
+
+            if (peerId == "ALL")
+                return;
 
             // check if the peer is actually a device within the current session
             // this is to prevent cross session communication
@@ -179,7 +201,7 @@ namespace JustSending.Services
                 }
             }
 
-            throw new InvalidOperationException("Attempting of cross session communication.");
+            throw new InvalidOperationException("Attempt of cross session communication.");
         }
 
         #endregion

@@ -71,8 +71,10 @@ var EndToEndEncryption = {
      * @param {boolean} initiate true to start the computation, only one client will receive this 'true'
      */
     init: function (peerId, hub, p, g, pka, initiate) {
-        
+
         var that = EndToEndEncryption;
+        
+        that.showStatus("");
 
         that.peerId = peerId;
         that.hub = hub;
@@ -82,8 +84,19 @@ var EndToEndEncryption = {
         that.setPrime(p, g);
 
         if (initiate) {
-            that.computeA();
+            setTimeout(function () {
+                that.computeA();
+            }, 500);
+
         }
+    },
+    showStatus: function (msg) {
+        if (msg == undefined) {
+            JustSendingApp.showStatus();
+            return;
+        }
+
+        JustSendingApp.showStatus("<i class=\"fa fa-lock\"></i> Establishing secure connection..." + msg);
     },
 
     initCallbacks: function (hub) {
@@ -104,8 +117,9 @@ var EndToEndEncryption = {
                     break;
 
                 case "broadcastKeys":
+                    that.showStatus("Decrypting keys");
                     that.receiveKeys(dataObj);
-                    break;    
+                    break;
             }
 
         };
@@ -202,7 +216,7 @@ var EndToEndEncryption = {
     },
 
     onHandshakeDone: function () {
-        
+
         this.p = null;
         this.g = null;
         this.a = null;
@@ -242,14 +256,14 @@ var EndToEndEncryption = {
             this.callAllPeers("broadcastKeys", encKeys);
             this.printKeyStoreStats();
         }
-        
+
         this.initiator = false;
     },
 
     receiveKeys: function (dataObj) {
         for (var i in dataObj) {
             var nk = dataObj[i];
-            
+
             for (var j in this.keys) {
                 var ik = this.keys[j];
 
@@ -267,7 +281,7 @@ var EndToEndEncryption = {
 
     updateKeyStore: function (secret, data) {
         var incomingKeyStore = JSON.parse(this.decrypt(data, secret));
-        
+
         this.keys = incomingKeyStore;
 
         this.printKeyStoreStats();
@@ -275,7 +289,9 @@ var EndToEndEncryption = {
 
     printKeyStoreStats: function () {
         Log("Total Keys: " + this.keys.length);
-        Log("Known Keys: \r\n\t\t" + this.keys.map(function (t) { return t.Key + (t.Key == EndToEndEncryption.public_key_alias ? " (In Use)": ""); }).join("\r\n\t\t"));
+        Log("Known Keys: \r\n\t\t" + this.keys.map(function (t) { return t.Key + (t.Key == EndToEndEncryption.public_key_alias ? " (In Use)" : ""); }).join("\r\n\t\t"));
+
+        this.showStatus();
     },
 
     encrypt: function (data, secret) {
