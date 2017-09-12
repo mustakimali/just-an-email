@@ -22,6 +22,11 @@ var EndToEndEncryption = {
     hub: null,
     peerId: null,
 
+    // true - mean this device was in charge of
+    // initiating connection with a new device
+    //
+    initiator: false,
+
     private_key: null,
     public_key_alias: null,
 
@@ -72,6 +77,7 @@ var EndToEndEncryption = {
         that.peerId = peerId;
         that.hub = hub;
         that.public_key_alias = pka;
+        that.initiator = initiate;
 
         that.setPrime(p, g);
 
@@ -85,7 +91,7 @@ var EndToEndEncryption = {
 
         hub.client.callback = function (method, data) {
 
-            Log("Request received [" + method + "] ->" + data);
+            Log("Request received [" + method + "] -> Payload Size: " + data.length);
 
             var dataObj = JSON.parse(data);
             switch (method) {
@@ -182,7 +188,7 @@ var EndToEndEncryption = {
         that
             .hub
             .server
-            .callPeer(that.peerId, method, JSON.stringify(data))
+            .callPeer(peerId, method, JSON.stringify(data))
             .catch(function (e) {
                 Log("ERROR: " + e);
             })
@@ -208,26 +214,36 @@ var EndToEndEncryption = {
 
         this.keys.push({ Key: this.public_key_alias, Secret: this.private_key });
 
+        console.clear();
         Log("Handshake is done");
 
         //
-        // Bradcast all keys with all peers
-        // of course encrypt each secret with the secret itself
-        // Each peer receiving them must have at least one secret
+        // Securely bradcast all keys with all peers
+        // Private Key Exchange! HOW!!
+        // For each private key, Encrypt the entire key store with the private key itself
+        // Each peer receiving thse must have at least one private key already known
+        // (identified by the public key alias which is also incuded in plaintext)
         // to be able to decrypt them in order to receive all secrets.
-        // :-)
+        // How cool is that? (:
         //
-        var encKeys = [];
-        var keysJson = JSON.stringify(this.keys);
-        for (var i in this.keys) {
-            var k = this.keys[i];
-            encKeys.push({
-                Key: k.Key,
-                EncryptedSecrets: EndToEndEncryption.encrypt(keysJson, k.Secret)
-            });
-        }
+        if (!this.initiator) {
+            var encKeys = [];
+            var keysJson = JSON.stringify(this.keys);
+            for (var i in this.keys) {
+                var k = this.keys[i];
+                encKeys.push({
+                    // Pubilc Key Alias (unencrypted)
+                    Key: k.Key,
+                    // Private Key (Encrypted)
+                    EncryptedSecrets: EndToEndEncryption.encrypt(keysJson, k.Secret)
+                });
+            }
 
-        this.callAllPeers("broadcastKeys", JSON.stringify(encKeys));
+            this.callAllPeers("broadcastKeys", encKeys);
+            this.printKeyStoreStats();
+        }
+        
+        this.initiator = false;
     },
 
     receiveKeys: function (dataObj) {
@@ -239,6 +255,8 @@ var EndToEndEncryption = {
 
                 if (ik.Key == nk.Key) {
                     // I have the private key
+                    console.clear();
+                    Log("Decrypting incoming private keys using: \r\n\t\t" + ik.Key);
 
                     this.updateKeyStore(ik.Secret, nk.EncryptedSecrets);
                     return;
@@ -249,13 +267,23 @@ var EndToEndEncryption = {
 
     updateKeyStore: function (secret, data) {
         var incomingKeyStore = JSON.parse(this.decrypt(data, secret));
+        
+        this.keys = incomingKeyStore;
 
-        Log("INCOMING");
-        Log(incomingKeyStore);
+        this.printKeyStoreStats();
+    },
+
+    printKeyStoreStats: function () {
+        Log("Total Keys: " + this.keys.length);
+        Log("Known Keys: \r\n\t\t" + this.keys.map(function (t) { return t.Key + (t.Key == EndToEndEncryption.public_key_alias ? " (In Use)": ""); }).join("\r\n\t\t"));
     },
 
     encrypt: function (data, secret) {
         return sjcl.encrypt(secret, data);
+    },
+
+    encryptWithPrivateKey: function (data) {
+        return this.encrypt(data, this.private_key);
     },
 
     decrypt: function (data, secret) {
