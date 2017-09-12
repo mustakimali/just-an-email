@@ -143,12 +143,9 @@
     },
 
     beforeSubmit: function (jqForm, options) {
-        if (!EndToEndEncryption.isEstablished())
-            return;
+        //if (!EndToEndEncryption.isEstablished())
+        //    return;
         
-        var serializedForm = decodeURIComponent(jqForm.serialize());
-        options.data = serializedForm.deserializeToObject();
-        options.data.ComposerText = sjcl.encrypt(EndToEndEncryption.private_key, options.data.ComposerText); 
     },
 
     initWebSocket: function () {

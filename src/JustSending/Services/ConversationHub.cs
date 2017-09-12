@@ -54,9 +54,14 @@ namespace JustSending.Services
             return numConnectedDevices;
         }
 
-        private dynamic GetClients(string sessionId)
+        private dynamic GetClients(string sessionId, string except = null)
         {
             var connectionIds = _db.FindClient(sessionId);
+
+            if(!string.IsNullOrEmpty(except)){
+                connectionIds = connectionIds.Where(x => x != except);
+            }
+
             return CurrentHub.Clients.Clients(connectionIds.ToList());
         }
 
@@ -96,7 +101,7 @@ namespace JustSending.Services
             var numDevices = _db.Connections.Count(x => x.SessionId == sessionId);
             SendNumberOfDevices(sessionId, numDevices);
 
-            if (numDevices == 2)
+            if (numDevices > 1)
             {
                 InitKeyExchange(sessionId);
             }
@@ -110,11 +115,11 @@ namespace JustSending.Services
         {
             // enable end to end encryption
             //
-            var secondDeviceId = Context.ConnectionId;
+            var newDevice = Context.ConnectionId;
             var firstDeviceId =
                 _db
                     .Connections
-                    .FindOne(x => x.SessionId == sessionId && x.ConnectionId != secondDeviceId)
+                    .FindOne(x => x.SessionId == sessionId && x.ConnectionId != newDevice)
                     .ConnectionId;
 
             //
@@ -128,14 +133,14 @@ namespace JustSending.Services
             var initFirstDevice = (Task<object>) CurrentHub
                 .Clients
                 .Client(firstDeviceId)
-                .startKeyExchange(secondDeviceId, p, g, pka, false);
+                .startKeyExchange(newDevice, p, g, pka, false);
 
             initFirstDevice.ContinueWith(x =>
             {
 
                 CurrentHub
                 .Clients
-                .Client(secondDeviceId)
+                .Client(newDevice)
                 .startKeyExchange(firstDeviceId, p, g, pka, true);
 
             });
@@ -145,15 +150,26 @@ namespace JustSending.Services
         public void CallPeer(string peerId, string method, string param) {
             ValidateIntent(peerId);
 
-            GetClient(peerId).callback(method, param);
+            dynamic endpoint;
+
+            if(peerId == "ALL") {
+                endpoint = GetClients(GetSessionId(), except: Context.ConnectionId);
+            } else {
+                endpoint = GetClient(peerId);
+            }
+
+            endpoint.callback(method, param);
         }
 
         private void ValidateIntent(string peerId) {
+            
+            if(peerId == "ALL") return;
+
             // check if the peer is actually a device within the current session
             // this is to prevent cross session communication
             //
 
-            // Get session from connectio
+            // Get session from connection
             var connection = _db.Connections.FindById(Context.ConnectionId);
             if(connection != null) {
                 var devices = _db.FindClient(connection.SessionId);
@@ -237,6 +253,13 @@ namespace JustSending.Services
                 // ToDo: Schedule delete later
             }
         }
+
+        private string GetSessionId() =>
+                            _db
+                                .Connections
+                                .FindOne(x => x.ConnectionId == Context.ConnectionId)
+                                .SessionId;
+
 
         public override Task OnReconnected()
         {

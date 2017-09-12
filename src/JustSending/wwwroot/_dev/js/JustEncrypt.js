@@ -87,26 +87,31 @@ var EndToEndEncryption = {
 
             Log("Request received [" + method + "] ->" + data);
 
+            var dataObj = JSON.parse(data);
             switch (method) {
                 case "ComputeB":
-                    that.computeB(JSON.parse(data).A);
+                    that.computeB(dataObj.A);
                     break;
 
                 case "ComputeK":
-                    that.computeK(JSON.parse(data).B);
+                    that.computeK(dataObj.B);
                     break;
+
+                case "broadcastKeys":
+                    that.receiveKeys(dataObj);
+                    break;    
             }
 
         };
 
-        Log("Listening");
+        Log("Ready to shake hands.");
     },
 
     setPrime: function (p, g) {
         var that = EndToEndEncryption;
 
-        Log("p=" + p);
-        Log("g=" + g);
+        Log("p LEN " + p.length);
+        Log("g LEN " + g.length);
 
         that.p = new BigNumber(p);
         that.g = new BigNumber(g);
@@ -119,12 +124,12 @@ var EndToEndEncryption = {
     computeA: function () {
         var that = EndToEndEncryption;
 
-        Log("Request Arrived");
+        Log("computeA: Working...");
 
         that.a = PrimeHelper.randomNumberOfLength(that.a_digits);
         var A = that.g.pow(that.a).mod(that.p);
 
-        Log("Send A=" + A.toString(10));
+        Log("Send A");
 
         that.callPeer("ComputeB", { A: A.toString(10) });
     },
@@ -136,7 +141,7 @@ var EndToEndEncryption = {
         this.b = new BigNumber(PrimeHelper.randomNumberOfLength(that.b_digits));
         var B = that.g.pow(that.b).mod(that.p);
 
-        Log("Computed, sending, B=" + B.toString(10));
+        Log("computeB: Computed, sending");
         // send B
         // ask peer to compute secret
         that.callPeer("ComputeK", { B: B.toString(10) });
@@ -149,7 +154,7 @@ var EndToEndEncryption = {
         var that = EndToEndEncryption;
         that.B = new BigNumber(B);
 
-        Log("Computing secret with B=" + that.B.toString(10));
+        Log("Computing secret with B");
 
         that.k = that.B.pow(that.a).mod(that.p);
 
@@ -165,9 +170,14 @@ var EndToEndEncryption = {
         this.onHandshakeDone();
     },
 
+
     callPeer: function (method, data) {
+        this.callPeerInternal(this.peerId, method, data);
+    },
+
+    callPeerInternal: function (peerId, method, data) {
         var that = EndToEndEncryption;
-        Log("Calling peer '" + method + "' [" + that.peerId + "]");
+        Log("Calling peer '" + method + "' [" + peerId + "]");
 
         that
             .hub
@@ -179,6 +189,10 @@ var EndToEndEncryption = {
             .then(function (b, d, e) {
                 // Request sent
             });
+    },
+
+    callAllPeers: function (method, data) {
+        this.callPeerInternal("ALL", method, data);
     },
 
     onHandshakeDone: function () {
@@ -194,8 +208,58 @@ var EndToEndEncryption = {
 
         this.keys.push({ Key: this.public_key_alias, Secret: this.private_key });
 
-        Log("Handshake is done. K=" + this.private_key);
-        console.clear();
+        Log("Handshake is done");
+
+        //
+        // Bradcast all keys with all peers
+        // of course encrypt each secret with the secret itself
+        // Each peer receiving them must have at least one secret
+        // to be able to decrypt them in order to receive all secrets.
+        // :-)
+        //
+        var encKeys = [];
+        var keysJson = JSON.stringify(this.keys);
+        for (var i in this.keys) {
+            var k = this.keys[i];
+            encKeys.push({
+                Key: k.Key,
+                EncryptedSecrets: EndToEndEncryption.encrypt(keysJson, k.Secret)
+            });
+        }
+
+        this.callAllPeers("broadcastKeys", JSON.stringify(encKeys));
+    },
+
+    receiveKeys: function (dataObj) {
+        for (var i in dataObj) {
+            var nk = dataObj[i];
+            
+            for (var j in this.keys) {
+                var ik = this.keys[j];
+
+                if (ik.Key == nk.Key) {
+                    // I have the private key
+
+                    this.updateKeyStore(ik.Secret, nk.EncryptedSecrets);
+                    return;
+                }
+            }
+        }
+    },
+
+    updateKeyStore: function (secret, data) {
+        var incomingKeyStore = JSON.parse(this.decrypt(data, secret));
+
+        Log("INCOMING");
+        Log(incomingKeyStore);
+    },
+
+    encrypt: function (data, secret) {
+        return sjcl.encrypt(secret, data);
+    },
+
+    decrypt: function (data, secret) {
+        return sjcl.decrypt(secret, data);
     }
 }
 
