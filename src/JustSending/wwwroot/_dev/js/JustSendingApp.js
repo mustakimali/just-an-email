@@ -8,25 +8,6 @@
 
         $("*[title]").tooltip();
 
-        var options = {
-            success: function () {
-                JustSendingApp.onSendComplete();
-                JustSendingApp.showStatus();
-            },
-            beforeSubmit: function () {
-                JustSendingApp.showStatus("Sending, please wait...");
-                return true;
-            },
-            beforeSerialize: JustSendingApp.beforeSubmit,
-            uploadProgress: function (e, pos, t, per) {
-                JustSendingApp.showStatus(null, per);
-            },
-
-            resetForm: true
-        };
-
-        $("#form").ajaxForm(options);
-
     },
     initAutoSizeComposer: function () {
         autosize($("#ComposerText"));
@@ -111,6 +92,21 @@
         var $fileData = $("#fileData");
         var $form = $("#form");
 
+        var options = {
+            success: function () {
+                JustSendingApp.onSendComplete();
+                JustSendingApp.showStatus();
+            },
+            beforeSubmit: JustSendingApp.beforeSubmit,
+            uploadProgress: function (e, pos, t, per) {
+                JustSendingApp.showStatus(null, per);
+            },
+
+            resetForm: true
+        };
+
+        $("#form").ajaxForm(options);
+
         $text.keypress(function (e) {
             if (e.which == 13 && e.ctrlKey) {
                 $('.sendBtn').trigger("click");
@@ -159,10 +155,45 @@
         })
     },
 
-    beforeSubmit: function (jqForm, options) {
-        //if (!EndToEndEncryption.isEstablished())
-        //    return;
+    beforeSubmit: function (formData, formObject, formOptions) {
+        var replaceFormValue = function (name, factory) {
+            for (var i = 0; i < formData.length; i++){
+                if (formData[i].name == name) {
+                    var newValue = factory(formData[i].value);
+                    if (newValue != null) {
+                        formData[i].value = newValue;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        if ($("#file")[0].files.length > 0) {
+            // not encrytiong files for now
+            //
+            replaceFormValue("EncryptionPublicKeyAlias", function (v) { return ""; });
+            return;
+        }
+
+        if (!EndToEndEncryption.isEstablished()) {
+            // no client has been connected yet,
+            // generate a secret key
+            // Which then be transmitted to peer
+            //
+            EndToEndEncryption.generateOwnPrivateKey(function (pka) {
+                // the form was serialized before generating the key,
+                // so i need to make sure this public key is included in this post
+                //
+                replaceFormValue("EncryptionPublicKeyAlias", function (v) { return pka; });
+            });
+        }
         
+        JustSendingApp.showStatus("Sending, please wait...");
+
+        replaceFormValue("ComposerText", function (v) { return EndToEndEncryption.encryptWithPrivateKey(v); });
+        return true;
     },
 
     initWebSocket: function () {

@@ -17,6 +17,7 @@ namespace JustSending.Data
         /// </summary>
         public string SocketConnectionId { get; internal set; }
 
+        public string EncryptionPublicKeyAlias { get; set; }
         public string Text { get; set; }
         public string TextHtml { get; set; }
 

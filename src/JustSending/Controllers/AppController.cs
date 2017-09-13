@@ -94,6 +94,7 @@ namespace JustSending.Controllers
                 Id = _db.NewGuid(),
                 SessionId = model.SessionId,
                 SocketConnectionId = model.SocketConnectionId,
+                EncryptionPublicKeyAlias = model.EncryptionPublicKeyAlias,
                 DateSent = DateTime.UtcNow,
                 Text = model.ComposerText,
                 TextHtml = CommonMarkConverter.Convert(WebUtility.HtmlEncode(model.ComposerText)),

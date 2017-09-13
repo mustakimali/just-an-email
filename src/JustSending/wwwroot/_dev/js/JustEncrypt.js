@@ -73,7 +73,7 @@ var EndToEndEncryption = {
     init: function (peerId, hub, p, g, pka, initiate) {
 
         var that = EndToEndEncryption;
-        
+
         that.showStatus("");
 
         that.peerId = peerId;
@@ -225,7 +225,7 @@ var EndToEndEncryption = {
         this.k = null;
 
         $("#EncryptionPublicKeyAlias").val(this.public_key_alias);
-
+        
         this.keys.push({ Key: this.public_key_alias, Secret: this.private_key });
 
         console.clear();
@@ -258,6 +258,18 @@ var EndToEndEncryption = {
         }
 
         this.initiator = false;
+    },
+
+    generateOwnPrivateKey: function (then) {
+        this.public_key_alias = PrimeHelper.randomNumberOfLength(32);
+        this.private_key = PrimeHelper.randomNumberOfLength(1026);
+
+        $("#EncryptionPublicKeyAlias").val(this.public_key_alias);
+        this.keys.push({ Key: this.public_key_alias, Secret: this.private_key });
+
+        this.printKeyStoreStats();
+
+        then(this.public_key_alias);
     },
 
     receiveKeys: function (dataObj) {

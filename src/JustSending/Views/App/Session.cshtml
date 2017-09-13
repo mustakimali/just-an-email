@@ -27,7 +27,7 @@
                         </div>
                         @Html.ValidationMessageFor(x => x.ComposerText)
                         <input id="file" name="file" type="file" style="display: none;" />
-                        <input id="fileData" name="FileData" type="hidden" />
+
                         @Html.HiddenFor(x => x.SessionId)
                         @Html.HiddenFor(x => x.SessionVerification)
                         @Html.HiddenFor(x => x.SocketConnectionId)
