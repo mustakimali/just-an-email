@@ -31,6 +31,7 @@ var EndToEndEncryption = {
     public_key_alias: null,
 
     keys: [],
+    keys_hash: {},
 
     isEstablished: function () {
         return this.keys.length > 0;
@@ -225,8 +226,9 @@ var EndToEndEncryption = {
         this.k = null;
 
         $("#EncryptionPublicKeyAlias").val(this.public_key_alias);
-        
+
         this.keys.push({ Key: this.public_key_alias, Secret: this.private_key });
+        this.keys_hash[this.public_key_alias] = this.private_key;
 
         console.clear();
         Log("Handshake is done");
@@ -265,7 +267,9 @@ var EndToEndEncryption = {
         this.private_key = PrimeHelper.randomNumberOfLength(1026);
 
         $("#EncryptionPublicKeyAlias").val(this.public_key_alias);
+
         this.keys.push({ Key: this.public_key_alias, Secret: this.private_key });
+        this.keys_hash[this.public_key_alias] = this.private_key;
 
         this.printKeyStoreStats();
 
@@ -295,7 +299,11 @@ var EndToEndEncryption = {
         var incomingKeyStore = JSON.parse(this.decrypt(data, secret));
 
         this.keys = incomingKeyStore;
-
+        this.keys_hash = {};
+        for (var i = 0; i < incomingKeyStore.length; i++) {
+            var c = incomingKeyStore[i];
+            this.keys_hash[c.Key] = c.Secret;
+        }
         this.printKeyStoreStats();
     },
 

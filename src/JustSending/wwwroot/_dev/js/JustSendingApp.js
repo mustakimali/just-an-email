@@ -22,7 +22,7 @@
 
         if (msg != null)
             $text.html(msg);
-        
+
         $percent.text(progress == null ? "" : progress + "%");
 
         if (msg == null && progress == null) {
@@ -67,6 +67,7 @@
 
     initViewSource: function () {
         $(".msg .source").on("click", function () {
+            var $this = $(this);
             var $modal = $("#sourceModal");
             var $cnt = $("#source-pre");
 
@@ -80,6 +81,12 @@
                 sessionId: sid
             };
             ajax_service.sendPostRequest("/a/message-raw", data, function (data) {
+                // Decrypt
+                var pka = $this.parents(".msg").data("key");
+                var decrypted = JustSendingApp.decryptMessageInternal(pka, data.content);
+                if (decrypted != null)
+                    data.content = decrypted;
+
                 $cnt.val(data.content);
             });
         });
@@ -157,7 +164,7 @@
 
     beforeSubmit: function (formData, formObject, formOptions) {
         var replaceFormValue = function (name, factory) {
-            for (var i = 0; i < formData.length; i++){
+            for (var i = 0; i < formData.length; i++) {
                 if (formData[i].name == name) {
                     var newValue = factory(formData[i].value);
                     if (newValue != null) {
@@ -189,11 +196,49 @@
                 replaceFormValue("EncryptionPublicKeyAlias", function (v) { return pka; });
             });
         }
-        
+
         JustSendingApp.showStatus("Sending, please wait...");
 
         replaceFormValue("ComposerText", function (v) { return EndToEndEncryption.encryptWithPrivateKey(v); });
         return true;
+    },
+
+    decryptMessages: function () {
+        var $msgEls = $(".msg");
+        $.each($msgEls, function (idx, itm) {
+            var $itm = $(itm);
+            if ($itm.hasClass("decrypted")) return;
+
+            var $data = $itm.find(".data");
+
+            var encryptedData = $data.attr("data-value");
+            var pka = $itm.data("key");
+            var decryptedData = "";
+
+            if (pka == null) {
+                decryptedData = encryptedData;
+            } else {
+                decryptedData = JustSendingApp.decryptMessageInternal(pka, encryptedData);
+
+                if (decryptedData == null) {
+                    $data.html("<span class='text-danger'><i class='fa fa-lock'></i> Encrypted</span>");
+                    return;
+                }
+            }
+
+            $data.text(decryptedData);
+
+            $data.removeAttr("data-value");
+            $itm.addClass("decrypted");
+        });
+    },
+
+    decryptMessageInternal: function (pka, encryptedData) {
+        var pk = EndToEndEncryption.keys_hash[pka];
+        if (pk == null) {
+            return null;
+        }
+        return EndToEndEncryption.decrypt(encryptedData, pk);
     },
 
     initWebSocket: function () {
@@ -307,6 +352,8 @@
             { id: id, id2: id2, from: isNaN(from) ? 0 : from },
             function (response) {
                 $("#conversation-list").prepend(response);
+
+                JustSendingApp.decryptMessages();
                 JustSendingApp.convertLinks();
                 JustSendingApp.processTime();
                 JustSendingApp.initViewSource();
