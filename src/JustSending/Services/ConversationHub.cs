@@ -98,7 +98,7 @@ namespace JustSending.Services
                 Id = _db.NewGuid(),
                 SessionId = sessionId,
                 DateSent = DateTime.UtcNow,
-                TextHtml = message,
+                Text = message,
                 SocketConnectionId = Context.ConnectionId,
                 IsNotification = true
             };

@@ -1,17 +1,17 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Net;
 using System.Threading.Tasks;
 using JustSending.Data;
 using JustSending.Models;
 using JustSending.Services;
-using LiteDB;
+using JustSending.Services.Attributes;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
-using CommonMark;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using IOFile = System.IO.File;
 
 namespace JustSending.Controllers
 {
@@ -80,15 +80,76 @@ namespace JustSending.Controllers
             return View("Session", vm);
         }
 
-        [Route("post")]
+        [Route("post/files")]
         [HttpPost]
-        public async Task<IActionResult> Post(SessionModel model)
+        [DisableFormValueModelBinding]
+        [IgnoreAntiforgeryToken]
+        [RequestSizeLimit(2_147_483_648)]
+        public async Task<IActionResult> PostWithFile()
         {
-            if (!ModelState.IsValid)
+            FormValueProvider formModel;
+            var postedFilePath = Path.GetTempFileName();
+            using (var stream = IOFile.Create(postedFilePath))
+            {
+                formModel = await Request.StreamFile(stream);
+            }
+
+            var model = new SessionModel();
+            var bindingSuccessful = await TryUpdateModelAsync(model, prefix: "", valueProvider: formModel);
+
+            if (!bindingSuccessful)
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+            }
+
+            var fileInfo = new FileInfo(postedFilePath);
+            if (fileInfo.Length > Convert.ToInt64(_config["MaxUploadSizeBytes"]))
             {
                 return BadRequest();
             }
+            var message = GetMessageFromModel(model, true);
+            var uploadDir = GetUploadFolder(model.SessionId, _env.WebRootPath);
+            if (!Directory.Exists(uploadDir)) Directory.CreateDirectory(uploadDir);
 
+            // Use original file name
+            var fileName = message.Text;
+            if (IOFile.Exists(Path.Combine(uploadDir, fileName)))
+            {
+                // if exist then append digits from the session id
+                fileName = Path.GetFileNameWithoutExtension(message.Text) + "_" + message.Id.Substring(0, 6) + Path.GetExtension(message.Text);
+            }
+            var destUploadPath = Path.Combine(uploadDir, fileName);
+
+            message.Text = fileName;
+            message.HasFile = true;
+            message.FileSizeBytes = fileInfo.Length;
+
+            IOFile.Move(postedFilePath, destUploadPath);
+
+            return SaveMessageAndReturnResponse(message);
+        }
+
+        [Route("post")]
+        [HttpPost]
+        public IActionResult Post(SessionModel model)
+        {
+            var message = GetMessageFromModel(model);
+            return SaveMessageAndReturnResponse(message);
+        }
+
+        private IActionResult SaveMessageAndReturnResponse(Message message)
+        {
+            _db.MessagesInsert(message);
+            _hub.RequestReloadMessage(message.SessionId);
+
+            return Accepted();
+        }
+
+        private Message GetMessageFromModel(SessionModel model, bool hasFile = false)
+        {
             var message = new Message
             {
                 Id = _db.NewGuid(),
@@ -97,42 +158,9 @@ namespace JustSending.Controllers
                 EncryptionPublicKeyAlias = model.EncryptionPublicKeyAlias,
                 DateSent = DateTime.UtcNow,
                 Text = model.ComposerText,
-                TextHtml = CommonMarkConverter.Convert(WebUtility.HtmlEncode(model.ComposerText)),
-                HasFile = Request.Form.Files.Any()
+                HasFile = hasFile
             };
-
-            if (message.HasFile)
-            {
-                var file = Request.Form.Files.First();
-                if (file.Length > Convert.ToInt64(_config["MaxUploadSizeBytes"]))
-                {
-                    return BadRequest();
-                }
-                var uploadDir = GetUploadFolder(model.SessionId, _env.WebRootPath);
-                if (!Directory.Exists(uploadDir)) Directory.CreateDirectory(uploadDir);
-
-                // Use original file name
-                var fileName = message.Text;
-                if (System.IO.File.Exists(Path.Combine(uploadDir, fileName)))
-                {
-                    // if exist then append digits from the session id
-                    fileName = Path.GetFileNameWithoutExtension(message.Text) + "_" + message.Id.Substring(0, 6) + Path.GetExtension(message.Text);
-                }
-                var path = Path.Combine(uploadDir, fileName);
-
-                message.Text = fileName;
-                message.FileSizeBytes = file.Length;
-
-                using (var fileStream = System.IO.File.OpenWrite(path))
-                {
-                    await file.CopyToAsync(fileStream);
-                }
-            }
-
-            _db.MessagesInsert(message);
-            _hub.RequestReloadMessage(model.SessionId);
-
-            return Accepted();
+            return message;
         }
 
         [HttpGet]
@@ -225,7 +253,7 @@ namespace JustSending.Controllers
 
             var messages = _db
                 .Messages
-                .Find(x=> x.SessionId == id && x.SessionMessageSequence > @from)
+                .Find(x => x.SessionId == id && x.SessionMessageSequence > @from)
                 .OrderByDescending(x => x.DateSent);
             return View("GetMessages", messages);
         }

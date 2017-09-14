@@ -137,6 +137,7 @@
                     $clearBtn.trigger("click");
                     return;
                 }
+                $text.data("old", $text.val());
                 $text.val(file.name);
                 $text.attr("readonly", "readonly");
                 $clearBtn.show();
@@ -154,7 +155,8 @@
             $file.val("");
             $clearBtn.hide();
             $text.removeAttr("readonly");
-            $text.val("");
+            $text.val($text.data("old"));
+            $text.data("old", "");
             autosize.update($text);
             $fileData.val("");
             JustSendingApp.initAutoSizeComposer();
@@ -178,6 +180,11 @@
         }
 
         if ($("#file")[0].files.length > 0) {
+            //
+            // Files are posted in a different endpoint
+            //
+            formOptions.url += "/files";
+
             // not encrytiong files for now
             //
             replaceFormValue("EncryptionPublicKeyAlias", function (v) { return ""; });

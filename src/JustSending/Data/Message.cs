@@ -19,7 +19,6 @@ namespace JustSending.Data
 
         public string EncryptionPublicKeyAlias { get; set; }
         public string Text { get; set; }
-        public string TextHtml { get; set; }
 
         public DateTimeOffset DateSent { get; set; }
         public bool HasFile { get; internal set; }
