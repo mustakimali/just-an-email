@@ -2,7 +2,6 @@
     sendRequest: function (method, serviceName, data, success, error, onLocalUrl, dataType, beforeRequest, afterResponse) {
         if (beforeRequest && typeof (beforeRequest) === "function") beforeRequest();
 
-        app_busy(true);
         Log("Ajax {0} Request to: {1}".format(method, serviceName));
 
         $.ajax({
@@ -20,8 +19,6 @@
                 if (success && typeof (success) === "function") {
                     success(response);
                 }
-
-                app_busy(false);
             },
             error: function (jqXhr, textStatus, errorThrown) {
                 showAjaxError(jqXhr, errorThrown);
@@ -31,7 +28,6 @@
                 if (error && typeof (error) === "function") {
                     error(jqXhr, textStatus, errorThrown);
                 }
-                app_busy(false);
             }
         });
     },

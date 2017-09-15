@@ -52,6 +52,7 @@ var EndToEndEncryption = {
         //   Start the key exchange
         //
         hub.client.startKeyExchange = function (peerId, p, g, pka, initiate) {
+            app_busy(true);
 
             Log("Peer Id: " + peerId);
 
@@ -260,6 +261,7 @@ var EndToEndEncryption = {
         }
 
         this.initiator = false;
+        app_busy(false);
     },
 
     generateOwnPrivateKey: function (then) {

@@ -1,5 +1,7 @@
 ﻿var JustSendingApp = {
     init: function () {
+        app_busy(true);
+
         var that = this;
         this.initPermalink(function () {
 
@@ -141,6 +143,7 @@
             success: function () {
                 JustSendingApp.onSendComplete();
                 JustSendingApp.showStatus();
+                app_busy(false);
             },
             beforeSubmit: JustSendingApp.beforeSubmit,
             uploadProgress: function (e, pos, t, per) {
@@ -227,6 +230,7 @@
             //
             formOptions.url += "/files";
             hasFile = true;
+            app_busy(true);
         }
 
         if (!EndToEndEncryption.isEstablished()) {
@@ -260,6 +264,8 @@
             if ($itm.hasClass("decrypted")) return;
 
             var $data = $itm.find(".data");
+
+            if (!$data.length) return;
 
             var encryptedData = $data.attr("data-value");
             var pka = $itm.data("key");
@@ -375,6 +381,7 @@
 
                         Log("Device Id: " + socketConnectionId);
 
+                        app_busy(false);
                     });
             });
     },
