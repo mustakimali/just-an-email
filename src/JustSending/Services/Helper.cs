@@ -7,12 +7,13 @@ namespace JustSending
 {
     public static class Helper
     {
+        public static readonly DateTime BeginningOfUnixTime = new DateTime(1970, 1, 1);
         public static readonly Random Random = new Random(DateTime.UtcNow.Millisecond);
 
         public static string ToFileSizeString(this long fileSize)
         {
             var unitsOfFileSize = new[] { "B", "KB", "MB", "GB", "TB", "PB", "EB" };
-            var fileSizeInLong = (double) fileSize;
+            var fileSizeInLong = (double)fileSize;
             var order = 0;
             while (fileSizeInLong >= 1024 && order + 1 < unitsOfFileSize.Length)
             {
@@ -26,7 +27,7 @@ namespace JustSending
         public static string GetPrime(int length, IHostingEnvironment env)
         {
             var file = Path.Combine(env.WebRootPath, "Assets", "Primes", $"primes-{length}.txt");
-            if(!File.Exists(file)) return string.Empty;
+            if (!File.Exists(file)) return string.Empty;
 
             var fileLines = File.ReadLines(file);
             var totalLines = Convert.ToInt16(fileLines.FirstOrDefault());
@@ -34,5 +35,7 @@ namespace JustSending
 
             return fileLines.Skip(randomLine).FirstOrDefault();
         }
+
+        public static int ToEpoch(this DateTime date) => (int)date.Subtract(BeginningOfUnixTime).TotalSeconds;
     }
 }

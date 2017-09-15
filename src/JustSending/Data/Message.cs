@@ -30,5 +30,6 @@ namespace JustSending.Data
         /// </summary>
         /// <returns></returns>
         public bool IsNotification { get; internal set; }
+        public int DateSentEpoch { get; internal set; }
     }
 }

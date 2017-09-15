@@ -39,8 +39,10 @@ namespace JustSending.Controllers
         [HttpGet]
         public IActionResult NewSession()
         {
-            //return RedirectToAction("Session", new { id = sessionId, id2 = idVerification });
-            return Session(_db.NewGuid(), _db.NewGuid(), verifySessionExistance: false);
+            var id = (string)(TempData[nameof(Data.Session.Id)] ?? _db.NewGuid());
+            var id2 = (string)(TempData[nameof(Data.Session.IdVerification)] ?? _db.NewGuid());
+
+            return Session(id, id2, verifySessionExistance: false);
         }
 
         private IActionResult Session(string id, string id2, bool verifySessionExistance = true)
@@ -163,13 +165,15 @@ namespace JustSending.Controllers
 
         private Message GetMessageFromModel(SessionModel model, bool hasFile = false)
         {
+            var utcNow = DateTime.UtcNow;
             var message = new Message
             {
                 Id = _db.NewGuid(),
                 SessionId = model.SessionId,
                 SocketConnectionId = model.SocketConnectionId,
                 EncryptionPublicKeyAlias = model.EncryptionPublicKeyAlias,
-                DateSent = DateTime.UtcNow,
+                DateSent = utcNow,
+                DateSentEpoch = utcNow.ToEpoch(),
                 Text = model.ComposerText,
                 HasFile = hasFile
             };
@@ -239,7 +243,11 @@ namespace JustSending.Controllers
             _db.ShareTokens.Delete(model.Token);
             _hub.HideSharePanel(session.Id);
 
-            return Session(session.Id, session.IdVerification);
+            TempData[nameof(Data.Session.Id)] = session.Id;
+            TempData[nameof(Data.Session.IdVerification)] = session.IdVerification;
+
+            return RedirectToAction(nameof(NewSession));
+            //return Session(session.Id, session.IdVerification);
         }
 
         [HttpPost]

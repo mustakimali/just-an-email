@@ -52,6 +52,7 @@
     initAutoSizeComposer: function () {
         autosize($("#ComposerText"));
     },
+
     showStatus: function (msg, progress) {
         if (msg == undefined) msg = null;
         if (progress == undefined) progress = null;
@@ -428,6 +429,10 @@
     processTime: function () {
         $.each($(".msg .time"), function (idx, itm) {
             var $this = $(itm);
+            if (isNaN(Date.parse($this.data("val")))) {
+                $this.find(".val").text($this.attr("title"));
+                return;
+            }
             var gmt = new Date($this.data("val"));
             $this.find(".val").text(gmt.toLocaleTimeString());
         });

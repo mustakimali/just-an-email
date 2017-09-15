@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using JustSending.Data;
 using Microsoft.AspNetCore.Hosting;
@@ -174,7 +175,12 @@ namespace JustSending.Services
 
                 endpoint = GetClients(sessionId, except: Context.ConnectionId);
 
-                AddSessionNotification(sessionId, "A new device connected.<br/><i class=\"fa fa-lock\"></i> Message is End to End encrypted.");
+                var msg = new StringBuilder("A new device connected.<br/><i class=\"fa fa-lock\"></i> Message is End to End encrypted.");
+                var numDevices = _db.Connections.Count(x => x.SessionId == sessionId);
+                if(numDevices == 2){
+                    msg.Append("<br/><span class='text-info small'>Frequently share data between these devices?<br/>Bookmark this page on each devices to quickly connect your devices.</span>");
+                }
+                AddSessionNotification(sessionId, msg.ToString());
             } else {
                 endpoint = GetClient(peerId);
             }

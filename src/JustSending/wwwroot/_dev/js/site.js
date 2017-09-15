@@ -92,12 +92,12 @@ function showAjaxError(jqXhr, errorThrown) {
         }
     }
 
-    Log(jqXhr);
-    swal(
-        "Error",
-        message,
-        "error"
-    );
+    console.error(jqXhr);
+    swal({
+        title: "Unexpected Error",
+        text: message + "\r\nPlease try refreshing this page.",
+        type: "warning"
+    });
 }
 
 function Log(text) {
