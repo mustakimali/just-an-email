@@ -59,7 +59,8 @@ namespace JustSending.Services
         {
             var connectionIds = _db.FindClient(sessionId);
 
-            if(!string.IsNullOrEmpty(except)){
+            if (!string.IsNullOrEmpty(except))
+            {
                 connectionIds = connectionIds.Where(x => x != except);
             }
 
@@ -85,7 +86,9 @@ namespace JustSending.Services
                 if (numDevices == 0)
                 {
                     EraseSessionInternal(sessionId);
-                } else {
+                }
+                else
+                {
                     AddSessionNotification(sessionId, "A device was disconnected.");
                 }
             }
@@ -93,7 +96,8 @@ namespace JustSending.Services
             return Task.CompletedTask;
         }
 
-        private void AddSessionNotification(string sessionId, string message) {
+        private void AddSessionNotification(string sessionId, string message)
+        {
             var msg = new Message
             {
                 Id = _db.NewGuid(),
@@ -103,7 +107,7 @@ namespace JustSending.Services
                 SocketConnectionId = Context.ConnectionId,
                 IsNotification = true
             };
-            
+
             _db.MessagesInsert(msg);
             RequestReloadMessage(sessionId);
         }
@@ -148,7 +152,7 @@ namespace JustSending.Services
             var g = Helper.GetPrime(2, _env);
             var pka = Guid.NewGuid().ToString("N");
 
-            var initFirstDevice = (Task<object>) CurrentHub
+            var initFirstDevice = (Task<object>)CurrentHub
                 .Clients
                 .Client(firstDeviceId)
                 .startKeyExchange(newDevice, p, g, pka, false);
@@ -165,30 +169,36 @@ namespace JustSending.Services
 
         }
 
-        public void CallPeer(string peerId, string method, string param) {
+        public void CallPeer(string peerId, string method, string param)
+        {
             ValidateIntent(peerId);
 
             dynamic endpoint;
 
-            if(peerId == "ALL") {
+            if (peerId == "ALL")
+            {
                 var sessionId = GetSessionId();
 
                 endpoint = GetClients(sessionId, except: Context.ConnectionId);
 
                 var msg = new StringBuilder("A new device connected.<br/><i class=\"fa fa-lock\"></i> Message is End to End encrypted.");
                 var numDevices = _db.Connections.Count(x => x.SessionId == sessionId);
-                if(numDevices == 2){
-                    msg.Append("<br/><span class='text-info small'>Frequently share data between these devices?<br/>Bookmark this page on each devices to quickly connect your devices.</span>");
+                if (numDevices == 2)
+                {
+                    msg.Append("<hr/><div class='text-info'>Frequently share data between these devices?<br/><span class='small'>Bookmark this page on each devices to quickly connect your devices.</span></div>");
                 }
                 AddSessionNotification(sessionId, msg.ToString());
-            } else {
+            }
+            else
+            {
                 endpoint = GetClient(peerId);
             }
 
             endpoint.callback(method, param);
         }
 
-        private void ValidateIntent(string peerId) {
+        private void ValidateIntent(string peerId)
+        {
 
             if (peerId == "ALL")
                 return;
@@ -199,9 +209,11 @@ namespace JustSending.Services
 
             // Get session from connection
             var connection = _db.Connections.FindById(Context.ConnectionId);
-            if(connection != null) {
+            if (connection != null)
+            {
                 var devices = _db.FindClient(connection.SessionId);
-                if(devices.Contains(peerId)){
+                if (devices.Contains(peerId))
+                {
                     // OK
                     return;
                 }

@@ -5,17 +5,19 @@
         var that = this;
         this.initPermalink(function () {
 
-            that.loadMessages();
-            that.initWebSocket();
-            that.switchView(false);
-            that.initFileShare();
-            that.initAutoSizeComposer();
-    
+            that.loadMessages(function () {
+                that.initWebSocket();
+            });
         });
-        
+
+        that.switchView(false);
+        that.initComposer();
+        that.initAutoSizeComposer();
+
         $("*[title]").tooltip();
 
     },
+
     initPermalink: function (then) {
         var $id = $("#SessionId");
         var $id2 = $("#SessionVerification");
@@ -23,8 +25,7 @@
         var id = $id.val();
         var id2 = $id2.val();
 
-        if (window.location.hash && window.location.hash.length == 65)
-        {
+        if (window.location.hash && window.location.hash.length == 65) {
             var hash = window.location.hash.substr(1);
 
             id = hash.substr(0, 32);
@@ -46,7 +47,7 @@
                 // Error
             }, true, "text");
 
-        
+
     },
 
     initAutoSizeComposer: function () {
@@ -133,7 +134,7 @@
         });
     },
 
-    initFileShare: function () {
+    initComposer: function () {
         var $file = $("#file");
         var $text = $("#ComposerText");
         var $clearBtn = $(".clearSelectedFileBtn");
@@ -254,7 +255,7 @@
             //
             replaceFormValue("ComposerText", function (v) { return EndToEndEncryption.encryptWithPrivateKey(v); });
         }
-        
+
         return true;
     },
 
@@ -287,6 +288,8 @@
 
             $data.removeAttr("data-value");
             $itm.addClass("decrypted");
+
+            JustSendingApp.convertLinks();
         });
     },
 
@@ -400,21 +403,32 @@
         }
     },
 
-    loadMessages: function () {
+    loadMessages: function (then) {
         var id = $("#SessionId").val();
         var id2 = $("#SessionVerification").val();
         var from = parseInt($(".msg-c:first").data("seq"));
 
         ajax_service.sendRequest("POST",
             "/app/messages",
-            { id: id, id2: id2, from: isNaN(from) ? 0 : from },
+            {
+                id: id,
+                id2: id2,
+                from: isNaN(from) ? 0 : from
+            },
             function (response) {
-                $("#conversation-list").prepend(response);
 
-                JustSendingApp.decryptMessages();
-                JustSendingApp.convertLinks();
+                $(response)
+                    .hide()
+                    .prependTo($("#conversation-list"))
+                    .slideDown(250, function () {
+                        JustSendingApp.decryptMessages();
+                    });
+                
                 JustSendingApp.processTime();
                 JustSendingApp.initViewSource();
+
+                if (then != undefined) then();
+
             },
             true,
             "text/html");
@@ -445,24 +459,30 @@
     },
 
     convertLinks: function () {
-        $.each($(".msg .text p"),
+        $.each($(".msg .text .data"),
             function (idx, itm) {
+                if ($(itm).hasClass("embedded"))
+                    return;
 
                 if ($(itm).children().length)
                     return;
                 //$(itm).html(JustSendingApp.replaceURLWithHTMLLinks($(itm).text()));
-                $(itm)
-                    .removeClass("text")
-                    .addClass("text-d");
+                //$(itm)
+                //    .removeClass("text")
+                //    .addClass("text-d");
 
                 var x = new EmbedJS({
                     input: $(itm)[0],
                     tweetsEmbed: true,
+                    linkOptions: {
+                        target: "_blank"
+                    },
                     googleAuthKey: 'AIzaSyCqFouT8h5DKAbxlrTZmjXEmNBjC69f0ts',
                     inlineEmbed: 'all'
                 });
 
                 x.render();
+                $(itm).addClass("embedded");
             });
 
         $('pre code').each(function (i, block) {

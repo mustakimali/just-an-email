@@ -10,7 +10,8 @@
 {
 <div class="msg-c" data-seq="@message.SessionMessageSequence">
 @if(message.IsNotification) {
-    <div class="alert alert-warning notif">
+    <div class="alert alert-dismissible alert-warning notif" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         <i class="fa fa-info-circle"></i> @Html.Raw(message.Text)
     </div>
 } else {
