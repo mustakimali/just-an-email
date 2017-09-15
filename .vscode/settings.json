@@ -1,0 +1,11 @@
+{
+    "emeraldwalk.runonsave": {
+        "commands": [
+            {
+                "match": ".*",
+                "isAsync": true,
+                "cmd": "rsync -va --delete /Volumes/RAM_256/JustA.ML/ /Volumes/STORAGE/_RamDisk/JustA.ML/"
+            }
+        ]
+    }
+}

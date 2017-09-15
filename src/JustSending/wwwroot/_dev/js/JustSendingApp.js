@@ -1,14 +1,52 @@
 ﻿var JustSendingApp = {
     init: function () {
-        this.loadMessages();
-        this.initWebSocket();
-        this.switchView(false);
-        this.initFileShare();
-        this.initAutoSizeComposer();
+        var that = this;
+        this.initPermalink(function () {
 
+            that.loadMessages();
+            that.initWebSocket();
+            that.switchView(false);
+            that.initFileShare();
+            that.initAutoSizeComposer();
+    
+        });
+        
         $("*[title]").tooltip();
 
     },
+    initPermalink: function (then) {
+        var $id = $("#SessionId");
+        var $id2 = $("#SessionVerification");
+
+        var id = $id.val();
+        var id2 = $id2.val();
+
+        if (window.location.hash && window.location.hash.length == 65)
+        {
+            var hash = window.location.hash.substr(1);
+
+            id = hash.substr(0, 32);
+            id2 = hash.substr(32);
+        } else {
+            window.location.hash = id + id2;
+        }
+
+        // Request to create session
+        //
+        ajax_service.sendRequest("POST", "/app/new", { id, id2 },
+            function (data) {
+                // Success
+                $id.val(id);
+                $id2.val(id2);
+
+                then();
+            }, function () {
+                // Error
+            }, true, "text");
+
+        
+    },
+
     initAutoSizeComposer: function () {
         autosize($("#ComposerText"));
     },
@@ -80,7 +118,7 @@
                 messageId: id,
                 sessionId: sid
             };
-            ajax_service.sendPostRequest("/a/message-raw", data, function (data) {
+            ajax_service.sendPostRequest("/app/message-raw", data, function (data) {
                 // Decrypt
                 var pka = $this.parents(".msg").data("key");
                 var decrypted = JustSendingApp.decryptMessageInternal(pka, data.content);
@@ -106,7 +144,8 @@
             },
             beforeSubmit: JustSendingApp.beforeSubmit,
             uploadProgress: function (e, pos, t, per) {
-                JustSendingApp.showStatus(null, per);
+                JustSendingApp.showStatus("Sending...", per);
+
             },
 
             resetForm: true
@@ -164,7 +203,10 @@
         })
     },
 
+
     beforeSubmit: function (formData, formObject, formOptions) {
+        var hasFile = false;
+
         var replaceFormValue = function (name, factory) {
             for (var i = 0; i < formData.length; i++) {
                 if (formData[i].name == name) {
@@ -184,11 +226,7 @@
             // Files are posted in a different endpoint
             //
             formOptions.url += "/files";
-
-            // not encrytiong files for now
-            //
-            replaceFormValue("EncryptionPublicKeyAlias", function (v) { return ""; });
-            return;
+            hasFile = true;
         }
 
         if (!EndToEndEncryption.isEstablished()) {
@@ -206,7 +244,12 @@
 
         JustSendingApp.showStatus("Sending, please wait...");
 
-        replaceFormValue("ComposerText", function (v) { return EndToEndEncryption.encryptWithPrivateKey(v); });
+        if (!hasFile) {
+            // not encrypting file name yet!
+            //
+            replaceFormValue("ComposerText", function (v) { return EndToEndEncryption.encryptWithPrivateKey(v); });
+        }
+        
         return true;
     },
 
@@ -355,7 +398,7 @@
         var from = parseInt($(".msg-c:first").data("seq"));
 
         ajax_service.sendRequest("POST",
-            "/a/messages",
+            "/app/messages",
             { id: id, id2: id2, from: isNaN(from) ? 0 : from },
             function (response) {
                 $("#conversation-list").prepend(response);

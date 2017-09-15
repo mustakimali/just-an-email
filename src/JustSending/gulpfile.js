@@ -21,7 +21,7 @@ gulp.task("min:js", function () {
     var tasks = getBundles(regex.js).map(function (bundle) {
         return gulp.src(bundle.inputFiles, { base: "." })
             .pipe(concat(bundle.outputFileName))
-            .pipe(uglify())
+            //.pipe(uglify())
             .pipe(gulp.dest("."));
     });
     return merge(tasks);

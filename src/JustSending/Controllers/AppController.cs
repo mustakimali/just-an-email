@@ -15,7 +15,7 @@ using IOFile = System.IO.File;
 
 namespace JustSending.Controllers
 {
-    [Route("a")]
+    [Route("app")]
     public class AppController : Controller
     {
         private readonly AppDbContext _db;
@@ -35,17 +35,49 @@ namespace JustSending.Controllers
             _config = config;
         }
 
+        [Route("")]
         [HttpGet]
-        [Route("")]
-        public IActionResult CreateNewSessionGet() => RedirectToAction("Index", "Home");
-
-        [Route("")]
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public IActionResult CreateNewSession()
+        public IActionResult NewSession()
         {
-            var sessionId = _db.NewGuid();
-            var idVerification = _db.NewGuid();
+            //return RedirectToAction("Session", new { id = sessionId, id2 = idVerification });
+            return Session(_db.NewGuid(), _db.NewGuid(), verifySessionExistance: false);
+        }
+
+        private IActionResult Session(string id, string id2, bool verifySessionExistance = true)
+        {
+            if (verifySessionExistance)
+            {
+                var session = _db.Sessions.FindById(id);
+                if (session == null || session.IdVerification != id2)
+                {
+                    return NotFound();
+                }
+            }
+
+            var vm = new SessionModel
+            {
+                SessionId = id,
+                SessionVerification = id2
+            };
+
+            return View("Session", vm);
+        }
+
+        [Route("new")]
+        [HttpPost]
+        public IActionResult CreateSessionAjax(string id, string id2)
+        {
+            if ((id != null && id.Length != 32)
+                || (id2 != null && id2.Length != 32))
+                return BadRequest();
+
+            if (_db.Sessions.FindById(id) != null)
+            {
+                return Ok();
+            }
+
+            var sessionId = id;
+            var idVerification = id2;
 
             // Create Session
             var session = new Session
@@ -58,26 +90,7 @@ namespace JustSending.Controllers
 
             // New ShareToken
             _db.CreateNewShareToken(sessionId);
-
-            //return RedirectToAction("Session", new { id = sessionId, id2 = idVerification });
-            return Session(session.Id, session.IdVerification);
-        }
-
-        private IActionResult Session(string id, string id2)
-        {
-            var session = _db.Sessions.FindById(id);
-            if (session == null || session.IdVerification != id2)
-            {
-                return NotFound();
-            }
-
-            var vm = new SessionModel
-            {
-                SessionId = id,
-                SessionVerification = id2
-            };
-
-            return View("Session", vm);
+            return Accepted();
         }
 
         [Route("post/files")]
