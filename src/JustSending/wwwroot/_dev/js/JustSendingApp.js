@@ -208,7 +208,6 @@
         })
     },
 
-
     beforeSubmit: function (formData, formObject, formOptions) {
         var hasFile = false;
 
@@ -257,6 +256,41 @@
         }
 
         return true;
+    },
+
+    processFile: function (file, onReadBuffer, onDone) {
+        var fileSize = file.size;
+        var bufferSize = 64 * 1024;
+        var offset = 0;
+        var self = this;
+    
+        var load = function (evt) {
+
+            if (evt.target.error == null) {
+                offset += evt.target.result.length;
+                onReadBuffer(evt.target.result);
+            } else {
+                Log("Read error: " + evt.target.error);
+                return;
+            }
+            if (offset >= fileSize) {
+                Log("Done reading file");
+                onDone();
+                return;
+            }
+
+            readBuffer(offset, bufferSize, file);
+            
+        }
+    
+        var readBuffer = function(_offset, length, _file) {
+            var r = new FileReader();
+            var blob = _file.slice(_offset, length + _offset);
+            r.onload = load;
+            r.readAsText(blob);
+        }
+    
+        readBuffer(offset, bufferSize, file);
     },
 
     decryptMessages: function () {
