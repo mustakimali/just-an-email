@@ -274,7 +274,7 @@
 
     processFile: function (file, done) {
         var fileSize = file.size;
-        var bufferSize = 256 * 1024;
+        var bufferSize = 128 * 1024;
         var offset = 0;
         var sessionId = $("#SessionId").val();
         var self = this;
@@ -289,12 +289,12 @@
                 var encData = EndToEndEncryption.encryptWithPrivateKey(data);
                 var encObj = JSON.parse(encData);
 
-                // if (pageOneSent) {
-                //     encData = JSON.stringify({
-                //         iv: encObj.iv,
-                //         ct: encObj.ct
-                //     });
-                // }
+                if (pageOneSent) {
+                    encData = JSON.stringify({
+                        iv: encObj.iv,
+                        ct: encObj.ct
+                    });
+                }
                     
                 self
                     .hub
