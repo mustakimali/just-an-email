@@ -222,12 +222,10 @@ namespace JustSending.Controllers
 
         [HttpGet]
         [Route("file/{id}/{sessionId}")]
-        public IActionResult DownloadFile(string id, string sessionId, string fileName)
+        public IActionResult DownloadFile(string id, string sessionId)
         {
             var msg = _db.Messages.FindById(id);
-            if (msg == null
-                || msg.SessionId != sessionId
-                || msg.Text != fileName)
+            if (msg == null || msg.SessionId != sessionId)
             {
                 // Chances of link forgery? 0%!
                 return NotFound();

@@ -25,14 +25,13 @@
         <div class="content">
         @if(message.HasFile){
             <div class="file">
-                <i class="fa fa-2x fa-paperclip"></i> @message.Text
+                <i class="fa fa-2x fa-paperclip"></i> <span class="data" data-value="@message.Text"></span>
                 <br/>
                 <a class="btn btn-success download" 
                     asp-controller="App" 
                     asp-action="DownloadFile" 
                     asp-route-sessionId="@message.SessionId" 
                     asp-route-id="@message.Id"
-                    asp-route-fileName="@message.Text"
                     target="_blank"><i class="fa fa-download"></i> Download (@Helper.ToFileSizeString(message.FileSizeBytes))</a>
             </div>
         } else {
