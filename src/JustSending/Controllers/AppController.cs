@@ -95,7 +95,7 @@ namespace JustSending.Controllers
             return Accepted();
         }
 
-        [Route("post/files")]
+        [Route("post/files-stream")]
         [HttpPost]
         [DisableFormValueModelBinding]
         [IgnoreAntiforgeryToken]
@@ -145,6 +145,46 @@ namespace JustSending.Controllers
             IOFile.Move(postedFilePath, destUploadPath);
 
             return SaveMessageAndReturnResponse(message);
+        }
+
+        [Route("post/files")]
+        [HttpPost]
+        public IActionResult PostWithFileAfterStreaming(SessionModel model)
+        {
+            // Locate the file
+            var uploadedPath = Path.Combine(GetUploadFolder(string.Empty, _env.WebRootPath), model.SocketConnectionId + ConversationHub.FILE_EXT);
+            if (!IOFile.Exists(uploadedPath))
+            {
+                return NotFound();
+            }
+            
+            var message = GetMessageFromModel(model);
+            var uploadFolder = GetUploadFolder(model.SessionId, _env.WebRootPath);
+            var moveToPath = Path.Combine(uploadFolder, message.Id + ConversationHub.FILE_EXT);
+
+            if(!Directory.Exists(uploadFolder))
+                Directory.CreateDirectory(uploadFolder);
+
+            IOFile.Move(uploadedPath, moveToPath);
+
+            var fileInfo = new FileInfo(moveToPath);
+            if (!ModelState.IsValid || fileInfo.Length > Convert.ToInt64(_config["MaxUploadSizeBytes"]))
+            {
+                DeleteIfExists(moveToPath);
+
+                return BadRequest(ModelState);
+            }
+
+            message.HasFile = true;
+            message.FileSizeBytes = fileInfo.Length;
+
+            return SaveMessageAndReturnResponse(message);
+        }
+
+        private void DeleteIfExists(string path)
+        {
+            if (IOFile.Exists(path))
+                IOFile.Delete(path);
         }
 
         [Route("post")]

@@ -1,4 +1,6 @@
 ﻿var JustSendingApp = {
+    hub: null,
+
     init: function () {
         app_busy(true);
 
@@ -208,6 +210,8 @@
         })
     },
 
+    finishedStreamingFile: false,
+
     beforeSubmit: function (formData, formObject, formOptions) {
         var hasFile = false;
 
@@ -225,15 +229,6 @@
             return false;
         }
 
-        if ($("#file")[0].files.length > 0) {
-            //
-            // Files are posted in a different endpoint
-            //
-            formOptions.url += "/files";
-            hasFile = true;
-            app_busy(true);
-        }
-
         if (!EndToEndEncryption.isEstablished()) {
             // no client has been connected yet,
             // generate a secret key
@@ -247,49 +242,91 @@
             });
         }
 
-        JustSendingApp.showStatus("Sending, please wait...");
+        if ($("#file")[0].files.length > 0) {
 
-        if (!hasFile) {
-            // not encrypting file name yet!
-            //
-            replaceFormValue("ComposerText", function (v) { return EndToEndEncryption.encryptWithPrivateKey(v); });
+            var file = $("#file")[0].files[0];
+
+            JustSendingApp.processFile(file, function () {
+                // Unselect file
+                //
+                $("#file").val("");
+                // Do normal post
+                //
+                JustSendingApp.finishedStreamingFile = true;
+                $("#form").submit();
+            });
+
+            return false;
+
+        } else if (JustSendingApp.finishedStreamingFile) {
+            
+            JustSendingApp.finishedStreamingFile = false;
+            formOptions.url += "/files";
+            hasFile = true;
+
         }
 
+        JustSendingApp.showStatus("Sending, please wait...");
+
+        replaceFormValue("ComposerText", function (v) { return EndToEndEncryption.encryptWithPrivateKey(v); });
         return true;
     },
 
-    processFile: function (file, onReadBuffer, onDone) {
+    processFile: function (file, done) {
         var fileSize = file.size;
         var bufferSize = 64 * 1024;
         var offset = 0;
+        var sessionId = $("#SessionId").val();
         var self = this;
-    
+
         var load = function (evt) {
 
             if (evt.target.error == null) {
                 offset += evt.target.result.length;
-                onReadBuffer(evt.target.result);
+
+                var data = evt.target.result;
+                var encData = EndToEndEncryption.encryptWithPrivateKey(data);
+
+                self
+                    .hub
+                    .server
+                    .streamFile(sessionId, encData)
+                    .then(function () {
+                        
+                        // read the next block
+                        //
+                        readBuffer(offset, bufferSize, file);
+                    });
+                
+                self.showStatus("Encrypting...", parseInt(offset * 100 / fileSize));
+
             } else {
                 Log("Read error: " + evt.target.error);
+                app_busy(false);
                 return;
             }
             if (offset >= fileSize) {
-                Log("Done reading file");
-                onDone();
+                Log("Done streaming file...");
+                
+                r.onload = null;
+                app_busy(false);
+                done(file.name)
                 return;
             }
 
-            readBuffer(offset, bufferSize, file);
             
+
         }
     
-        var readBuffer = function(_offset, length, _file) {
-            var r = new FileReader();
+        var r = new FileReader();
+        r.onload = load;
+
+        var readBuffer = function (_offset, length, _file) {
             var blob = _file.slice(_offset, length + _offset);
-            r.onload = load;
             r.readAsText(blob);
         }
-    
+
+        app_busy(true);
         readBuffer(offset, bufferSize, file);
     },
 
@@ -337,6 +374,7 @@
 
     initWebSocket: function () {
         var hub = $.connection.conversationHub;
+        this.hub = hub;
 
         hub.client.requestReloadMessage = function () {
             JustSendingApp.loadMessages();

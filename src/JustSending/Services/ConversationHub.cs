@@ -3,24 +3,43 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using JustSending.Controllers;
 using JustSending.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Infrastructure;
+using Microsoft.Extensions.Configuration;
 
 namespace JustSending.Services
 {
     public class ConversationHub : Hub
     {
+#if DEBUG
+        public const string FILE_EXT = ".txt";
+#else
+        public const string FILE_EXT = ".file";
+#endif
+
         private readonly AppDbContext _db;
         private readonly IConnectionManager _connectionManager;
         private readonly IHostingEnvironment _env;
+        private readonly IConfiguration _config;
 
-        public ConversationHub(AppDbContext db, IConnectionManager connectionManager, IHostingEnvironment env)
+        private readonly long _maxUploadSize;
+        private readonly string _uploadFolder;
+
+        public ConversationHub(AppDbContext db,
+                    IConnectionManager connectionManager,
+                    IHostingEnvironment env,
+                    IConfiguration config)
         {
             _db = db;
             _connectionManager = connectionManager;
             _env = env;
+            _config = config;
+
+            _maxUploadSize = Convert.ToInt64(_config["MaxUploadSizeBytes"]);
+            _uploadFolder = AppController.GetUploadFolder(string.Empty, _env.WebRootPath);
         }
 
         internal void RequestReloadMessage(string sessionId)
@@ -126,9 +145,17 @@ namespace JustSending.Services
             if (numDevices > 1)
             {
                 InitKeyExchange(sessionId);
+                CancelShare();
             }
 
             return Context.ConnectionId;
+        }
+
+        public async Task StreamFile(string sessionId, string content)
+        {
+            var uploadPath = Path.Combine(_uploadFolder, Context.ConnectionId + ConversationHub.FILE_EXT);
+
+            await File.AppendAllLinesAsync(uploadPath, new[] { content });
         }
 
         #region KeyExchange
