@@ -56,7 +56,14 @@
         autosize($("#ComposerText"));
     },
 
+    lastStatusUpdatedEpoch: 0,
+    statusUpdateInterval: 500,
+
     showStatus: function (msg, progress) {
+        if (msg != undefined && progress != undefined && Date.now() - this.lastStatusUpdatedEpoch < this.statusUpdateInterval) {
+            return;
+        }
+
         if (msg == undefined) msg = null;
         if (progress == undefined) progress = null;
 
@@ -74,6 +81,8 @@
         } else if ($el.is(":hidden")) {
             $el.slideDown(250);
         }
+
+        this.lastStatusUpdatedEpoch = Date.now();
     },
 
     copySource: function () {
@@ -274,7 +283,7 @@
 
     processFile: function (file, done) {
         var fileSize = file.size;
-        var bufferSize = 128 * 1024;
+        var bufferSize = 64 * 1024;
         var offset = 0;
         var sessionId = $("#SessionId").val();
         var self = this;
@@ -285,17 +294,16 @@
             if (evt.target.error == null) {
                 offset += evt.target.result.length;
 
-                var data = evt.target.result;
-                var encData = EndToEndEncryption.encryptWithPrivateKey(data);
-                var encObj = JSON.parse(encData);
-
+                var encData = EndToEndEncryption.encryptWithPrivateKey(evt.target.result);
                 if (pageOneSent) {
+                    var j = JSON.parse(encData);
                     encData = JSON.stringify({
-                        iv: encObj.iv,
-                        ct: encObj.ct
+                        iv: j.iv,
+                        ct: j.ct
                     });
+                    j = null;
                 }
-                    
+
                 self
                     .hub
                     .server
@@ -323,8 +331,6 @@
                 done(file.name)
                 return;
             }
-
-            
 
         }
     
