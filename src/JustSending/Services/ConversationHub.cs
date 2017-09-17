@@ -210,7 +210,7 @@ namespace JustSending.Services
 
                 endpoint = GetClients(sessionId, except: Context.ConnectionId);
 
-                var msg = new StringBuilder("A new device connected.<br/><i class=\"fa fa-lock\"></i> Message is End to End encrypted.");
+                var msg = new StringBuilder("A new device connected.<br/><i class=\"fa fa-lock\"></i> Message is end to end encrypted.");
                 var numDevices = _db.Connections.Count(x => x.SessionId == sessionId);
                 if (numDevices == 2)
                 {
