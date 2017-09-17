@@ -15,7 +15,7 @@
 
 ## Roadmap
 - [x] Multiline composer, Markdown + Syntax highlighter, View Orginal text (Suggested by [DasBeasto in Reddit](https://www.reddit.com/r/SideProject/comments/6wzotn/justaml_a_website_to_share_fileurltext_to_another/dme5bmh/))
-- [x] End-to-end encrytion for both texts and files.
+- [x] End-to-end encrytion for messages.
 - [ ] Completely bypass server when devices are in the same network / WebRTC
 
 ## Preview
