@@ -2,17 +2,20 @@
 
 ### Running live here [https://justa.ml](https://justa.ml)
 
-[![Build status](https://ci.appveyor.com/api/projects/status/3jxpwg2tcwoiaq9b/branch/master?svg=true)](https://ci.appveyor.com/project/mustakimali/justa-ml/branch/master)
+#### Staging site [justaml.azurewebsites.net](http://justaml.azurewebsites.net)
+
+[![Build status](https://ci.appveyor.com/api/projects/status/3jxpwg2tcwoiaq9b/branch/master?svg=true)](https://ci.appveyor.com/project/mustakimali/justa-ml/branch/master) Production
+[![Build status](https://ci.appveyor.com/api/projects/status/notmi7mr5jd27k8d?svg=true)](https://ci.appveyor.com/project/mustakimali/justa-ml-a82xl) Development (Unstable)
 
 ## Getting started
 * Make sure you have [.NET Core 2.0 SDK](https://www.microsoft.com/net/download/core) installed
 * Clone
-* run `bower install` to install client-side dependencies / CDN will be used in `Release` mode
 * `dotnet run` or `dotnet watch run`
+* Should be running in http://localhost:61452
 
 ## Roadmap
 - [x] Multiline composer, Markdown + Syntax highlighter, View Orginal text (Suggested by [DasBeasto in Reddit](https://www.reddit.com/r/SideProject/comments/6wzotn/justaml_a_website_to_share_fileurltext_to_another/dme5bmh/))
-- [ ] End-to-end encrytion for both texts and files.
+- [x] End-to-end encrytion for both texts and files.
 - [ ] Completely bypass server when devices are in the same network / WebRTC
 
 ## Preview

@@ -27,9 +27,11 @@
                         </div>
                         @Html.ValidationMessageFor(x => x.ComposerText)
                         <input id="file" name="file" type="file" style="display: none;" />
-                        <input id="fileData" name="FileData" type="hidden" />
+
                         @Html.HiddenFor(x => x.SessionId)
-                        @Html.HiddenFor(x => x.SessionVarification)
+                        @Html.HiddenFor(x => x.SessionVerification)
+                        @Html.HiddenFor(x => x.SocketConnectionId)
+                        @Html.HiddenFor(x => x.EncryptionPublicKeyAlias)
                     </form>
                 </div>
             </div>
@@ -62,14 +64,11 @@
 <div id="conversation">
     <div id="please-wait" style="display: none;">
         <div class="alert alert-danger">
-            Sending, please wait... <strong id="percent"></strong>
+            <span id="status">Sending, please wait...</span> <strong id="percent"></strong>
         </div>
     </div>
 
     <div id="conversation-list">
-        <div class="alert alert-info">
-            Loading...
-        </div>
     </div>
 
     <div class="welcome-note">
@@ -124,13 +123,26 @@
     <script src="https://ajax.aspnetcdn.com/ajax/jquery.validate/1.14.0/jquery.validate.min.js"></script>
     <script src="https://ajax.aspnetcdn.com/ajax/jquery.validation.unobtrusive/3.2.6/jquery.validate.unobtrusive.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.2.2/jquery.form.min.js"></script>
-    <script src="https://platform.twitter.com/widgets.js "></script>
+    <script src="https://platform.twitter.com/widgets.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/embed-js/4.2.3/embed.min.js"></script>
     <script src="https://ajax.aspnetcdn.com/ajax/signalr/jquery.signalr-2.2.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/autosize.js/4.0.0/autosize.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bignumber.js/4.0.4/bignumber.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sjcl/1.0.7/sjcl.min.js"></script>
     <script src="~/signalr/hubs" asp-append-version="true"></script>
-    <script src="~/js/JustSendingApp.js" asp-append-version="true"></script>
+    <environment names="Development">
+        <script src="~/_dev/js/JustEncrypt.js" asp-append-version="true"></script>
+        <script src="~/_dev/js/JustSendingApp.js" asp-append-version="true"></script>
+    </environment>
+    <environment names="Production">
+        <script src="~/js/app.min.js" asp-append-version="true"></script>
+    </environment>
+    <script type="text/javascript">
+        $(function () { 
+            JustSendingApp.init(); 
+        });
+    </script>
 }
 @section Head
 {

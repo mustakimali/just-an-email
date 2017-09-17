@@ -1,7 +1,0 @@
-{
-  "name": "Just Sending",
-  "private": true,
-  "dependencies": {
-    "bootstrap": "*"
-  }
-}

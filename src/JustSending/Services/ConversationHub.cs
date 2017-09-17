@@ -1,24 +1,47 @@
+using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
+using JustSending.Controllers;
 using JustSending.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Infrastructure;
+using Microsoft.Extensions.Configuration;
 
 namespace JustSending.Services
 {
     public class ConversationHub : Hub
     {
+#if DEBUG
+        public const string FILE_EXT = ".txt";
+#else
+        public const string FILE_EXT = ".file";
+#endif
+
         private readonly AppDbContext _db;
         private readonly IConnectionManager _connectionManager;
         private readonly IHostingEnvironment _env;
+        private readonly IConfiguration _config;
 
-        public ConversationHub(AppDbContext db, IConnectionManager connectionManager, IHostingEnvironment env)
+        private readonly long _maxUploadSize;
+        private readonly string _uploadFolder;
+
+        public ConversationHub(AppDbContext db,
+                    IConnectionManager connectionManager,
+                    IHostingEnvironment env,
+                    IConfiguration config)
         {
             _db = db;
             _connectionManager = connectionManager;
             _env = env;
+            _config = config;
+
+            _maxUploadSize = Convert.ToInt64(_config["MaxUploadSizeBytes"]);
+            _uploadFolder = AppController.GetUploadFolder(string.Empty, _env.WebRootPath);
+
+            if (!Directory.Exists(_uploadFolder)) Directory.CreateDirectory(_uploadFolder);
         }
 
         internal void RequestReloadMessage(string sessionId)
@@ -53,13 +76,21 @@ namespace JustSending.Services
             return numConnectedDevices;
         }
 
-        private dynamic GetClients(string sessionId)
+        private dynamic GetClients(string sessionId, string except = null)
         {
-            var hub = _connectionManager.GetHubContext<ConversationHub>();
             var connectionIds = _db.FindClient(sessionId);
 
-            return hub.Clients.Clients(connectionIds.ToList());
+            if (!string.IsNullOrEmpty(except))
+            {
+                connectionIds = connectionIds.Where(x => x != except);
+            }
+
+            return CurrentHub.Clients.Clients(connectionIds.ToList());
         }
+
+        private dynamic GetClient(string connectionId) => CurrentHub.Clients.Client(connectionId);
+
+        private IHubContext CurrentHub => _connectionManager.GetHubContext<ConversationHub>();
 
         private const string stringSessionKey = "session";
         public override Task OnConnected()
@@ -77,12 +108,32 @@ namespace JustSending.Services
                 {
                     EraseSessionInternal(sessionId);
                 }
+                else
+                {
+                    AddSessionNotification(sessionId, "A device was disconnected.");
+                }
             }
 
             return Task.CompletedTask;
         }
 
-        public void Connect(string sessionId)
+        private void AddSessionNotification(string sessionId, string message)
+        {
+            var msg = new Message
+            {
+                Id = _db.NewGuid(),
+                SessionId = sessionId,
+                DateSent = DateTime.UtcNow,
+                Text = message,
+                SocketConnectionId = Context.ConnectionId,
+                IsNotification = true
+            };
+
+            _db.MessagesInsert(msg);
+            RequestReloadMessage(sessionId);
+        }
+
+        public string Connect(string sessionId)
         {
             _db.TrackClient(sessionId, Context.ConnectionId);
 
@@ -90,8 +141,117 @@ namespace JustSending.Services
             //
             CheckIfShareTokenExists(sessionId);
 
-            SendNumberOfDevices(sessionId, _db.Connections.Count(x => x.SessionId == sessionId));
+            var numDevices = _db.Connections.Count(x => x.SessionId == sessionId);
+            SendNumberOfDevices(sessionId, numDevices);
+
+            if (numDevices > 1)
+            {
+                InitKeyExchange(sessionId);
+                CancelShare();
+            }
+
+            return Context.ConnectionId;
         }
+
+        public async Task StreamFile(string sessionId, string content)
+        {
+            var uploadPath = Path.Combine(_uploadFolder, Context.ConnectionId + ConversationHub.FILE_EXT);
+
+            await File.AppendAllLinesAsync(uploadPath, new[] { content });
+        }
+
+        #region KeyExchange
+
+        private void InitKeyExchange(string sessionId)
+        {
+            // enable end to end encryption
+            //
+            var newDevice = Context.ConnectionId;
+            var firstDeviceId =
+                _db
+                    .Connections
+                    .FindOne(x => x.SessionId == sessionId && x.ConnectionId != newDevice)
+                    .ConnectionId;
+
+            //
+            // Send shared p & g to both parties then
+            // request the original device to initite key-exchange
+            //
+            var p = Helper.GetPrime(1024, _env);
+            var g = Helper.GetPrime(2, _env);
+            var pka = Guid.NewGuid().ToString("N");
+
+            var initFirstDevice = (Task<object>)CurrentHub
+                .Clients
+                .Client(firstDeviceId)
+                .startKeyExchange(newDevice, p, g, pka, false);
+
+            initFirstDevice.ContinueWith(x =>
+            {
+
+                CurrentHub
+                .Clients
+                .Client(newDevice)
+                .startKeyExchange(firstDeviceId, p, g, pka, true);
+
+            });
+
+        }
+
+        public void CallPeer(string peerId, string method, string param)
+        {
+            ValidateIntent(peerId);
+
+            dynamic endpoint;
+
+            if (peerId == "ALL")
+            {
+                var sessionId = GetSessionId();
+
+                endpoint = GetClients(sessionId, except: Context.ConnectionId);
+
+                var msg = new StringBuilder("A new device connected.<br/><i class=\"fa fa-lock\"></i> Message is end to end encrypted.");
+                var numDevices = _db.Connections.Count(x => x.SessionId == sessionId);
+                if (numDevices == 2)
+                {
+                    msg.Append("<hr/><div class='text-info'>Frequently share data between these devices?<br/><span class='small'>Bookmark this page on each devices to quickly connect your devices.</span></div>");
+                }
+                AddSessionNotification(sessionId, msg.ToString());
+            }
+            else
+            {
+                endpoint = GetClient(peerId);
+            }
+
+            endpoint.callback(method, param);
+        }
+
+        private void ValidateIntent(string peerId)
+        {
+
+            if (peerId == "ALL")
+                return;
+
+            // check if the peer is actually a device within the current session
+            // this is to prevent cross session communication
+            //
+
+            // Get session from connection
+            var connection = _db.Connections.FindById(Context.ConnectionId);
+            if (connection != null)
+            {
+                var devices = _db.FindClient(connection.SessionId);
+                if (devices.Contains(peerId))
+                {
+                    // OK
+                    return;
+                }
+            }
+
+            throw new InvalidOperationException("Attempt of cross session communication.");
+        }
+
+        #endregion
 
         private bool CheckIfShareTokenExists(string sessionId, bool notifyIfExist = true)
         {
@@ -156,10 +316,19 @@ namespace JustSending.Services
                 {
                     Directory.Delete(folder, true);
                 }
-            } catch {
+            }
+            catch
+            {
                 // ToDo: Schedule delete later
             }
         }
+
+        private string GetSessionId() =>
+                            _db
+                                .Connections
+                                .FindOne(x => x.ConnectionId == Context.ConnectionId)
+                                .SessionId;
+
 
         public override Task OnReconnected()
         {

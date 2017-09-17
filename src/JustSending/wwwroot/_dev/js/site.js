@@ -2,8 +2,7 @@
     sendRequest: function (method, serviceName, data, success, error, onLocalUrl, dataType, beforeRequest, afterResponse) {
         if (beforeRequest && typeof (beforeRequest) === "function") beforeRequest();
 
-        app_busy(true);
-        l("Ajax {0} Request to: {1}".format(method, serviceName));
+        Log("Ajax {0} Request to: {1}".format(method, serviceName));
 
         $.ajax({
             type: method,
@@ -20,8 +19,6 @@
                 if (success && typeof (success) === "function") {
                     success(response);
                 }
-
-                app_busy(false);
             },
             error: function (jqXhr, textStatus, errorThrown) {
                 showAjaxError(jqXhr, errorThrown);
@@ -31,7 +28,6 @@
                 if (error && typeof (error) === "function") {
                     error(jqXhr, textStatus, errorThrown);
                 }
-                app_busy(false);
             }
         });
     },
@@ -96,16 +92,16 @@ function showAjaxError(jqXhr, errorThrown) {
         }
     }
 
-    l(jqXhr);
-    swal(
-        "Error",
-        message,
-        "error"
-    );
+    console.error(jqXhr);
+    swal({
+        title: "Unexpected Error",
+        text: message + "\r\nPlease try refreshing this page.",
+        type: "warning"
+    });
 }
 
-function l(text) {
-    if (window.location.href.indexOf("localhost") > 0)
+function Log(text) {
+    if (window.location.href.indexOf("localhost") > 0 || window.location.href.indexOf("show_log") > 0)
         console.log(text);
 }
 

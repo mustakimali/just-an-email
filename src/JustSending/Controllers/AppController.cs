@@ -1,21 +1,21 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Net;
 using System.Threading.Tasks;
 using JustSending.Data;
 using JustSending.Models;
 using JustSending.Services;
-using LiteDB;
+using JustSending.Services.Attributes;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
-using CommonMark;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using IOFile = System.IO.File;
 
 namespace JustSending.Controllers
 {
-    [Route("a")]
+    [Route("app")]
     public class AppController : Controller
     {
         private readonly AppDbContext _db;
@@ -35,17 +35,51 @@ namespace JustSending.Controllers
             _config = config;
         }
 
+        [Route("")]
         [HttpGet]
-        [Route("")]
-        public IActionResult CreateNewSessionGet() => RedirectToAction("Index", "Home");
-
-        [Route("")]
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public IActionResult CreateNewSession()
+        public IActionResult NewSession()
         {
-            var sessionId = _db.NewGuid();
-            var idVerification = _db.NewGuid();
+            var id = (string)(TempData[nameof(Data.Session.Id)] ?? _db.NewGuid());
+            var id2 = (string)(TempData[nameof(Data.Session.IdVerification)] ?? _db.NewGuid());
+
+            return Session(id, id2, verifySessionExistance: false);
+        }
+
+        private IActionResult Session(string id, string id2, bool verifySessionExistance = true)
+        {
+            if (verifySessionExistance)
+            {
+                var session = _db.Sessions.FindById(id);
+                if (session == null || session.IdVerification != id2)
+                {
+                    return NotFound();
+                }
+            }
+
+            var vm = new SessionModel
+            {
+                SessionId = id,
+                SessionVerification = id2
+            };
+
+            return View("Session", vm);
+        }
+
+        [Route("new")]
+        [HttpPost]
+        public IActionResult CreateSessionAjax(string id, string id2)
+        {
+            if ((id != null && id.Length != 32)
+                || (id2 != null && id2.Length != 32))
+                return BadRequest();
+
+            if (_db.Sessions.FindById(id) != null)
+            {
+                return Ok();
+            }
+
+            var sessionId = id;
+            var idVerification = id2;
 
             // Create Session
             var session = new Session
@@ -58,90 +92,140 @@ namespace JustSending.Controllers
 
             // New ShareToken
             _db.CreateNewShareToken(sessionId);
-
-            //return RedirectToAction("Session", new { id = sessionId, id2 = idVerification });
-            return Session(session.Id, session.IdVerification);
+            return Accepted();
         }
 
-        private IActionResult Session(string id, string id2)
+        [Route("post/files-stream")]
+        [HttpPost]
+        [DisableFormValueModelBinding]
+        [IgnoreAntiforgeryToken]
+        [RequestSizeLimit(2_147_483_648)]
+        public async Task<IActionResult> PostWithFile()
         {
-            var session = _db.Sessions.FindById(id);
-            if (session == null || session.IdVerification != id2)
+            FormValueProvider formModel;
+            var postedFilePath = Path.GetTempFileName();
+            using (var stream = IOFile.Create(postedFilePath))
+            {
+                formModel = await Request.StreamFile(stream);
+            }
+
+            var model = new SessionModel();
+            var bindingSuccessful = await TryUpdateModelAsync(model, prefix: "", valueProvider: formModel);
+
+            if (!bindingSuccessful)
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+            }
+
+            var fileInfo = new FileInfo(postedFilePath);
+            if (fileInfo.Length > Convert.ToInt64(_config["MaxUploadSizeBytes"]))
+            {
+                return BadRequest();
+            }
+            var message = GetMessageFromModel(model, true);
+            var uploadDir = GetUploadFolder(model.SessionId, _env.WebRootPath);
+            if (!Directory.Exists(uploadDir)) Directory.CreateDirectory(uploadDir);
+
+            // Use original file name
+            var fileName = message.Text;
+            if (IOFile.Exists(Path.Combine(uploadDir, fileName)))
+            {
+                // if exist then append digits from the session id
+                fileName = Path.GetFileNameWithoutExtension(message.Text) + "_" + message.Id.Substring(0, 6) + Path.GetExtension(message.Text);
+            }
+            var destUploadPath = Path.Combine(uploadDir, fileName);
+
+            message.Text = fileName;
+            message.HasFile = true;
+            message.FileSizeBytes = fileInfo.Length;
+
+            IOFile.Move(postedFilePath, destUploadPath);
+
+            return SaveMessageAndReturnResponse(message);
+        }
+
+        [Route("post/files")]
+        [HttpPost]
+        public IActionResult PostWithFileAfterStreaming(SessionModel model)
+        {
+            // Locate the file
+            var uploadedPath = Path.Combine(GetUploadFolder(string.Empty, _env.WebRootPath), model.SocketConnectionId + ConversationHub.FILE_EXT);
+            if (!IOFile.Exists(uploadedPath))
             {
                 return NotFound();
             }
+            
+            var message = GetMessageFromModel(model);
+            var uploadFolder = GetUploadFolder(model.SessionId, _env.WebRootPath);
+            var moveToPath = Path.Combine(uploadFolder, message.Id + ConversationHub.FILE_EXT);
 
-            var vm = new SessionModel
+            if(!Directory.Exists(uploadFolder))
+                Directory.CreateDirectory(uploadFolder);
+
+            IOFile.Move(uploadedPath, moveToPath);
+
+            var fileInfo = new FileInfo(moveToPath);
+            if (!ModelState.IsValid || fileInfo.Length > Convert.ToInt64(_config["MaxUploadSizeBytes"]))
             {
-                SessionId = id,
-                SessionVarification = id2
-            };
+                DeleteIfExists(moveToPath);
 
-            return View("Session", vm);
+                return BadRequest(ModelState);
+            }
+
+            message.HasFile = true;
+            message.FileSizeBytes = fileInfo.Length;
+
+            return SaveMessageAndReturnResponse(message);
+        }
+
+        private void DeleteIfExists(string path)
+        {
+            if (IOFile.Exists(path))
+                IOFile.Delete(path);
         }
 
         [Route("post")]
         [HttpPost]
-        [RequestSizeLimit(1_083_741_824)]
-        public async Task<IActionResult> Post(SessionModel model)
+        public IActionResult Post(SessionModel model)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest();
-            }
+            var message = GetMessageFromModel(model);
+            return SaveMessageAndReturnResponse(message);
+        }
 
-            var message = new Message
-            {
-                Id = _db.NewGuid(),
-                SessionId = model.SessionId,
-                DateSent = DateTime.UtcNow,
-                Text = model.ComposerText,
-                TextMarkdownProcessed = CommonMarkConverter.Convert(WebUtility.HtmlEncode(model.ComposerText)),
-                HasFile = Request.Form.Files.Any()
-            };
-
-            if (message.HasFile)
-            {
-                var file = Request.Form.Files.First();
-                if (file.Length > Convert.ToInt64(_config["MaxUploadSizeBytes"]))
-                {
-                    return BadRequest();
-                }
-                var uploadDir = GetUploadFolder(model.SessionId, _env.WebRootPath);
-                if (!Directory.Exists(uploadDir)) Directory.CreateDirectory(uploadDir);
-
-                // Use original file name
-                var fileName = message.Text;
-                if (System.IO.File.Exists(Path.Combine(uploadDir, fileName)))
-                {
-                    // if exist then append digits from the session id
-                    fileName = Path.GetFileNameWithoutExtension(message.Text) + "_" + message.Id.Substring(0, 6) + Path.GetExtension(message.Text);
-                }
-                var path = Path.Combine(uploadDir, fileName);
-
-                message.Text = fileName;
-                message.FileSizeBytes = file.Length;
-
-                using (var fileStream = System.IO.File.OpenWrite(path))
-                {
-                    await file.CopyToAsync(fileStream);
-                }
-            }
-
-            _db.Messages.Insert(message);
-            _hub.RequestReloadMessage(model.SessionId);
+        private IActionResult SaveMessageAndReturnResponse(Message message)
+        {
+            _db.MessagesInsert(message);
+            _hub.RequestReloadMessage(message.SessionId);
 
             return Accepted();
         }
 
+        private Message GetMessageFromModel(SessionModel model, bool hasFile = false)
+        {
+            var utcNow = DateTime.UtcNow;
+            var message = new Message
+            {
+                Id = _db.NewGuid(),
+                SessionId = model.SessionId,
+                SocketConnectionId = model.SocketConnectionId,
+                EncryptionPublicKeyAlias = model.EncryptionPublicKeyAlias,
+                DateSent = utcNow,
+                DateSentEpoch = utcNow.ToEpoch(),
+                Text = model.ComposerText,
+                HasFile = hasFile
+            };
+            return message;
+        }
+
         [HttpGet]
-        [Route("f/{id}/{sessionId}")]
-        public IActionResult DownloadFile(string id, string sessionId, string fileName)
+        [Route("file/{id}/{sessionId}")]
+        public IActionResult DownloadFile(string id, string sessionId)
         {
             var msg = _db.Messages.FindById(id);
-            if (msg == null
-                || msg.SessionId != sessionId
-                || msg.Text != fileName)
+            if (msg == null || msg.SessionId != sessionId)
             {
                 // Chances of link forgery? 0%!
                 return NotFound();
@@ -161,10 +245,7 @@ namespace JustSending.Controllers
         }
 
         [Route("messages"), HttpPost]
-        public IActionResult GetMessages(string id, string id2)
-        {
-            return GetMessagesInternal(id, id2);
-        }
+        public IActionResult GetMessages(string id, string id2, int @from) => GetMessagesInternal(id, id2, @from);
 
         [Route("connect")]
         public IActionResult Connect()
@@ -200,11 +281,15 @@ namespace JustSending.Controllers
             _db.ShareTokens.Delete(model.Token);
             _hub.HideSharePanel(session.Id);
 
-            return Session(session.Id, session.IdVerification);
+            TempData[nameof(Data.Session.Id)] = session.Id;
+            TempData[nameof(Data.Session.IdVerification)] = session.IdVerification;
+
+            return RedirectToAction(nameof(NewSession));
+            //return Session(session.Id, session.IdVerification);
         }
 
         [HttpPost]
-        [Route("message")]
+        [Route("message-raw")]
         public IActionResult GetMessage(string messageId, string sessionId)
         {
             var msg = _db.Messages.FindById(messageId);
@@ -217,7 +302,7 @@ namespace JustSending.Controllers
             });
         }
 
-        private IActionResult GetMessagesInternal(string id, string id2)
+        private IActionResult GetMessagesInternal(string id, string id2, int @from)
         {
             var session = _db.Sessions.FindById(id);
             if (session == null || session.IdVerification != id2)
@@ -227,7 +312,7 @@ namespace JustSending.Controllers
 
             var messages = _db
                 .Messages
-                .Find(Query.EQ(nameof(Message.SessionId), id))
+                .Find(x => x.SessionId == id && x.SessionMessageSequence > @from)
                 .OrderByDescending(x => x.DateSent);
             return View("GetMessages", messages);
         }
