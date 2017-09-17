@@ -25,7 +25,7 @@
         <div class="content">
         @if(message.HasFile){
             <div class="file">
-                <i class="fa fa-2x fa-paperclip"></i> <span class="data" data-value="@message.Text"></span>
+                <i class="fa fa-2x fa-paperclip"></i> @message.Text
                 <br/>
                 <a class="btn btn-success download" 
                     asp-controller="App" 

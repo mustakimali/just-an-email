@@ -40,6 +40,8 @@ namespace JustSending.Services
 
             _maxUploadSize = Convert.ToInt64(_config["MaxUploadSizeBytes"]);
             _uploadFolder = AppController.GetUploadFolder(string.Empty, _env.WebRootPath);
+
+            if (!Directory.Exists(_uploadFolder)) Directory.CreateDirectory(_uploadFolder);
         }
 
         internal void RequestReloadMessage(string sessionId)

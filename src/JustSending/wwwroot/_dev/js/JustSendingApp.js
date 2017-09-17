@@ -171,7 +171,7 @@
 
         $text.keypress(function (e) {
             if (e.which == 13 && e.ctrlKey) {
-                $('.sendBtn').trigger("click");
+                $("#form").submit();
                 return false;
             }
             return true;
@@ -206,17 +206,18 @@
             return false;
         });
 
-        $clearBtn.on("click", function () {
-            $file.val("");
-            $clearBtn.hide();
-            $text.removeAttr("readonly");
-            $text.val($text.data("old"));
-            $text.data("old", "");
-            autosize.update($text);
-            $fileData.val("");
-            JustSendingApp.initAutoSizeComposer();
-            return false;
-        })
+        $clearBtn.on("click",
+            function() {
+                $file.val("");
+                $clearBtn.hide();
+                $text.removeAttr("readonly");
+                $text.val($text.data("old"));
+                $text.data("old", "");
+                autosize.update($text);
+                $fileData.val("");
+                JustSendingApp.initAutoSizeComposer();
+                return false;
+            });
     },
 
     finishedStreamingFile: false,
@@ -248,12 +249,20 @@
                 // so i need to make sure this public key is included in this post
                 //
                 replaceFormValue("EncryptionPublicKeyAlias", function (v) { return pka; });
+
+                $("#form").submit();
             });
+
+            return false;
         }
 
         if ($("#file")[0].files.length > 0) {
 
-            var file = $("#file")[0].files[0];
+            JustSendingApp.finishedStreamingFile = false;
+            formOptions.url += "/files-stream";
+            hasFile = true;
+            
+            /*var file = $("#file")[0].files[0];
 
             JustSendingApp.processFile(file, function () {
                 // Unselect file
@@ -265,19 +274,20 @@
                 $("#form").submit();
             });
 
-            return false;
+            return false;*/
 
         } else if (JustSendingApp.finishedStreamingFile) {
             
             JustSendingApp.finishedStreamingFile = false;
             formOptions.url += "/files";
-            hasFile = true;
 
         }
 
         JustSendingApp.showStatus("Sending, please wait...");
 
-        replaceFormValue("ComposerText", function (v) { return EndToEndEncryption.encryptWithPrivateKey(v); });
+        if(!hasFile)
+            replaceFormValue("ComposerText", function (v) { return EndToEndEncryption.encryptWithPrivateKey(v); });
+
         return true;
     },
 
