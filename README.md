@@ -13,11 +13,9 @@
 * `dotnet run` or `dotnet watch run`
 * Should be running in http://localhost:61452
 
-## Roadmap
-- [x] Multiline composer, Markdown + Syntax highlighter, View Orginal text (Suggested by [DasBeasto in Reddit](https://www.reddit.com/r/SideProject/comments/6wzotn/justaml_a_website_to_share_fileurltext_to_another/dme5bmh/))
-- [x] End-to-end encrytion for messages.
-- [ ] Completely bypass server when devices are in the same network / WebRTC
+## A huge thanks to the following projects
 
-## Preview
+* [Stanford Javascript Crypto Library ](https://github.com/bitwiseshiftleft/sjcl)
+* [bignumber.js](https://github.com/MikeMcl/bignumber.js)
 
-![preview 1](http://i.imgur.com/jLEjVd3.png)
+... and all other third party libraries used in this project.
