@@ -17,7 +17,14 @@
         that.initAutoSizeComposer();
 
         $("*[title]").tooltip();
+        $("a.navbar-brand").on("click", function () {
+            JustSendingApp.goHome();
+            return false;
+        });
 
+        window.onbeforeunload = function(event) {
+            JustSendingApp.goHome();
+        };
     },
 
     initPermalink: function (then) {
@@ -416,7 +423,7 @@
         };
 
         hub.client.sessionDeleted = function () {
-            window.location.href = "/";
+            JustSendingApp.goHome();
         };
 
         hub.client.setNumberOfDevices = function (num) {
@@ -486,6 +493,10 @@
                         app_busy(false);
                     });
             });
+    },
+
+    goHome: function() {
+        window.location.replace("/");
     },
 
     switchView: function (showSharePanel) {
