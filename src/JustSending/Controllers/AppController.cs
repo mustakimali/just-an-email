@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using IOFile = System.IO.File;
+using LiteDB;
 
 namespace JustSending.Controllers
 {
@@ -301,6 +302,26 @@ namespace JustSending.Controllers
                 Content = msg.Text
             });
         }
+
+        #if DEBUG
+        
+        [HttpGet]
+        [Route("stress-test")]
+        public IActionResult StressTest(string sessionId, string message)
+        {
+            if(string.IsNullOrEmpty(message))
+                message = Guid.NewGuid().ToString("N");
+
+            // find a session with an active device
+            //
+            return Post(new SessionModel
+            {
+                SessionId = sessionId,
+                ComposerText = message
+            });
+        }
+
+        #endif
 
         private IActionResult GetMessagesInternal(string id, string id2, int @from)
         {

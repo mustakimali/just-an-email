@@ -512,7 +512,18 @@
         }
     },
 
+    loadMessageInProgress: false,
+    loadMessageTimer: null,
+
     loadMessages: function (then) {
+        if (this.loadMessageInProgress) {
+            this.loadMessageTimer = setTimeout(function () { JustSendingApp.loadMessages(); }, 500);
+            return;
+        }
+
+        this.loadingMessage = true;
+        clearTimeout(this.loadMessageTimer);
+
         var id = $("#SessionId").val();
         var id2 = $("#SessionVerification").val();
         var from = parseInt($(".msg-c:first").data("seq"));
@@ -537,6 +548,7 @@
                 JustSendingApp.initViewSource();
 
                 if (then != undefined) then();
+                JustSendingApp.loadMessageInProgress = false;
 
             },
             true,
