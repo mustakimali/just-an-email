@@ -25,7 +25,7 @@ namespace JustSending.Controllers
         }
 
         [Route("stats")]
-        public IActionResult Stats(int date = 0)
+        public IActionResult Stats(int date = -1)
         {
             var stat = _db.Statistics.FindById(date);
             if(stat == null) return NotFound();

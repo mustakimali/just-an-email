@@ -151,13 +151,16 @@ namespace JustSending.Data
                 update(thisMonth);
 
                 // Today
-                var today = StatsFindByIdOrNew(utcNow.Year, utcNow.Millisecond, utcNow.Day);
+                var today = StatsFindByIdOrNew(utcNow.Year, utcNow.Month, utcNow.Day);
                 update(today);
 
-                Statistics.Upsert(allTime);
-                Statistics.Upsert(thisYear);
-                Statistics.Upsert(thisMonth);
-                Statistics.Upsert(thisMonth);
+                Statistics.Upsert(new[] 
+                {
+                    allTime,
+                    thisYear,
+                    thisMonth,
+                    today
+                });
             }
         }
 
@@ -171,7 +174,7 @@ namespace JustSending.Data
         private int StatsGetIdFor(int? year, int? month = null, int? day = null)
         {
             if (!year.HasValue)
-                return 0;
+                return -1;
 
             return Convert.ToInt32(year.Value.ToString().Substring(2) + (month ?? 0).ToString("00") + (day ?? 0).ToString("00"));
         }

@@ -32,12 +32,14 @@
 
     <div class="container body-content">
         @RenderBody()
-        
     </div>
     <hr/>
     <footer>
         <div class="container">
-            <p>With <i class="fa fa-heart"></i> by <a href="//mustak.im" target="_blank">Mustakim Ali</a></p>
+            <p>
+                <span>With <i class="fa fa-heart"></i> by <a href="//mustak.im" target="_blank">Mustakim Ali</a></span>
+                <span style="float: right;opacity:0.7;"><a asp-controller="Home" asp-action="Stats">Stats</a></span>
+            </p>
         </div>
     </footer>
     <div id="overlay"></div>

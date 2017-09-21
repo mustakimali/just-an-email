@@ -201,7 +201,7 @@ namespace JustSending.Controllers
         {
             _db.MessagesInsert(message);
             _db.RecordMessageStats(message);
-            
+
             _hub.RequestReloadMessage(message.SessionId);
 
             return Accepted();
@@ -240,6 +240,7 @@ namespace JustSending.Controllers
             if (!System.IO.File.Exists(path))
                 return NotFound();
 
+            _db.RecordStats(s => s.FilesSizeBytes += msg.FileSizeBytes);
             return PhysicalFile(path, "application/" + Path.GetExtension(path).Trim('.'), msg.Text);
         }
 
