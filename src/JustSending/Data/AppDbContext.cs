@@ -39,6 +39,7 @@ namespace JustSending.Data
         public LiteCollection<ShareToken> ShareTokens => Database.GetCollection<ShareToken>();
         public LiteCollection<Message> Messages => Database.GetCollection<Message>();
         public LiteCollection<ConnectionSession> Connections => Database.GetCollection<ConnectionSession>();
+        public LiteCollection<Stats> Statistics => Database.GetCollection<Stats>();
 
         public string NewGuid() => Guid.NewGuid().ToString("N");
 
@@ -115,6 +116,67 @@ namespace JustSending.Data
             };
             ShareTokens.Insert(shareToken);
             return shareToken.Id;
+        }
+
+        public void RecordMessageStats(Message msg)
+        {
+            RecordStats(s =>
+            {
+                s.Messages++;
+                s.MessagesSizeBytes += msg.Text.Length;
+
+                if (msg.HasFile)
+                {
+                    s.Files++;
+                    s.FilesSizeBytes += msg.FileSizeBytes;
+                }
+            });
+        }
+        public void RecordStats(Action<Stats> update)
+        {
+            lock (this)
+            {
+                var utcNow = DateTime.UtcNow;
+
+                // All time stats
+                var allTime = StatsFindByIdOrNew(null);
+                update(allTime);
+
+                // This year
+                var thisYear = StatsFindByIdOrNew(utcNow.Year);
+                update(thisYear);
+
+                // This month
+                var thisMonth = StatsFindByIdOrNew(utcNow.Year, utcNow.Month);
+                update(thisMonth);
+
+                // Today
+                var today = StatsFindByIdOrNew(utcNow.Year, utcNow.Month, utcNow.Day);
+                update(today);
+
+                Statistics.Upsert(new[] 
+                {
+                    allTime,
+                    thisYear,
+                    thisMonth,
+                    today
+                });
+            }
+        }
+
+        private Stats StatsFindByIdOrNew(int? year, int? month = null, int? day = null)
+        {
+            var id = StatsGetIdFor(year, month, day);
+            var items = Statistics.FindById(id);
+            return items ?? new Stats { Id = id, DateCreatedUtc = DateTime.UtcNow };
+        }
+
+        private int StatsGetIdFor(int? year, int? month = null, int? day = null)
+        {
+            if (!year.HasValue)
+                return -1;
+
+            return Convert.ToInt32(year.Value.ToString().Substring(2) + (month ?? 0).ToString("00") + (day ?? 0).ToString("00"));
         }
     }
 }

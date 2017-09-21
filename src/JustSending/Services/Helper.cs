@@ -10,20 +10,6 @@ namespace JustSending
         public static readonly DateTime BeginningOfUnixTime = new DateTime(1970, 1, 1);
         public static readonly Random Random = new Random(DateTime.UtcNow.Millisecond);
 
-        public static string ToFileSizeString(this long fileSize)
-        {
-            var unitsOfFileSize = new[] { "B", "KB", "MB", "GB", "TB", "PB", "EB" };
-            var fileSizeInLong = (double)fileSize;
-            var order = 0;
-            while (fileSizeInLong >= 1024 && order + 1 < unitsOfFileSize.Length)
-            {
-                order++;
-                fileSizeInLong = fileSizeInLong / 1024;
-            }
-
-            return string.Format("{0:0.##} {1}", fileSizeInLong, unitsOfFileSize[order]);
-        }
-
         public static string GetPrime(int length, IHostingEnvironment env)
         {
             var file = Path.Combine(env.WebRootPath, "Assets", "Primes", $"primes-{length}.txt");
@@ -37,5 +23,21 @@ namespace JustSending
         }
 
         public static int ToEpoch(this DateTime date) => (int)date.Subtract(BeginningOfUnixTime).TotalSeconds;
+
+        public static string ToFileSize(this int len) => ((long)len).ToFileSize();
+        public static string ToFileSize(this long lens)
+        {
+            var len = (double)lens;
+            var sizes = new[] { "B", "KB", "MB", "GB", "TB" };
+            var order = 0;
+
+            while (len >= 1024 && order < sizes.Length - 1)
+            {
+                order++;
+                len = len / 1024;
+            }
+
+            return string.Format("{0:#,###,##0.##} {1}", len, sizes[order]);
+        }
     }
 }

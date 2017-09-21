@@ -32,7 +32,7 @@
                     asp-action="DownloadFile" 
                     asp-route-sessionId="@message.SessionId" 
                     asp-route-id="@message.Id"
-                    target="_blank"><i class="fa fa-download"></i> Download (@Helper.ToFileSizeString(message.FileSizeBytes))</a>
+                    target="_blank"><i class="fa fa-download"></i> Download (@Helper.ToFileSize(message.FileSizeBytes))</a>
             </div>
         } else {
             <div class="text">

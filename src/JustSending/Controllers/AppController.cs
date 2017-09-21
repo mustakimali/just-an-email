@@ -93,6 +93,7 @@ namespace JustSending.Controllers
 
             // New ShareToken
             _db.CreateNewShareToken(sessionId);
+            _db.RecordStats(s => s.Sessions++);
             return Accepted();
         }
 
@@ -158,12 +159,12 @@ namespace JustSending.Controllers
             {
                 return NotFound();
             }
-            
+
             var message = GetMessageFromModel(model);
             var uploadFolder = GetUploadFolder(model.SessionId, _env.WebRootPath);
             var moveToPath = Path.Combine(uploadFolder, message.Id + ConversationHub.FILE_EXT);
 
-            if(!Directory.Exists(uploadFolder))
+            if (!Directory.Exists(uploadFolder))
                 Directory.CreateDirectory(uploadFolder);
 
             IOFile.Move(uploadedPath, moveToPath);
@@ -199,6 +200,8 @@ namespace JustSending.Controllers
         private IActionResult SaveMessageAndReturnResponse(Message message)
         {
             _db.MessagesInsert(message);
+            _db.RecordMessageStats(message);
+
             _hub.RequestReloadMessage(message.SessionId);
 
             return Accepted();
@@ -237,6 +240,7 @@ namespace JustSending.Controllers
             if (!System.IO.File.Exists(path))
                 return NotFound();
 
+            _db.RecordStats(s => s.FilesSizeBytes += msg.FileSizeBytes);
             return PhysicalFile(path, "application/" + Path.GetExtension(path).Trim('.'), msg.Text);
         }
 
@@ -303,13 +307,13 @@ namespace JustSending.Controllers
             });
         }
 
-        #if DEBUG
-        
+#if DEBUG
+
         [HttpGet]
         [Route("stress-test")]
         public IActionResult StressTest(string sessionId, string message)
         {
-            if(string.IsNullOrEmpty(message))
+            if (string.IsNullOrEmpty(message))
                 message = Guid.NewGuid().ToString("N");
 
             // find a session with an active device
@@ -321,7 +325,7 @@ namespace JustSending.Controllers
             });
         }
 
-        #endif
+#endif
 
         private IActionResult GetMessagesInternal(string id, string id2, int @from)
         {

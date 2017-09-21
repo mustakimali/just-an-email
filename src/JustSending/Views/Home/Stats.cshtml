@@ -1,0 +1,98 @@
+@using JustSending
+@model JustSending.Data.Stats
+@{
+    ViewData["Title"] = "Statistics";
+}
+
+<div class="container" style="margin-top: 50px;">
+<div class="row">
+    <div class="col-xl-3 col-sm-6 mb-3" title="Total messages sent and size">
+        <div class="card text-white bg-info o-hidden h-100">
+        <div class="card-body">
+            <div class="card-body-icon">
+            <i class="fa fa-fw fa-comments"></i>
+            </div>
+            <div class="mr-5">@Model.Messages.ToString("###,###,###")</div>
+        </div>
+        <a class="card-footer text-white clearfix small z-1" href="#">
+            <span class="float-left">@Model.MessagesSizeBytes.ToFileSize()</span>
+        </a>
+        </div>
+    </div>
+    <div class="col-xl-3 col-sm-6 mb-3" title="Total files transfered and size">
+        <div class="card text-white bg-danger o-hidden h-100">
+        <div class="card-body">
+            <div class="card-body-icon">
+            <i class="fa fa-fw fa-files-o"></i>
+            </div>
+            <div class="mr-5">@Model.Files.ToString("###,###,###")</div>
+        </div>
+        <a class="card-footer text-white clearfix small z-1" href="#">
+            <span class="float-left">@Model.FilesSizeBytes.ToFileSize()</span>
+        </a>
+        </div>
+    </div>
+    <div class="col-xl-3 col-sm-6 mb-3">
+        <div class="card text-white bg-warning o-hidden h-100">
+        <div class="card-body">
+            <div class="card-body-icon">
+            <i class="fa fa-fw fa-connectdevelop"></i>
+            </div>
+            <div class="mr-5">@Model.Sessions.ToString("###,###,###")</div>
+        </div>
+        <a class="card-footer text-white clearfix small z-1" href="#">
+            <span class="float-left">Sessions</span>
+        </a>
+        </div>
+    </div>
+    <div class="col-xl-3 col-sm-6 mb-3">
+        <div class="card text-white bg-success o-hidden h-100">
+        <div class="card-body">
+            <div class="card-body-icon">
+            <i class="fa fa-fw fa-laptop"></i>
+            </div>
+            <div class="mr-5">@Model.Devices.ToString("###,###,###")</div>
+        </div>
+        <a class="card-footer text-white clearfix small z-1" href="#">
+            <span class="float-left">Devices</span>
+        </a>
+        </div>
+    </div>
+    
+</div>
+</div>
+@section Head
+{
+    @Html.Partial("_CommonHead")
+    <style>
+        .card {
+            padding: 20px;
+            font-size: 300%;
+            margin-bottom: 20px;
+        }
+        .card-body-icon {
+            position: absolute;
+            right: 10px;
+            font-size: 300%;
+            top: -12px;
+            color: #fff;
+            opacity: 0.7;
+        }
+        .card-footer {
+            font-size: 50%;
+            color: #888;
+        }
+        .mr-5 {
+            font-size: 150%;
+            margin-bottom: -24px;
+            color: #155799;
+        }
+    </style>
+}
+@section scripts {
+    <script>
+        $(function() {
+            $("*[title]").tooltip();
+        });
+    </script>
+}

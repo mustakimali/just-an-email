@@ -95,6 +95,7 @@ namespace JustSending.Services
         private const string stringSessionKey = "session";
         public override Task OnConnected()
         {
+            _db.RecordStats(s => s.Devices++);
             return Task.CompletedTask;
         }
 
