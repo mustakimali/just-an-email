@@ -45,7 +45,7 @@
 
         // Request to create session
         //
-        ajax_service.sendRequest("POST", "/app/new", { id, id2 },
+        ajax_service.sendRequest("POST", "/app/new", { id: id, id2: id2 },
             function (data) {
                 // Success
                 $id.val(id);
@@ -592,17 +592,22 @@
                 //    .removeClass("text")
                 //    .addClass("text-d");
 
-                var x = new EmbedJS({
-                    input: $(itm)[0],
-                    tweetsEmbed: true,
-                    linkOptions: {
-                        target: "_blank"
-                    },
-                    googleAuthKey: 'AIzaSyCqFouT8h5DKAbxlrTZmjXEmNBjC69f0ts',
-                    inlineEmbed: 'all'
-                });
-
-                x.render();
+                try {
+                    var x = new EmbedJS({
+                        input: $(itm)[0],
+                        tweetsEmbed: true,
+                        linkOptions: {
+                            target: "_blank"
+                        },
+                        googleAuthKey: 'AIzaSyCqFouT8h5DKAbxlrTZmjXEmNBjC69f0ts',
+                        inlineEmbed: 'all'
+                    });
+                
+                    x.render();
+                } catch (ex) {
+                    // ignored in IE
+                }
+                
                 $(itm).addClass("embedded");
             });
 
