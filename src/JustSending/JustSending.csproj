@@ -17,7 +17,7 @@
     <DotNetCliToolReference Include="Microsoft.DotNet.Watcher.Tools" Version="2.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="wwwroot\images\" />
+    <Folder Include="wwwroot\** " />
     <None Include="*.ps1" CopyToPublishDirectory="Always" />
   </ItemGroup>
 </Project>
