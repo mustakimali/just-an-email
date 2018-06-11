@@ -17,7 +17,7 @@ namespace JustSending
 
             var fileLines = File.ReadLines(file);
             var totalLines = Convert.ToInt16(fileLines.FirstOrDefault());
-            var randomLine = Helper.Random.Next(0, totalLines) + 1;
+            var randomLine = Random.Next(0, totalLines) + 1;
 
             return fileLines.Skip(randomLine).FirstOrDefault();
         }

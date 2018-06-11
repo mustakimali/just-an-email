@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
@@ -19,19 +19,5 @@
   <ItemGroup>
     <Folder Include="wwwroot\images\" />
     <None Include="*.ps1" CopyToPublishDirectory="Always" />
-    <Folder Include="wwwroot\_dev" CopyToPublishDirectory="Never">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Folder>
   </ItemGroup>
-  <Target Name="GulpTaskClean" BeforeTargets="Clean">
-    <Exec Command="gulp clean" />
-  </Target>
-  <Target Name="GulpTaskBuild" BeforeTargets="Build">
-    <Exec Command="npm install" />
-    <Exec Command="gulp min" />
-  </Target>
-  <Target Name="PrepublishScript" BeforeTargets="PrepareForPublish">
-    <Exec Command="npm install" />
-    <Exec Command="gulp min" />
-  </Target>
 </Project>
