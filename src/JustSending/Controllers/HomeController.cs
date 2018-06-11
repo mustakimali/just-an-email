@@ -33,6 +33,18 @@ namespace JustSending.Controllers
             return View(stat);
         }
 
+        [Route("api/prime")]
+        public IActionResult Prime([FromServices] IHostingEnvironment env)
+        {
+            Response.Headers.Add("Access-Control-Allow-Origin", "*");
+            
+            return Json(new
+            {
+                Size_1024 = Helper.GetPrime(1024, env),
+                Size_2 = Helper.GetPrime(2, env)
+            });
+        }
+
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
