@@ -13,25 +13,22 @@ namespace JustSending.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly AppDbContext _db;
-        public HomeController(AppDbContext db)
-        {
-            _db = db;
-        }
-
         public IActionResult Index()
         {
             return View();
         }
 
         [Route("stats")]
-        public IActionResult Stats(int date = -1)
+        public IActionResult Stats([FromServices] AppDbContext db, int date = -1)
         {
-            var stat = _db.Statistics.FindById(date);
+            var stat = db.Statistics.FindById(date);
             if(stat == null) return NotFound();
 
             return View(stat);
         }
+
+        [Route("stats/raw")]
+        public IActionResult StatsRaw([FromServices] AppDbContext db) => Json(db.Statistics.FindAll());
 
         [Route("api/prime")]
         public IActionResult Prime([FromServices] IHostingEnvironment env)
