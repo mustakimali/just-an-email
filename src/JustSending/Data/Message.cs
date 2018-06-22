@@ -7,10 +7,8 @@ namespace JustSending.Data
     {
         [BsonId]
         public string Id { get; set; }
-        [BsonIndex()]
         public int SessionMessageSequence { get; set; }
 
-        [BsonIndex]
         public string SessionId { get; set; }
         /// <summary>
         /// Unique for each connected device in a particular session

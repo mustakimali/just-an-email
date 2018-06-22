@@ -406,27 +406,30 @@
     },
 
     initWebSocket: function () {
-        var hub = $.connection.conversationHub;
-        this.hub = hub;
+        var ws = new signalR.HubConnectionBuilder()
+            .withUrl("/signalr/hubs")
+            .build();
+        var conn = ws;
+        this.hub = ws;
 
-        hub.client.requestReloadMessage = function () {
+        conn.on("requestReloadMessage", function() {
             JustSendingApp.loadMessages();
-        };
+        });
 
-        hub.client.showSharePanel = function (token) {
+        conn.on("showSharePanel", function (token) {
             $("#token").text(token);
             JustSendingApp.switchView(true);
-        };
+        });
 
-        hub.client.hideSharePanel = function () {
+        conn.on("hideSharePanel", function() {
             JustSendingApp.switchView(false);
-        };
+        });
 
-        hub.client.sessionDeleted = function () {
+        conn.on("sessionDeleted", function () {
             JustSendingApp.goHome();
-        };
+        });
 
-        hub.client.setNumberOfDevices = function (num) {
+        conn.on("setNumberOfDevices", function (num) {
             var $el = $("#connectedDevices");
 
             if (num > 1) {
@@ -443,15 +446,15 @@
                     });
                 }
             }
-        };
+        });
 
         $("#shareBtn").on("click", function () {
-            hub.server.share();
+            conn.send("share");
             return false;
         });
 
         $(".cancelShareBtn").on("click", function () {
-            hub.server.cancelShare();
+            conn.send("cancelShare");
             return false;
         });
 
@@ -465,9 +468,9 @@
                 confirmButtonColor: "#d9534f",
                 confirmButtonText: "Erase everything!",
                 closeOnConfirm: false
-            }, function () {
+            }, function() {
                 window.onbeforeunload = null;
-                hub.server.eraseSession();
+                conn.send("eraseSession");
 
                 swal("Erasing...", "You will be taken to the homepage when it's done.", "success");
             });
@@ -475,24 +478,36 @@
             return false;
         });
 
-        EndToEndEncryption.initKeyExchange(hub);
+        EndToEndEncryption.initKeyExchange(conn);
+        
+        var onConnected = function() {
+            conn
+                .send("connect", $("#SessionId").val())
+                .then(function(socketConnectionId) {
 
-        $.connection
-            .hub
+                    $("#SocketConnectionId").val(socketConnectionId);
+
+                    Log("Device Id: " + socketConnectionId);
+
+                    app_busy(false);
+                });
+        };
+
+        conn
             .start()
-            .done(function () {
-                hub
-                    .server
-                    .connect($("#SessionId").val())
-                    .then(function (socketConnectionId) {
+            .then(onConnected)
+            .catch(function(err) {
+                Log("Error: " + err.toString());
 
-                        $("#SocketConnectionId").val(socketConnectionId);
-
-                        Log("Device Id: " + socketConnectionId);
-
-                        app_busy(false);
-                    });
             });
+
+        conn.connection.onclose = function(msg) {
+            Log("Closing");
+        };
+
+        window.onbeforeunload = function (e) {
+            JustSendingApp.hub.stop();
+        };
     },
 
     goHome: function() {
