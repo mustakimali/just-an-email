@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using JustSending.Data;
 using JustSending.Models;
@@ -12,7 +11,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using IOFile = System.IO.File;
-using LiteDB;
 
 namespace JustSending.Controllers
 {
@@ -146,12 +144,12 @@ namespace JustSending.Controllers
 
             IOFile.Move(postedFilePath, destUploadPath);
 
-            return SaveMessageAndReturnResponse(message);
+            return await SaveMessageAndReturnResponse(message);
         }
 
         [Route("post/files")]
         [HttpPost]
-        public IActionResult PostWithFileAfterStreaming(SessionModel model)
+        public async Task<IActionResult> PostWithFileAfterStreaming(SessionModel model)
         {
             // Locate the file
             var uploadedPath = Path.Combine(GetUploadFolder(string.Empty, _env.WebRootPath), model.SocketConnectionId + ConversationHub.FILE_EXT);
@@ -180,7 +178,7 @@ namespace JustSending.Controllers
             message.HasFile = true;
             message.FileSizeBytes = fileInfo.Length;
 
-            return SaveMessageAndReturnResponse(message);
+            return await SaveMessageAndReturnResponse(message);
         }
 
         private void DeleteIfExists(string path)
@@ -191,18 +189,18 @@ namespace JustSending.Controllers
 
         [Route("post")]
         [HttpPost]
-        public IActionResult Post(SessionModel model)
+        public async Task<IActionResult> Post(SessionModel model)
         {
             var message = GetMessageFromModel(model);
-            return SaveMessageAndReturnResponse(message);
+            return await SaveMessageAndReturnResponse(message);
         }
 
-        private IActionResult SaveMessageAndReturnResponse(Message message)
+        private async Task<IActionResult> SaveMessageAndReturnResponse(Message message)
         {
             _db.MessagesInsert(message);
             _db.RecordMessageStats(message);
 
-            _hub.RequestReloadMessage(message.SessionId);
+            await _hub.RequestReloadMessage(message.SessionId);
 
             return Accepted();
         }
@@ -260,7 +258,7 @@ namespace JustSending.Controllers
 
         [HttpPost]
         [Route("connect")]
-        public IActionResult Connect(ConnectViewModel model)
+        public async Task<IActionResult> Connect(ConnectViewModel model)
         {
             if (!ModelState.IsValid)
             {
@@ -284,7 +282,7 @@ namespace JustSending.Controllers
             // Ready to join,
             // Delete the Token
             _db.ShareTokens.Delete(model.Token);
-            _hub.HideSharePanel(session.Id);
+            await _hub.HideSharePanel(session.Id);
 
             TempData[nameof(Data.Session.Id)] = session.Id;
             TempData[nameof(Data.Session.IdVerification)] = session.IdVerification;
@@ -307,25 +305,26 @@ namespace JustSending.Controllers
             });
         }
 
-#if DEBUG
 
+#if DEBUG
         [HttpGet]
         [Route("stress-test")]
-        public IActionResult StressTest(string sessionId, string message)
+        public async Task<IActionResult> StressTest(string sessionId, string message)
         {
             if (string.IsNullOrEmpty(message))
                 message = Guid.NewGuid().ToString("N");
 
             // find a session with an active device
             //
-            return Post(new SessionModel
+            return await Post(new SessionModel
             {
                 SessionId = sessionId,
                 ComposerText = message
             });
         }
-
 #endif
+
+
 
         private IActionResult GetMessagesInternal(string id, string id2, int @from)
         {

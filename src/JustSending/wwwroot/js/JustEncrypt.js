@@ -1,4 +1,4 @@
-"use strict"
+"use strict";
 
 var EndToEndEncryption = {
 
@@ -51,14 +51,14 @@ var EndToEndEncryption = {
         // SERVER CALLS:
         //   Start the key exchange
         //
-        hub.client.startKeyExchange = function (peerId, p, g, pka, initiate) {
+        hub.on("startKeyExchange", function(peerId, p, g, pka, initiate) {
             app_busy(true);
 
             Log("Peer Id: " + peerId);
 
             EndToEndEncryption.init(peerId, hub, p, g, pka, initiate);
 
-        }
+        });
 
     },
 
@@ -104,27 +104,27 @@ var EndToEndEncryption = {
     initCallbacks: function (hub) {
         var that = EndToEndEncryption;
 
-        hub.client.callback = function (method, data) {
+        hub.on("callback", function(method, data) {
 
             Log("Request received [" + method + "] -> Payload Size: " + data.length);
 
             var dataObj = JSON.parse(data);
             switch (method) {
-                case "ComputeB":
-                    that.computeB(dataObj.A);
-                    break;
+            case "ComputeB":
+                that.computeB(dataObj.A);
+                break;
 
-                case "ComputeK":
-                    that.computeK(dataObj.B);
-                    break;
+            case "ComputeK":
+                that.computeK(dataObj.B);
+                break;
 
-                case "broadcastKeys":
-                    that.showStatus("Decrypting keys");
-                    that.receiveKeys(dataObj);
-                    break;
+            case "broadcastKeys":
+                that.showStatus("Decrypting keys");
+                that.receiveKeys(dataObj);
+                break;
             }
 
-        };
+        });
 
         Log("Ready to shake hands.");
     },
@@ -203,12 +203,11 @@ var EndToEndEncryption = {
 
         that
             .hub
-            .server
-            .callPeer(peerId, method, JSON.stringify(data))
-            .catch(function (e) {
+            .send("callPeer", peerId, method, JSON.stringify(data))
+            .catch(function(e) {
                 Log("ERROR: " + e);
             })
-            .then(function (b, d, e) {
+            .then(function(b, d, e) {
                 // Request sent
             });
     },

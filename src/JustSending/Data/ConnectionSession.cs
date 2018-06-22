@@ -6,7 +6,6 @@ namespace JustSending.Data
     {
         [BsonId]
         public string ConnectionId { get; set; }
-        [BsonIndex]
         public string SessionId { get; set; }
     }
 }

@@ -7,7 +7,6 @@ namespace JustSending.Data
     {
         [BsonId]
         public string Id { get; set; }
-        [BsonIndex]
         public string IdVerification { get; set; }
 
         public DateTime DateCreated { get; set; }

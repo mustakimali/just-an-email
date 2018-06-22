@@ -29,10 +29,24 @@ namespace JustSending.Data
                     if (!Directory.Exists(dataDirectory)) Directory.CreateDirectory(dataDirectory);
 
                     _db = new LiteDatabase(Path.Combine(dataDirectory, "AppDb.ldb"));
+
+                    EnsureIndex();
                 }
 
                 return _db;
             }
+        }
+
+        private void EnsureIndex()
+        {
+            Connections.EnsureIndex(x => x.SessionId);
+
+            Messages.EnsureIndex(x => x.SessionMessageSequence);
+            Messages.EnsureIndex(x => x.SessionId);
+
+            Sessions.EnsureIndex(x => x.IdVerification);
+
+            ShareTokens.EnsureIndex(x => x.SessionId);
         }
 
         public LiteCollection<Session> Sessions => Database.GetCollection<Session>();
@@ -40,7 +54,7 @@ namespace JustSending.Data
         public LiteCollection<Message> Messages => Database.GetCollection<Message>();
         public LiteCollection<ConnectionSession> Connections => Database.GetCollection<ConnectionSession>();
         public LiteCollection<Stats> Statistics => Database.GetCollection<Stats>();
-
+        
         public string NewGuid() => Guid.NewGuid().ToString("N");
 
         public int NewConnectionId()
