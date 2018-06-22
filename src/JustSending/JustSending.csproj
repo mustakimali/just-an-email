@@ -3,9 +3,11 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
-    <DockerComposeProjectPath>..\..\docker-compose.dcproj</DockerComposeProjectPath>
+    <ApplicationInsightsResourceId>/subscriptions/15a2a270-9a75-4f16-bce1-f08edc382c97/resourcegroups/MustakimRG/providers/microsoft.insights/components/JustSending</ApplicationInsightsResourceId>
+    <ApplicationInsightsAnnotationResourceId>/subscriptions/15a2a270-9a75-4f16-bce1-f08edc382c97/resourcegroups/MustakimRG/providers/microsoft.insights/components/JustSending</ApplicationInsightsAnnotationResourceId>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.WebSockets" Version="2.1.1" />
     <PackageReference Include="LiteDB" Version="4.1.4" />
@@ -13,5 +15,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="*.ps1" CopyToPublishDirectory="Always" />
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Connected Services" />
   </ItemGroup>
 </Project>

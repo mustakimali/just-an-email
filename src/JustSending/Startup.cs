@@ -56,6 +56,7 @@ namespace JustALink
             {
                 routes.MapHub<ConversationHub>("/signalr/hubs");
             });
+            
             app.UseMvc(routes =>
             {
                 routes.MapRoute(
