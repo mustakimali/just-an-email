@@ -17,6 +17,8 @@
     <meta property="og:image" content="https://justa.ml/images/logo-large.png">
     
     @RenderSection("Head", false)
+    	
+    @Html.Raw(JavaScriptSnippet.FullScript)
 </head>
 <body>
     <nav class="navbar navbar-inverse navbar-fixed-top">
