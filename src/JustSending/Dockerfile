@@ -1,8 +1,19 @@
-FROM microsoft/aspnetcore:2.0
-ARG source
+FROM dotnet:2.1-sdk AS build-env
 WORKDIR /app
 EXPOSE 80
-COPY ${source:-bin/Release/netcoreapp2.0/publish} .
+
+# Copy csproj and restore as distinct layers
+COPY *.csproj ./
+RUN dotnet restore
+
+# Copy everything else and build
+COPY . ./
+RUN dotnet publish -c Release -o out
+
+# Build runtime image
+FROM dotnet:2.1-aspnetcore-runtime
+WORKDIR /app
+COPY --from=build-env /app/out .
 ENTRYPOINT ["dotnet", "JustSending.dll"]
 VOLUME ["App_Data/"]
 VOLUME ["wwwroot/uploads"]

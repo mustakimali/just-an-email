@@ -1,8 +1,0 @@
-version: '3'
-
-services:
-  justsending:
-    image: justsending
-    build:
-      context: ./src/JustSending
-      dockerfile: Dockerfile
