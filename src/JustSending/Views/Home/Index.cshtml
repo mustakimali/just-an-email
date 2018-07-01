@@ -12,9 +12,20 @@
             <h1 class="text-lowercase">Pass files or <span title="Long URL, unfinished facebook status, code blocks!" style="border-bottom: 1px dotted #fff;cursor: help;">any texts</span> between your devices</h1>
             
             <div>
-                <a asp-controller="App" asp-action="NewSession" class="btn btn-lg btn-primary btn-block" style="margin-bottom: 5px">Start</a>
+                <a id="new-session" asp-controller="App" asp-action="NewSession" class="btn btn-lg btn-primary btn-block" style="margin-bottom: 5px">Start</a>
+                <noscript>
+                    <a asp-controller="App" asp-action="LiteSessionNew" class="btn btn-lg btn-primary btn-block" style="margin-bottom: 5px">Start*</a>
+                    <style>
+                        #new-session { display: none; }
+                    </style>
+                </noscript>
                 <a asp-action="Connect" asp-controller="App" style="opacity: 0.7" class="btn btn-lg btn-primary btn-block" >Connect</a>
             </div>
+            <noscript>
+                <p class="small">
+                    * Your device is too outdated to experience the full rich experience of this app
+                </p>
+            </noscript>
             
         </div>
     </div>

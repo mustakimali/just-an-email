@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -15,7 +16,7 @@ using IOFile = System.IO.File;
 namespace JustSending.Controllers
 {
     [Route("app")]
-    public class AppController : Controller
+    public partial class AppController : Controller
     {
         private readonly AppDbContext _db;
         private readonly ConversationHub _hub;
@@ -77,21 +78,7 @@ namespace JustSending.Controllers
                 return Ok();
             }
 
-            var sessionId = id;
-            var idVerification = id2;
-
-            // Create Session
-            var session = new Session
-            {
-                DateCreated = DateTime.UtcNow,
-                Id = sessionId,
-                IdVerification = idVerification
-            };
-            _db.Sessions.Insert(session);
-
-            // New ShareToken
-            _db.CreateNewShareToken(sessionId);
-            _db.RecordStats(s => s.Sessions++);
+            CreateSession(id, id2);
             return Accepted();
         }
 
@@ -189,16 +176,21 @@ namespace JustSending.Controllers
 
         [Route("post")]
         [HttpPost]
-        public async Task<IActionResult> Post(SessionModel model)
+        public async Task<IActionResult> Post(SessionModel model, bool lite = false)
         {
             var message = GetMessageFromModel(model);
-            return await SaveMessageAndReturnResponse(message);
+            return await SaveMessageAndReturnResponse(message, lite);
         }
 
-        private async Task<IActionResult> SaveMessageAndReturnResponse(Message message)
+        private async Task<IActionResult> SaveMessageAndReturnResponse(Message message, bool lite = false)
         {
             _db.MessagesInsert(message);
             _db.RecordMessageStats(message);
+
+            if (lite)
+            {
+                return RedirectToAction(nameof(LiteSession), new {id1 = message.SessionId, id2 = message.SessionIdVerification});
+            }
 
             await _hub.RequestReloadMessage(message.SessionId);
 
@@ -212,6 +204,7 @@ namespace JustSending.Controllers
             {
                 Id = _db.NewGuid(),
                 SessionId = model.SessionId,
+                SessionIdVerification = model.SessionVerification,
                 SocketConnectionId = model.SocketConnectionId,
                 EncryptionPublicKeyAlias = model.EncryptionPublicKeyAlias,
                 DateSent = utcNow,
@@ -248,7 +241,7 @@ namespace JustSending.Controllers
         }
 
         [Route("messages"), HttpPost]
-        public IActionResult GetMessages(string id, string id2, int @from) => GetMessagesInternal(id, id2, @from);
+        public IActionResult GetMessages(string id, string id2, int @from) => GetMessagesViewInternal(id, id2, @from);
 
         [Route("connect")]
         public IActionResult Connect()
@@ -282,6 +275,12 @@ namespace JustSending.Controllers
             // Ready to join,
             // Delete the Token
             _db.ShareTokens.Delete(model.Token);
+
+            if (session.IsLiteSession)
+            {
+                return RedirectToAction(nameof(LiteSession), new {id1 = session.Id, id2 = session.IdVerification});
+            }
+
             await _hub.HideSharePanel(session.Id);
 
             TempData[nameof(Data.Session.Id)] = session.Id;
@@ -324,20 +323,9 @@ namespace JustSending.Controllers
         }
 #endif
 
-
-
-        private IActionResult GetMessagesInternal(string id, string id2, int @from)
+        private IActionResult GetMessagesViewInternal(string id, string id2, int @from)
         {
-            var session = _db.Sessions.FindById(id);
-            if (session == null || session.IdVerification != id2)
-            {
-                return NotFound();
-            }
-
-            var messages = _db
-                .Messages
-                .Find(x => x.SessionId == id && x.SessionMessageSequence > @from)
-                .OrderByDescending(x => x.DateSent);
+            var messages = GetMessagesInternal(id, id2, @from).ToArray();
             return View("GetMessages", messages);
         }
     }
