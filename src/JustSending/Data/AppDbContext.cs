@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Linq;
 using LiteDB;
 using Microsoft.AspNetCore.Hosting;
@@ -28,7 +29,13 @@ namespace JustSending.Data
                     var dataDirectory = Path.Combine(_env.ContentRootPath, "App_Data");
                     if (!Directory.Exists(dataDirectory)) Directory.CreateDirectory(dataDirectory);
 
-                    _db = new LiteDatabase(Path.Combine(dataDirectory, "AppDb.ldb"));
+                    var connectionString = $"FileName={Path.Combine(dataDirectory, "AppDb.ldb")}";
+                    if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        connectionString += ";Mode=Exclusive";
+                    }
+
+                    _db = new LiteDatabase(connectionString);
 
                     EnsureIndex();
                 }

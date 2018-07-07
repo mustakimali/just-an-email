@@ -68,9 +68,17 @@
 
         </div>
     </div>
-}
-<div id="conversation">
 
+    <noscript>
+        <a asp-action="LiteSession"
+            asp-route-id1="@Model.SessionId"
+            asp-route-id1="@Model.SessionVerification"
+            class="btn btn-warning btn-block"><i class="fa fa-refresh"></i> Refresh</a>
+    </noscript>
+}
+
+<div id="conversation">
+    
     <div id="conversation-list">
         <partial name="GetMessages" for="@Model.Messages" />
     </div>

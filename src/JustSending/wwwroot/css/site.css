@@ -407,4 +407,11 @@ body.busy #overlay {
         margin: 0 0 5px 0;
         font-size: 16pt;
     }
+    #conversation {
+        margin-top: 15px;
+    }
+    a#deleteBtn {
+        width: 30px;
+        margin-right: -10px;
+    }
 }
