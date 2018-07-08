@@ -2,6 +2,8 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
 using Microsoft.AspNetCore.Hosting;
 
 namespace JustSending
@@ -14,7 +16,7 @@ namespace JustSending
         public static string GetPrime(int length, IHostingEnvironment env)
         {
             var file = Path.Combine(env.WebRootPath, "Assets", "Primes", $"primes-{length}.txt");
-            if (!File.Exists(file)) return string.Empty;
+            if (!File.Exists(file)) return String.Empty;
 
             var fileLines = File.ReadLines(file);
             var totalLines = Convert.ToInt16(fileLines.FirstOrDefault());
@@ -38,7 +40,27 @@ namespace JustSending
                 len = len / 1024;
             }
 
-            return string.Format("{0:#,###,##0.##} {1}", len, sizes[order]);
+            return String.Format("{0:#,###,##0.##} {1}", len, sizes[order]);
+        }
+
+        public static string BuildDbConnectionString(string dbName, IHostingEnvironment hostingEnvironment)
+        {
+            var dataDirectory = Path.Combine(hostingEnvironment.ContentRootPath, "App_Data");
+            if (!Directory.Exists(dataDirectory)) Directory.CreateDirectory(dataDirectory);
+
+            var connectionString = new  StringBuilder($"FileName={Path.Combine(dataDirectory, $"{dbName}.ldb")}");
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                connectionString.Append(";Mode=Exclusive");
+            }
+
+            return connectionString.ToString();
+
+        }
+
+        public static string GetUploadFolder(string sessionId, string root)
+        {
+            return Path.Combine(root, "upload", sessionId);
         }
     }
 }

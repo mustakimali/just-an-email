@@ -1,23 +1,22 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using JustSending.Data;
+using Hangfire;
 using JustSending.Models;
 using JustSending.Services;
-using JustSending.Services.Attributes;
-using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using IOFile = System.IO.File;
 
 namespace JustSending.Controllers
 {
-    public partial  class AppController : Controller
+    public partial class AppController : Controller
     {
         [Route("lite")]
-        public IActionResult LiteSessionNew() => RedirectToAction(nameof(LiteSession), new {id1 = Guid.NewGuid().ToString("N"), id2 = Guid.NewGuid().ToString("N")});
+        public IActionResult LiteSessionNew() => RedirectToAction(nameof(LiteSession), new { id1 = Guid.NewGuid().ToString("N"), id2 = Guid.NewGuid().ToString("N") });
 
         [Route("{id1}/{id2}")]
         public IActionResult LiteSession(string id1, string id2)
@@ -46,6 +45,59 @@ namespace JustSending.Controllers
             ViewData["LiteMode"] = true;
             return View(vm);
         }
-        
+
+        [HttpPost]
+        [Route("post/files/lite")]
+        //[RequestSizeLimit(2_147_483_648)]
+        public async Task<IActionResult> PostLite(SessionModel model, IFormFile file)
+        {
+            if (file == null)
+            {
+                if (string.IsNullOrEmpty(model.ComposerText))
+                    return GoBack();
+
+                return await Post(model, true);
+            }
+
+            var postedFilePath = Path.GetTempFileName();
+            using (var fs = new FileStream(postedFilePath, FileMode.OpenOrCreate))
+            {
+                await file.CopyToAsync(fs);
+            }
+
+            try
+            {
+                if (string.IsNullOrEmpty(model.ComposerText))
+                {
+                    model.ComposerText = file.FileName;
+                }
+
+                var message = SavePostedFile(postedFilePath, model);
+                await SaveMessageAndReturnResponse(message, true);
+            }
+            catch (BadHttpRequestException)
+            {
+                return BadRequest();
+            }
+            
+            return GoBack();
+
+            IActionResult GoBack() => RedirectToAction(nameof(LiteSession), new {id1 = model.SessionId, id2 = model.SessionVerification});
+
+        }
+
+        private void EnsureSessionCleanup(string sessionId, bool isLiteSession)
+        {
+            var session = _db.Sessions.FindById(sessionId);
+            if (session == null) return;
+
+            TimeSpan triggerAfter = TimeSpan.FromHours(isLiteSession ? 6 : 24);
+
+            if (!string.IsNullOrEmpty(session.CleanupJobId))
+                BackgroundJob.Delete(session.CleanupJobId);
+            var id = BackgroundJob.Schedule<BackgroundJobScheduler>(b => b.EraseSession(sessionId), triggerAfter);
+            session.CleanupJobId = id;
+            _db.Sessions.Upsert(session);
+        }
     }
 }

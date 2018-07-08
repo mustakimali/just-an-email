@@ -11,5 +11,6 @@ namespace JustSending.Data
 
         public DateTime DateCreated { get; set; }
         public bool IsLiteSession { get; set; }
+        public string CleanupJobId { get; set; }
     }
 }

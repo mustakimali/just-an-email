@@ -2,3 +2,18 @@
 .share-actions {
     display: block;
 }
+.ref-info {
+    text-align: center;
+    font-size: 80%;
+    background-color: #ddd;
+    padding: 5px;
+}
+
+#file {
+    display: block;
+    padding: 10px 0;
+    color: white;
+}
+#ComposerText {
+    height: 46px;
+}

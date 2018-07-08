@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Hangfire;
 using JustSending.Data;
 using JustSending.Models;
 using JustSending.Services;
@@ -11,6 +12,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
 using IOFile = System.IO.File;
 
 namespace JustSending.Controllers
@@ -107,13 +110,28 @@ namespace JustSending.Controllers
                 }
             }
 
-            var fileInfo = new FileInfo(postedFilePath);
-            if (fileInfo.Length > Convert.ToInt64(_config["MaxUploadSizeBytes"]))
+            try
+            {
+                var message = SavePostedFile(postedFilePath, model);
+                return await SaveMessageAndReturnResponse(message);
+            }
+            catch (BadHttpRequestException)
             {
                 return BadRequest();
             }
+            
+        }
+
+        private Message SavePostedFile(string postedFilePath, SessionModel model)
+        {
+            var fileInfo = new FileInfo(postedFilePath);
+            if (fileInfo.Length > Convert.ToInt64(_config["MaxUploadSizeBytes"]))
+            {
+                BadHttpRequestException.Throw(RequestRejectionReason.InvalidContentLength, HttpMethod.Post);
+            }
+
             var message = GetMessageFromModel(model, true);
-            var uploadDir = GetUploadFolder(model.SessionId, _env.WebRootPath);
+            var uploadDir = Helper.GetUploadFolder(model.SessionId, _env.WebRootPath);
             if (!Directory.Exists(uploadDir)) Directory.CreateDirectory(uploadDir);
 
             // Use original file name
@@ -123,6 +141,7 @@ namespace JustSending.Controllers
                 // if exist then append digits from the session id
                 fileName = Path.GetFileNameWithoutExtension(message.Text) + "_" + message.Id.Substring(0, 6) + Path.GetExtension(message.Text);
             }
+
             var destUploadPath = Path.Combine(uploadDir, fileName);
 
             message.Text = fileName;
@@ -130,8 +149,7 @@ namespace JustSending.Controllers
             message.FileSizeBytes = fileInfo.Length;
 
             IOFile.Move(postedFilePath, destUploadPath);
-
-            return await SaveMessageAndReturnResponse(message);
+            return message;
         }
 
         [Route("post/files")]
@@ -139,14 +157,14 @@ namespace JustSending.Controllers
         public async Task<IActionResult> PostWithFileAfterStreaming(SessionModel model)
         {
             // Locate the file
-            var uploadedPath = Path.Combine(GetUploadFolder(string.Empty, _env.WebRootPath), model.SocketConnectionId + ConversationHub.FILE_EXT);
+            var uploadedPath = Path.Combine(Helper.GetUploadFolder(string.Empty, _env.WebRootPath), model.SocketConnectionId + ConversationHub.FILE_EXT);
             if (!IOFile.Exists(uploadedPath))
             {
                 return NotFound();
             }
 
             var message = GetMessageFromModel(model);
-            var uploadFolder = GetUploadFolder(model.SessionId, _env.WebRootPath);
+            var uploadFolder = Helper.GetUploadFolder(model.SessionId, _env.WebRootPath);
             var moveToPath = Path.Combine(uploadFolder, message.Id + ConversationHub.FILE_EXT);
 
             if (!Directory.Exists(uploadFolder))
@@ -187,6 +205,8 @@ namespace JustSending.Controllers
             _db.MessagesInsert(message);
             _db.RecordMessageStats(message);
 
+            EnsureSessionCleanup(message.SessionId, lite);
+
             if (lite)
             {
                 return RedirectToAction(nameof(LiteSession), new {id1 = message.SessionId, id2 = message.SessionIdVerification});
@@ -226,18 +246,13 @@ namespace JustSending.Controllers
                 return NotFound();
             }
 
-            var uploadDir = GetUploadFolder(sessionId, _env.WebRootPath);
+            var uploadDir = Helper.GetUploadFolder(sessionId, _env.WebRootPath);
             var path = Path.Combine(uploadDir, msg.Text);
             if (!System.IO.File.Exists(path))
                 return NotFound();
 
             _db.RecordStats(s => s.FilesSizeBytes += msg.FileSizeBytes);
             return PhysicalFile(path, "application/" + Path.GetExtension(path).Trim('.'), msg.Text);
-        }
-
-        public static string GetUploadFolder(string sessionId, string root)
-        {
-            return Path.Combine(root, "upload", sessionId);
         }
 
         [Route("messages"), HttpPost]

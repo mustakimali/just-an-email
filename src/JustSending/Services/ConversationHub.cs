@@ -16,15 +16,17 @@ namespace JustSending.Services
 
         private readonly AppDbContext _db;
         private readonly IHostingEnvironment _env;
+        private readonly BackgroundJobScheduler _jobScheduler;
 
         private readonly string _uploadFolder;
 
-        public ConversationHub(AppDbContext db, IHostingEnvironment env)
+        public ConversationHub(AppDbContext db, IHostingEnvironment env, BackgroundJobScheduler jobScheduler)
         {
             _db = db;
             _env = env;
+            _jobScheduler = jobScheduler;
 
-            _uploadFolder = AppController.GetUploadFolder(string.Empty, _env.WebRootPath);
+            _uploadFolder = Helper.GetUploadFolder(string.Empty, _env.WebRootPath);
 
             if (!Directory.Exists(_uploadFolder)) Directory.CreateDirectory(_uploadFolder);
         }
@@ -278,26 +280,8 @@ namespace JustSending.Services
 
         private async Task EraseSessionInternal(string sessionId)
         {
-            _db.Sessions.Delete(sessionId);
-            _db.Messages.Delete(x => x.SessionId == sessionId);
-            _db.ShareTokens.Delete(x => x.SessionId == sessionId);
-
+            _jobScheduler.EraseSession(sessionId);
             await SessionDeleted(sessionId);
-
-            _db.Connections.Delete(x => x.SessionId == sessionId);
-
-            try
-            {
-                var folder = AppController.GetUploadFolder(sessionId, _env.WebRootPath);
-                if (Directory.Exists(folder))
-                {
-                    Directory.Delete(folder, true);
-                }
-            }
-            catch
-            {
-                // ToDo: Schedule delete later
-            }
         }
 
         private string GetSessionId() =>

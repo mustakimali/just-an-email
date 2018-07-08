@@ -116,7 +116,27 @@
         </div>
     </div>
 </div>
+<noscrip>
+    
+    <div class="alert alert-danger">
+        <p>
+            Please use the lite version as your device isn't compatible with the rich experiences.
+        </p>
+        <hr/>
+        <a asp-action="LiteSessionNew" class="btn btn-danger btn-block">Take me to the lite experience</a>
+    </div>
 
+    
+
+    <style>
+        #conversation, .jumbotron {
+            display: none;
+        }
+        .alert {
+            margin-top: 20px;
+        }
+    </style>
+</noscrip>
 @section Scripts
     {
     <script src="https://ajax.aspnetcdn.com/ajax/jquery.validate/1.14.0/jquery.validate.min.js"></script>

@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Runtime.InteropServices;
 using System.Linq;
 using LiteDB;
 using Microsoft.AspNetCore.Hosting;
@@ -26,16 +24,7 @@ namespace JustSending.Data
             {
                 if (_db == null)
                 {
-                    var dataDirectory = Path.Combine(_env.ContentRootPath, "App_Data");
-                    if (!Directory.Exists(dataDirectory)) Directory.CreateDirectory(dataDirectory);
-
-                    var connectionString = $"FileName={Path.Combine(dataDirectory, "AppDb.ldb")}";
-                    if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                    {
-                        connectionString += ";Mode=Exclusive";
-                    }
-
-                    _db = new LiteDatabase(connectionString);
+                    _db = new LiteDatabase(Helper.BuildDbConnectionString("AppDb", _env));
 
                     EnsureIndex();
                 }
@@ -144,7 +133,7 @@ namespace JustSending.Data
             RecordStats(s =>
             {
                 s.Messages++;
-                s.MessagesSizeBytes += msg.Text.Length;
+                s.MessagesSizeBytes += msg.Text?.Length ?? 0;
 
                 if (msg.HasFile)
                 {
