@@ -31,11 +31,7 @@
                         </div>
                         @Html.ValidationMessageFor(x => x.ComposerText)
 
-
-                        @Html.HiddenFor(x => x.SessionId)
-                        @Html.HiddenFor(x => x.SessionVerification)
-                        @Html.HiddenFor(x => x.SocketConnectionId)
-                        @Html.HiddenFor(x => x.EncryptionPublicKeyAlias)
+                        <partial name="_LiteFormHiddens" model="@Model" />
                     </form>
                 </div>
             </div>
@@ -50,8 +46,12 @@
             {
                 <div class="share-panel row">
                     <div class="col-sm-7 col-xs-12" style="margin-bottom: 5px;">
-                        <h1 title="Use this PIN to securely connect to this session from another device"><i class="fa fa-lock text-"></i>&nbsp;<span id="token">@Model.Token.Value</span> <a href="#" class="cancelShareBtn btn btn-wide btn-danger hidden-xs" title="Dispose this PIN">Cancel</a></h1>
-                        <a href="#" class="cancelShareBtn btn btn-block btn-danger hidden-sm hidden-md hidden-lg" title="Dispose this PIN">Cancel</a>
+                        <form asp-action="CancelShareToken">
+                            <h1 title="Use this PIN to securely connect to this session from another device"><i class="fa fa-lock text-"></i>&nbsp;<span id="token">@Model.Token.Value</span> <button class="cancelShareBtn btn btn-wide btn-danger hidden-xs" title="Dispose this PIN">Cancel</button></h1>
+                            <button class="cancelShareBtn btn btn-block btn-danger hidden-sm hidden-md hidden-lg" title="Dispose this PIN">Cancel</button>
+
+                            <partial name="_LiteFormHiddens" model="@Model" />
+                        </form>
                     </div>
                     <div class="col-sm-5 hidden-xs">
                         <div class="instruction">
@@ -63,7 +63,11 @@
             else
             {
                 <div class="share-actions">
-                    <a id="shareBtn" href="#" class="btn btn-success pull-left">Connect another Device</a>
+                    <form asp-action="CreateShareToken">
+                        <button id="shareBtn" class="btn btn-success pull-left">Connect another Device</button>
+
+                        <partial name="_LiteFormHiddens" model="@Model" />
+                    </form>
                     <a id="deleteBtn" href="#" class="btn btn-danger pull-right" title="Finish and Erase Everything"><i class="fa fa-trash-o"></i></a>
                     <span id="connectedDevices" class="btn btn-warning" title="Number of devices connected"><span class="badge">2</span></span>
                     <div class="clearfix"></div>

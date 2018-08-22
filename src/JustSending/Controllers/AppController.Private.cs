@@ -33,6 +33,11 @@ namespace JustSending.Controllers
             _db.Sessions.Insert(session);
 
             // New ShareToken
+            return CreateShareToken(sessionId);
+        }
+
+        private int CreateShareToken(string sessionId)
+        {
             var token = _db.CreateNewShareToken(sessionId);
             _db.RecordStats(s => s.Sessions++);
             return token;

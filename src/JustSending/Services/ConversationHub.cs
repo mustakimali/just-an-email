@@ -262,12 +262,23 @@ namespace JustSending.Services
             var connection = _db.Connections.FindById(Context.ConnectionId);
             if (connection == null) return;
 
-            var shareToken = _db.ShareTokens.FindOne(x => x.SessionId == connection.SessionId);
+            if(CancelShareSessionBySessionId(connection.SessionId))
+            {
+                await HideSharePanel(connection.SessionId);
+            }
+        }
+
+        public bool CancelShareSessionBySessionId(string sessionId)
+        {
+            var shareToken = _db.ShareTokens.FindOne(x => x.SessionId == sessionId);
+
             if (shareToken != null)
             {
                 _db.ShareTokens.Delete(shareToken.Id);
-                await HideSharePanel(connection.SessionId);
+                return true;
             }
+
+            return false;
         }
 
         public async Task EraseSession()

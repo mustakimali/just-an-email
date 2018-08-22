@@ -18,7 +18,7 @@ namespace JustSending.Controllers
         [Route("lite")]
         public IActionResult LiteSessionNew() => RedirectToAction(nameof(LiteSession), new { id1 = Guid.NewGuid().ToString("N"), id2 = Guid.NewGuid().ToString("N") });
 
-        [Route("{id1}/{id2}")]
+        [Route("lite/{id1}/{id2}")]
         public IActionResult LiteSession(string id1, string id2)
         {
             int? token = null;
@@ -47,14 +47,14 @@ namespace JustSending.Controllers
         }
 
         [HttpPost]
-        [Route("post/files/lite")]
+        [Route("lite/post/files")]
         //[RequestSizeLimit(2_147_483_648)]
         public async Task<IActionResult> PostLite(SessionModel model, IFormFile file)
         {
             if (file == null)
             {
                 if (string.IsNullOrEmpty(model.ComposerText))
-                    return GoBack();
+                    return RedirectToLiteSession(model);
 
                 return await Post(model, true);
             }
@@ -80,11 +80,28 @@ namespace JustSending.Controllers
                 return BadRequest();
             }
             
-            return GoBack();
-
-            IActionResult GoBack() => RedirectToAction(nameof(LiteSession), new {id1 = model.SessionId, id2 = model.SessionVerification});
-
+            return RedirectToLiteSession(model);
         }
+
+        [HttpPost]
+        [Route("lite/share-token/cancel")]
+        public IActionResult CancelShareToken(SessionModel model)
+        {
+            _hub.CancelShareSessionBySessionId(model.SessionId);
+
+            return RedirectToLiteSession(model);
+        }
+
+        [HttpPost]
+        [Route("lite/share-token/new")]
+        public IActionResult CreateShareToken(SessionModel model)
+        {
+            CreateShareToken(model.SessionId);
+            
+            return RedirectToLiteSession(model);
+        }
+
+        private IActionResult RedirectToLiteSession(SessionModel model) => RedirectToAction(nameof(LiteSession), new { id1 = model.SessionId, id2 = model.SessionVerification });
 
         private void EnsureSessionCleanup(string sessionId, bool isLiteSession)
         {
