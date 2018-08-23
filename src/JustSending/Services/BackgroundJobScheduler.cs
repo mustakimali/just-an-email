@@ -37,7 +37,8 @@ namespace JustSending.Services
                 BackgroundJob.Schedule(() => DeleteUploadedFiles(sessionId), TimeSpan.FromMinutes(30));
             }
 
-            BackgroundJob.Delete(session.CleanupJobId);
+            if(!string.IsNullOrEmpty(session.CleanupJobId))
+                BackgroundJob.Delete(session.CleanupJobId);
         }
 
         public void DeleteUploadedFiles(string sessionId)

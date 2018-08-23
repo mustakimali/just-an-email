@@ -100,7 +100,7 @@ namespace JustSending.Services
             }
         }
 
-        private async Task AddSessionNotification(string sessionId, string message)
+        public async Task AddSessionNotification(string sessionId, string message, bool isLiteSession = false)
         {
             var msg = new Message
             {
@@ -108,12 +108,14 @@ namespace JustSending.Services
                 SessionId = sessionId,
                 DateSent = DateTime.UtcNow,
                 Text = message,
-                SocketConnectionId = Context.ConnectionId,
+                SocketConnectionId = Context?.ConnectionId,
                 IsNotification = true
             };
 
             _db.MessagesInsert(msg);
-            await RequestReloadMessage(sessionId);
+
+            if(!isLiteSession)
+                await RequestReloadMessage(sessionId);
         }
 
         public async Task<string> Connect(string sessionId)

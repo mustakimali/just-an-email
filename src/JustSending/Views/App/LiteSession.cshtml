@@ -68,7 +68,11 @@
 
                         <partial name="_LiteFormHiddens" model="@Model" />
                     </form>
-                    <a id="deleteBtn" href="#" class="btn btn-danger pull-right" title="Finish and Erase Everything"><i class="fa fa-trash-o"></i></a>
+                    <form asp-action="EraseSession">
+                        <button class="btn btn-danger pull-right" title="Finish and Erase Everything"><i class="fa fa-trash-o"></i></button>
+
+                        <partial name="_LiteFormHiddens" model="@Model" />
+                    </form>
                     <span id="connectedDevices" class="btn btn-warning" title="Number of devices connected"><span class="badge">2</span></span>
                     <div class="clearfix"></div>
                 </div>
@@ -119,15 +123,14 @@
 </div>
 
 @section Scripts
-    {
+{
     <script src="https://ajax.aspnetcdn.com/ajax/jquery.validate/1.14.0/jquery.validate.min.js"></script>
     <script src="https://ajax.aspnetcdn.com/ajax/jquery.validation.unobtrusive/3.2.6/jquery.validate.unobtrusive.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/autosize.js/4.0.0/autosize.min.js"></script>
-    <script src="~/js/JustSendingApp.js"></script>
-    <script src="~/js/JustSendingApp.Lite.js"></script>
+    <script src="~/js/JustSendingApp.js" asp-append-version="true"></script>
+    <script src="~/js/JustSendingApp.Lite.js" asp-append-version="true"></script>
 }
 @section Head
 {
     <partial name="_CommonHead" />
-    
 }

@@ -19,7 +19,7 @@ namespace JustSending.Controllers
         public IActionResult LiteSessionNew() => RedirectToAction(nameof(LiteSession), new { id1 = Guid.NewGuid().ToString("N"), id2 = Guid.NewGuid().ToString("N") });
 
         [Route("lite/{id1}/{id2}")]
-        public IActionResult LiteSession(string id1, string id2)
+        public async Task<IActionResult> LiteSession(string id1, string id2)
         {
             int? token = null;
             var session = _db.Sessions.FindById(id1);
@@ -32,6 +32,8 @@ namespace JustSending.Controllers
             else
             {
                 token = CreateSession(id1, id2, liteSession: true);
+
+                await _hub.AddSessionNotification(id1, "Session Created", true);
             }
 
             var vm = new LiteSessionModel
@@ -79,7 +81,7 @@ namespace JustSending.Controllers
             {
                 return BadRequest();
             }
-            
+
             return RedirectToLiteSession(model);
         }
 
@@ -87,7 +89,10 @@ namespace JustSending.Controllers
         [Route("lite/share-token/cancel")]
         public IActionResult CancelShareToken(SessionModel model)
         {
-            _hub.CancelShareSessionBySessionId(model.SessionId);
+            if (IsValidRequest(model))
+            {
+                _hub.CancelShareSessionBySessionId(model.SessionId);
+            }
 
             return RedirectToLiteSession(model);
         }
@@ -96,9 +101,31 @@ namespace JustSending.Controllers
         [Route("lite/share-token/new")]
         public IActionResult CreateShareToken(SessionModel model)
         {
-            CreateShareToken(model.SessionId);
-            
+            if (IsValidRequest(model))
+            {
+                CreateShareToken(model.SessionId);
+            }
+
             return RedirectToLiteSession(model);
+        }
+
+        [HttpPost]
+        [Route("lite/erase-session")]
+        public IActionResult EraseSession(SessionModel model, [FromServices] BackgroundJobScheduler jobScheduler)
+        {
+            if (IsValidRequest(model))
+            {
+                jobScheduler.EraseSession(model.SessionId);
+            }
+            return RedirectToAction(nameof(HomeController.Index), "Home");
+        }
+
+        private bool IsValidRequest(SessionModel model)
+        {
+            var session = _db.Sessions.FindById(model.SessionId);
+            if (session == null) return false;
+
+            return session.IdVerification == model.SessionVerification;
         }
 
         private IActionResult RedirectToLiteSession(SessionModel model) => RedirectToAction(nameof(LiteSession), new { id1 = model.SessionId, id2 = model.SessionVerification });
