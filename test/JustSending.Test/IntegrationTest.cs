@@ -19,57 +19,131 @@ using NUnit.Framework;
 namespace JustSending.Test
 {
     [TestFixture]
-    public class IntegrationTest
+    public class IntegrationTest : IDisposable
     {
         private readonly string _seleniumDriverPath;
+        private readonly Uri _appHostName = new Uri("http://localhost:5000");
+        private readonly string _contentRoot;
+        private Process _dotnetProcess;
 
         public IntegrationTest()
         {
             var basePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             var relativePath = "../../../../../src/JustSending".Replace('/', Path.DirectorySeparatorChar);
-            var contentRoot = Path.GetFullPath(relativePath, basePath);
+            _contentRoot = Path.GetFullPath(relativePath, basePath);
 
             _seleniumDriverPath = Path.Combine(Path.GetFullPath("../../../", basePath), "Drivers");
         }
 
         [Test]
-        public void Integration_1()
+        public async Task Integration_1()
         {
+            await EnsureAppRunning();
+
             using (var client1 = CreateDriver())
             using (var client2 = CreateDriver())
             {
-                client1.FindElement(By.Id("new-session")).Click();
-
-                client2.FindElement(By.Id("connect")).Click();
+                Navigate();
 
                 WaitMs(1000);
 
-                var token = client1.FindElement(By.Id("token")).Text;
-
-                client2.FindElement(By.Id("Token")).SendKeys(token);
-                client2.FindElement(By.Id("connect")).Click();
+                Pair();
 
                 WaitMs(1000);
 
-                client2.FindElement(By.Id("ComposerText")).SendKeys(Guid.NewGuid().ToString("N"));
-                client2.FindElement(By.ClassName("sendBtn")).Click();
-
-                WaitMs(1000);
+                SendAndVerifyMessage();
 
                 client1.FindElement(By.ClassName("navbar-brand")).Click();
                 WaitMs(500);
                 client2.FindElement(By.ClassName("confirm")).Click();
                 WaitMs(500);
                 client2.FindElement(By.ClassName("navbar-brand")).Click();
+
+                #region Local Functions
+
+                void SendAndVerifyMessage()
+                {
+                    var msgToSend = Guid.NewGuid().ToString("N");
+
+                    client2.FindElement(By.Id("ComposerText")).SendKeys(msgToSend);
+                    client2.FindElement(By.ClassName("sendBtn")).Click();
+
+                    WaitMs(1000);
+
+                    var textOnClient1 = client1.FindElement(By.CssSelector(".msg-c span.data")).Text;
+
+                    textOnClient1.Should().Be(msgToSend);
+                }
+
+                void Pair()
+                {
+                    var token = client1.FindElement(By.Id("token")).Text;
+
+                    client2.FindElement(By.Id("Token")).SendKeys(token);
+                    client2.FindElement(By.Id("connect")).Click();
+                }
+
+                void Navigate()
+                {
+                    client1.FindElement(By.Id("new-session")).Click();
+
+                    client2.FindElement(By.Id("connect")).Click();
+                }
+
+                #endregion
+            }
+        }
+
+        [TearDown]
+        public void Dispose()
+        {
+            if (_dotnetProcess != null && !_dotnetProcess.HasExited)
+            {
+                _dotnetProcess.Kill();
+            }
+        }
+
+        private async Task EnsureAppRunning()
+        {
+            using (var client = new HttpClient())
+            {
+                try
+                {
+                    var homePage = await client.GetStringAsync(_appHostName);
+
+                    if (!homePage.Contains("Mustakim Ali"))
+                        Assert.Fail($"Something else is running on {_appHostName}");
+                }
+                catch (Exception)
+                {
+                    _dotnetProcess = new Process()
+                    {
+                        StartInfo = {
+                            WorkingDirectory = _contentRoot,
+                            FileName = "dotnet",
+                            Arguments = "bin/Debug/netcoreapp2.1/JustSending.dll"
+                        }
+                    };
+                    _dotnetProcess.Start();
+                    WaitMs(3000);
+                }
+
             }
         }
 
         private IWebDriver CreateDriver()
         {
-            var driver = new ChromeDriver(_seleniumDriverPath);
+            ChromeOptions chromeOpt = new ChromeOptions();
+
+#if !DEBUG
+            chromeOpt.AddArguments("--headless");
+            chromeOpt.AddArguments("--disable-gpu");
+#endif
+
+            var driver = new ChromeDriver(_seleniumDriverPath, chromeOpt);
 
             driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(5);
-            driver.Navigate().GoToUrl("http://localhost:61452");
+            driver.Navigate().GoToUrl(_appHostName);
 
             return driver;
         }
