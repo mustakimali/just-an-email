@@ -15,6 +15,7 @@ using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium;
 using System.Diagnostics;
 using NUnit.Framework;
+using OpenQA.Selenium.Firefox;
 
 namespace JustSending.Test
 {
@@ -107,6 +108,10 @@ namespace JustSending.Test
         {
             using (var client = new HttpClient())
             {
+                string mode = "Debug";
+#if !DEBUG
+                mode = "Release";
+#endif
                 try
                 {
                     var homePage = await client.GetStringAsync(_appHostName);
@@ -121,17 +126,29 @@ namespace JustSending.Test
                         StartInfo = {
                             WorkingDirectory = _contentRoot,
                             FileName = "dotnet",
-                            Arguments = "bin/Debug/netcoreapp2.1/JustSending.dll"
+                            Arguments = $"bin/{mode}/netcoreapp2.1/{(mode == "Release" ? "publish/" : "")}JustSending.dll"
                         }
                     };
+
                     _dotnetProcess.Start();
-                    WaitMs(3000);
+                    WaitMs(5000);
                 }
 
             }
         }
 
         private IWebDriver CreateDriver()
+        {
+#if DEBUG
+            // Developer Machine
+            return CreateDriverChrome();
+#else
+            // AppVeyor
+            return CreateDriverFirefox();
+#endif
+        }
+
+        private IWebDriver CreateDriverChrome()
         {
             ChromeOptions chromeOpt = new ChromeOptions();
 
@@ -142,6 +159,24 @@ namespace JustSending.Test
 
             var driver = new ChromeDriver(_seleniumDriverPath, chromeOpt);
 
+            return InitialiseDriver(driver);
+        }
+
+        private IWebDriver CreateDriverFirefox()
+        {
+            var driverService = FirefoxDriverService.CreateDefaultService();
+
+            driverService.FirefoxBinaryPath = @"C:\Program Files (x86)\Mozilla Firefox\firefox.exe";
+            driverService.HideCommandPromptWindow = true;
+            driverService.SuppressInitialDiagnosticInformation = true;
+
+            var driver = new FirefoxDriver(driverService, new FirefoxOptions(), TimeSpan.FromSeconds(60));
+
+            return InitialiseDriver(driver);
+        }
+
+        private IWebDriver InitialiseDriver(IWebDriver driver)
+        {
             driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(5);
             driver.Navigate().GoToUrl(_appHostName);
 
