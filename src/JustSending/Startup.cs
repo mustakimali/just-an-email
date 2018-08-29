@@ -92,6 +92,10 @@ namespace JustALink
         }
         public bool Authorize(DashboardContext context)
         {
+            #if DEBUG
+            return true;
+            #endif
+            
             return context.GetHttpContext().Request.Cookies.TryGetValue("HangfireToken", out var tokenFromCookie) 
                    && tokenFromCookie == _token;
         }

@@ -205,7 +205,7 @@ namespace JustSending.Controllers
             _db.MessagesInsert(message);
             _db.RecordMessageStats(message);
 
-            EnsureSessionCleanup(message.SessionId, lite);
+            ScheduleOrExtendSessionCleanup(message.SessionId, lite);
 
             if (lite)
             {

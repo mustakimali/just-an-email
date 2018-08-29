@@ -130,7 +130,7 @@ namespace JustSending.Controllers
 
         private IActionResult RedirectToLiteSession(SessionModel model) => RedirectToAction(nameof(LiteSession), new { id1 = model.SessionId, id2 = model.SessionVerification });
 
-        private void EnsureSessionCleanup(string sessionId, bool isLiteSession)
+        private void ScheduleOrExtendSessionCleanup(string sessionId, bool isLiteSession)
         {
             var session = _db.Sessions.FindById(sessionId);
             if (session == null) return;

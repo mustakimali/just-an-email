@@ -2,16 +2,13 @@
 @{
     ViewData["Title"] = "Quickly send files, URL or any texts across your devices!";
 }
-@section Head {
-    <css files="~/css/_home.css" type="text/css"></css>
-}
 @section AboveBody
 {
     <div class="jumbotron">
         <div class="container">
             <h1 class="text-lowercase">Pass files or <span title="Long URL, unfinished facebook status, code blocks!" style="border-bottom: 1px dotted #fff;cursor: help;">any texts</span> between your devices</h1>
             
-            <div>
+            <div id="connect-panel">
                 <a id="new-session" asp-controller="App" asp-action="NewSession" class="btn btn-lg btn-primary btn-block" style="margin-bottom: 5px">Start</a>
                 <noscript>
                     <a asp-controller="App" asp-action="LiteSessionNew" class="btn btn-lg btn-primary btn-block" style="margin-bottom: 5px">Start*</a>
@@ -78,8 +75,12 @@
 @section Scripts
 {
 <script type="text/javascript">
-    $(function() {
+    (function($) {
+        if(window.innerWidth <= 340){
+            showNoscripts($);
+        }
+
         $("*[title]").tooltip();
-    });
+    })(window.jQuery);
 </script>
 }

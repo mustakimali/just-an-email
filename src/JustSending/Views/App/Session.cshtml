@@ -153,14 +153,24 @@
     <script src="~/js/JustEncrypt.js" asp-append-version="true"></script>
     <script src="~/js/JustSendingApp.js" asp-append-version="true"></script>
     <script type="text/javascript">
-        $(function () {
-            JustSendingApp.init();
-        });
+        (function() {
+            try {
+                JustSendingApp.init();
+            } catch (ex) {
+                window.location.href = "/app/lite";
+            }
+        })();
     </script>
+    <noscript>
+        <style>
+            .h-nojs {
+                display: none;
+            }
+        </style>
+    </noscript>
 }
 @section Head
 {
-    <partial name="_CommonHead"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/embed-js/4.2.3/embed.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/2.4.1/github-markdown.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/styles/github-gist.min.css" />

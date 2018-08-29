@@ -112,6 +112,25 @@ function app_busy(show) {
         $("body").removeClass("busy");
 }
 
+function onLoad(code) {
+    window.onload = code()
+}
+
+function showNoscripts($) {
+    var el = document.getElementById("new-session");
+    el.href = "/app/lite";
+    el.innerText += "*";
+}
+
+function hasjQuery() {
+    try {
+        var dno = window.$;
+        return true;
+    } catch (ex) {
+        return false;
+    }
+}
+
 String.prototype.format = function () {
     var args = arguments;
     return this.replace(/{(\d+)}/g, function (match, number) {

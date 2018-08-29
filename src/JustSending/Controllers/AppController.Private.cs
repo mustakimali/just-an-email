@@ -32,6 +32,8 @@ namespace JustSending.Controllers
             };
             _db.Sessions.Insert(session);
 
+            ScheduleOrExtendSessionCleanup(sessionId, liteSession);
+
             // New ShareToken
             return CreateShareToken(sessionId);
         }
