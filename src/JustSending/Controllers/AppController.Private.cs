@@ -47,6 +47,8 @@ namespace JustSending.Controllers
 
         private IEnumerable<Message> GetMessagesInternal(string id, string id2, int @from)
         {
+            if(string.IsNullOrEmpty(id)) return Enumerable.Empty<Message>();
+            
             var session = _db.Sessions.FindById(id);
             if (session == null || session.IdVerification != id2)
             {

@@ -138,7 +138,7 @@
     </style>
 </noscript>
 @section Scripts
-    {
+{
     <script src="https://ajax.aspnetcdn.com/ajax/jquery.validate/1.14.0/jquery.validate.min.js"></script>
     <script src="https://ajax.aspnetcdn.com/ajax/jquery.validation.unobtrusive/3.2.6/jquery.validate.unobtrusive.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.2.2/jquery.form.min.js"></script>
@@ -155,9 +155,15 @@
     <script type="text/javascript">
         (function() {
             try {
+                if(!window.Promise) {
+                    throw "Browser does not support Promise()";
+                }
                 JustSendingApp.init();
             } catch (ex) {
-                window.location.href = "/app/lite";
+                if(is_dev())
+                    document.body.text = JSON.stringify(ex);
+                else
+                    window.location.href = "/app/lite?r=u";
             }
         })();
     </script>

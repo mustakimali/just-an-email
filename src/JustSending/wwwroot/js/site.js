@@ -101,8 +101,12 @@ function showAjaxError(jqXhr, errorThrown) {
 }
 
 function Log(text) {
-    if (window.location.href.indexOf("localhost") > 0 || window.location.href.indexOf("show_log") > 0)
+    if (is_dev())
         console.log(text);
+}
+
+function is_dev() {
+    return window.location.href.indexOf("localhost") > 0 || window.location.href.indexOf("show_log") > 0; 
 }
 
 function app_busy(show) {
