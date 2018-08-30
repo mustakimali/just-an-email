@@ -111,21 +111,35 @@ namespace JustSending.Controllers
 
         [HttpPost]
         [Route("lite/erase-session")]
-        public IActionResult EraseSession(SessionModel model, [FromServices] BackgroundJobScheduler jobScheduler)
+        public async Task<IActionResult> EraseSession(SessionModel model, [FromServices] BackgroundJobScheduler jobScheduler)
         {
             if (IsValidRequest(model))
             {
-                jobScheduler.EraseSession(model.SessionId);
+                var cIds = jobScheduler.EraseSessionReturnConnectionIds(model.SessionId);
+                await _hub.NotifySessionDeleted(cIds);
             }
             return RedirectToAction(nameof(HomeController.Index), "Home");
         }
 
-        private bool IsValidRequest(SessionModel model)
+        [HttpPost]
+        [Route("lite/poll")]
+        public async Task<LiteSessionStatus> PollSessionStatus(string id, string id2, int from)
         {
-            var session = _db.Sessions.FindById(model.SessionId);
-            if (session == null) return false;
+            var data = new LiteSessionStatus();
 
-            return session.IdVerification == model.SessionVerification;
+            var token = _db.ShareTokens.FindOne(s => s.SessionId == id);
+            var messages = GetMessagesInternal(id, id2, from).ToArray();
+
+            data.HasToken = token != null;
+            data.HasSession = IsValidSession(id, id2);
+            data.Token = token?.Id.ToString(Constants.TOKEN_FORMAT_STRING);
+
+            ViewData["LiteMode"] = true;
+
+            if (messages.Length > 0)
+                data.MessageHtml = await this.RenderViewAsync("GetMessages", messages).ConfigureAwait(false);
+
+            return data;
         }
 
         private IActionResult RedirectToLiteSession(SessionModel model) => RedirectToAction(nameof(LiteSession), new { id1 = model.SessionId, id2 = model.SessionVerification });
@@ -139,7 +153,7 @@ namespace JustSending.Controllers
 
             if (!string.IsNullOrEmpty(session.CleanupJobId))
                 BackgroundJob.Delete(session.CleanupJobId);
-            var id = BackgroundJob.Schedule<BackgroundJobScheduler>(b => b.EraseSession(sessionId), triggerAfter);
+            var id = BackgroundJob.Schedule<BackgroundJobScheduler>(b => b.Erase(sessionId), triggerAfter);
             session.CleanupJobId = id;
             _db.Sessions.Upsert(session);
         }

@@ -456,6 +456,10 @@
             }
         });
 
+        conn.on("redirect", function (url) {
+            document.location.href = url;
+        });
+
         $("#shareBtn").on("click", function () {
             conn.send("share");
             return false;

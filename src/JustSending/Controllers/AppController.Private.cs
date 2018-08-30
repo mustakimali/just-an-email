@@ -1,21 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using JustSending.Data;
 using JustSending.Models;
-using JustSending.Services;
-using JustSending.Services.Attributes;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using IOFile = System.IO.File;
 
 namespace JustSending.Controllers
 {
-    public partial  class AppController : Controller
+    public partial class AppController : Controller
     {
         private int CreateSession(string id, string id2, bool liteSession = false)
         {
@@ -47,20 +39,32 @@ namespace JustSending.Controllers
 
         private IEnumerable<Message> GetMessagesInternal(string id, string id2, int @from)
         {
-            if(string.IsNullOrEmpty(id)) return Enumerable.Empty<Message>();
-            
-            var session = _db.Sessions.FindById(id);
-            if (session == null || session.IdVerification != id2)
+            if (!IsValidSession(id, id2))
             {
                 return Enumerable.Empty<Message>();
             }
 
-            var messages = _db
+            return _db
                 .Messages
                 .Find(x => x.SessionId == id && x.SessionMessageSequence > @from)
                 .OrderByDescending(x => x.DateSent);
-            return messages;
+        }
+
+        private bool IsValidRequest(SessionModel model) => IsValidSession(model.SessionId, model.SessionVerification);
+
+        private bool IsValidSession(string id, string id2)
+        {
+            if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(id2))
+                return false;
+
+            var session = _db.Sessions.FindById(id);
+            if (session == null || session.IdVerification != id2)
+            {
+                return false;
+            }
+
+            return true;
         }
     }
-    
+
 }

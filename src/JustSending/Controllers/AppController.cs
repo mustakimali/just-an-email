@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Hangfire;
 using JustSending.Data;
 using JustSending.Models;
 using JustSending.Services;
@@ -119,7 +117,7 @@ namespace JustSending.Controllers
             {
                 return BadRequest();
             }
-            
+
         }
 
         private Message SavePostedFile(string postedFilePath, SessionModel model)
@@ -207,20 +205,18 @@ namespace JustSending.Controllers
 
             ScheduleOrExtendSessionCleanup(message.SessionId, lite);
 
-            if (lite)
-            {
-                return RedirectToAction(nameof(LiteSession), new {id1 = message.SessionId, id2 = message.SessionIdVerification});
-            }
-
             await _hub.RequestReloadMessage(message.SessionId);
 
-            return Accepted();
+            if (lite)
+                return RedirectToAction(nameof(LiteSession), new { id1 = message.SessionId, id2 = message.SessionIdVerification });
+            else
+                return Accepted();
         }
 
         private Message GetMessageFromModel(SessionModel model, bool hasFile = false)
         {
             var utcNow = DateTime.UtcNow;
-            var message = new Message
+            return new Message
             {
                 Id = _db.NewGuid(),
                 SessionId = model.SessionId,
@@ -232,7 +228,6 @@ namespace JustSending.Controllers
                 Text = model.ComposerText,
                 HasFile = hasFile
             };
-            return message;
         }
 
         [HttpGet]
@@ -248,7 +243,7 @@ namespace JustSending.Controllers
 
             var uploadDir = Helper.GetUploadFolder(sessionId, _env.WebRootPath);
             var path = Path.Combine(uploadDir, msg.Text);
-            if (!System.IO.File.Exists(path))
+            if (!IOFile.Exists(path))
                 return NotFound();
 
             _db.RecordStats(s => s.FilesSizeBytes += msg.FileSizeBytes);
@@ -293,7 +288,8 @@ namespace JustSending.Controllers
 
             if (session.IsLiteSession)
             {
-                return RedirectToAction(nameof(LiteSession), new {id1 = session.Id, id2 = session.IdVerification});
+                await _hub.AddSessionNotification(session.Id, "A new device has been connected!", true);
+                return RedirectToAction(nameof(LiteSession), new { id1 = session.Id, id2 = session.IdVerification });
             }
 
             await _hub.HideSharePanel(session.Id);
@@ -319,28 +315,28 @@ namespace JustSending.Controllers
             });
         }
 
-
-#if DEBUG
-        [HttpGet]
-        [Route("stress-test")]
-        public async Task<IActionResult> StressTest(string sessionId, string message)
+        [HttpPost]
+        [Route("lite/notify/unsupported-device")]
+        public async Task<IActionResult> NotifyUnsupportedClientConnected(string id, string id2)
         {
-            if (string.IsNullOrEmpty(message))
-                message = Guid.NewGuid().ToString("N");
+            if (!IsValidSession(id, id2)) return BadRequest();
 
-            // find a session with an active device
-            //
-            return await Post(new SessionModel
-            {
-                SessionId = sessionId,
-                ComposerText = message
-            });
+            // Convert this session to Lite Session
+            var session = _db.Sessions.FindById(id);
+            session.IsLiteSession = true;
+            _db.Sessions.Upsert(session);
+
+            await _hub.RedirectTo(id, Url.Action(nameof(LiteSession), new { id1 = id, id2, r = "u" }))
+                .ConfigureAwait(false);
+
+            return Ok();
         }
-#endif
 
         private IActionResult GetMessagesViewInternal(string id, string id2, int @from)
         {
             var messages = GetMessagesInternal(id, id2, @from).ToArray();
+            if (messages.Length == 0) return new EmptyResult();
+
             return View("GetMessages", messages);
         }
     }

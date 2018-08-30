@@ -23,7 +23,7 @@
                     * Your device is too outdated to experience the full rich experience of this app
                 </p>
             </noscript>
-            
+           
         </div>
     </div>
     <div class="jumbotron share">
@@ -49,6 +49,9 @@
                         <li>No login/registration required.</li>
                         <li>All you need is a browser.</li>
                         <li>Share Files <strong>upto @config["MaxUploadSizeDisplay"]</strong>, URL or arbitrary text.</li>
+                        <li>
+                            Very old browser? use <a asp-controller="App" asp-action="LiteSessionNew">Lite version</a>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -78,7 +81,6 @@
     (function($) {
         if(window.innerWidth <= 340){
             showNoscripts($);
-            //showNoscripts($);
         }
 
         $("*[title]").tooltip();

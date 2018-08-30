@@ -36,19 +36,23 @@ namespace JustSending.Test
             _seleniumDriverPath = Path.Combine(Path.GetFullPath("../../../", basePath), "Drivers");
         }
 
-        [Test]
-        public async Task Integration_1()
+        [OneTimeSetUp]
+        public async Task Init()
         {
-            await EnsureAppRunning();
+            await EnsureAppRunning().ConfigureAwait(false);
+        }
 
+        [Test]
+        public void PairMessageExchange()
+        {
             using (var client1 = CreateDriver())
             using (var client2 = CreateDriver())
             {
-                Navigate();
+                Navigate(client1, client2);
 
                 WaitMs(1000);
 
-                Pair();
+                Pair(client1, client2);
 
                 WaitMs(1000);
 
@@ -76,22 +80,38 @@ namespace JustSending.Test
                     textOnClient1.Should().Be(msgToSend);
                 }
 
-                void Pair()
-                {
-                    var token = client1.FindElement(By.Id("token")).Text;
-
-                    client2.FindElement(By.Id("Token")).SendKeys(token);
-                    client2.FindElement(By.Id("connect")).Click();
-                }
-
-                void Navigate()
-                {
-                    client1.FindElement(By.Id("new-session")).Click();
-
-                    client2.FindElement(By.Id("connect")).Click();
-                }
-
                 #endregion
+            }
+        }
+
+        [Test]
+        public void DeleteSession()
+        {
+            using (var client1 = CreateDriver())
+            using (var client2 = CreateDriver())
+            {
+                Navigate(client1, client2);
+
+                WaitMs(1000);
+
+                Pair(client1, client2);
+
+                WaitMs(1000);
+
+                client2
+                    .FindElement(By.Id("deleteBtn"))
+                    .Click();
+
+                WaitMs(500);
+
+                client2
+                    .FindElement(By.ClassName("confirm"))
+                    .Click();
+
+                WaitMs(1000);
+
+                client2.Url.Should().Be(_appHostName.ToString());
+                client1.Url.Should().Be(_appHostName.ToString());
             }
         }
 
@@ -183,9 +203,24 @@ namespace JustSending.Test
             return driver;
         }
 
+        void Pair(IWebDriver client1, IWebDriver client2)
+        {
+            var token = client1.FindElement(By.Id("token")).Text;
+
+            client2.FindElement(By.Id("Token")).SendKeys(token);
+            client2.FindElement(By.Id("connect")).Click();
+        }
+
+        void Navigate(IWebDriver client1, IWebDriver client2)
+        {
+            client1.FindElement(By.Id("new-session")).Click();
+
+            client2.FindElement(By.Id("connect")).Click();
+        }
+
         private void WaitMs(int milliseconds)
         {
-            System.Threading.Thread.Sleep(milliseconds);
+            Thread.Sleep(milliseconds);
         }
     }
 }

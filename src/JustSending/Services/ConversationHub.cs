@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using JustSending.Controllers;
 using JustSending.Data;
+using JustSending.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
 
@@ -38,7 +39,7 @@ namespace JustSending.Services
 
         internal async Task ShowSharePanel(string sessionId, int token)
         {
-            await GetClients(sessionId).SendAsync("showSharePanel", token.ToString("### ###"));
+            await GetClients(sessionId).SendAsync("showSharePanel", token.ToString(Constants.TOKEN_FORMAT_STRING));
         }
 
         internal async Task HideSharePanel(string sessionId)
@@ -46,14 +47,19 @@ namespace JustSending.Services
             await GetClients(sessionId).SendAsync("hideSharePanel");
         }
 
-        internal async Task SessionDeleted(string sessionId)
+        internal async Task NotifySessionDeleted(string[] connectionIds)
         {
-            await GetClients(sessionId).SendAsync("sessionDeleted");
+            await Clients.Clients(connectionIds).SendAsync("sessionDeleted");
         }
 
         internal async Task SendNumberOfDevices(string sessionId, int count)
         {
             await GetClients(sessionId).SendAsync("setNumberOfDevices", count);
+        }
+
+        internal async Task RedirectTo(string sessionId, string relativeUrl)
+        {
+            await GetClients(sessionId).SendAsync("redirect", relativeUrl);
         }
 
         internal async Task<int> SendNumberOfDevices(string sessionId)
@@ -83,15 +89,25 @@ namespace JustSending.Services
             return Task.CompletedTask;
         }
 
-        public override async Task OnDisconnectedAsync(Exception ex)
+        public override async Task OnDisconnectedAsync(Exception exception)
         {
             var sessionId = _db.UntrackClientReturnSessionId(Context.ConnectionId);
+
+            if(string.IsNullOrEmpty(sessionId)) return;
+
+            // Don't Erase session if this session had been converted
+            // to a Lite Session in the mean time
+            //
+            var session = _db.Sessions.FindById(sessionId);
+            if (session.IsLiteSession) return;
+
             if (!string.IsNullOrEmpty(sessionId))
             {
                 var numDevices = await SendNumberOfDevices(sessionId);
                 if (numDevices == 0)
                 {
-                    await EraseSessionInternal(sessionId);
+                    var cIds = _jobScheduler.EraseSessionReturnConnectionIds(sessionId);
+                    await NotifySessionDeleted(cIds);
                 }
                 else
                 {
@@ -114,7 +130,7 @@ namespace JustSending.Services
 
             _db.MessagesInsert(msg);
 
-            if(!isLiteSession)
+            if (!isLiteSession)
                 await RequestReloadMessage(sessionId);
         }
 
@@ -264,7 +280,7 @@ namespace JustSending.Services
             var connection = _db.Connections.FindById(Context.ConnectionId);
             if (connection == null) return;
 
-            if(CancelShareSessionBySessionId(connection.SessionId))
+            if (CancelShareSessionBySessionId(connection.SessionId))
             {
                 await HideSharePanel(connection.SessionId);
             }
@@ -293,8 +309,8 @@ namespace JustSending.Services
 
         private async Task EraseSessionInternal(string sessionId)
         {
-            _jobScheduler.EraseSession(sessionId);
-            await SessionDeleted(sessionId);
+            var cIds = _jobScheduler.EraseSessionReturnConnectionIds(sessionId);
+            await NotifySessionDeleted(cIds);
         }
 
         private string GetSessionId() =>

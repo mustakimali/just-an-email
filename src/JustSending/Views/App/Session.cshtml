@@ -48,7 +48,7 @@
             </div>
             <div class="share-panel row">
                 <div class="col-sm-7 col-xs-12" style="margin-bottom: 5px;">
-                    <h1 title="Use this PIN to securely connect to this session from another device"><i class="fa fa-lock text-"></i>&nbsp;<span id="token">xxxx</span> <a href="#" class="cancelShareBtn btn btn-wide btn-danger hidden-xs" title="Dispose this PIN">Cancel</a></h1>
+                    <h1 title="Use this PIN to securely connect to this session from another device"><i class="fa fa-lock text-"></i>&nbsp;<span id="token">&nbsp;</span> <a href="#" class="cancelShareBtn btn btn-wide btn-danger hidden-xs" title="Dispose this PIN">Cancel</a></h1>
                     <a href="#" class="cancelShareBtn btn btn-block btn-danger hidden-sm hidden-md hidden-lg" title="Dispose this PIN">Cancel</a>
                 </div>
                 <div class="col-sm-5 hidden-xs">
@@ -126,8 +126,6 @@
         <a asp-action="LiteSessionNew" class="btn btn-danger btn-block">Take me to the lite experience</a>
     </div>
 
-    
-
     <style>
         #conversation, .jumbotron {
             display: none;
@@ -160,10 +158,25 @@
                 }
                 JustSendingApp.init();
             } catch (ex) {
-                if(is_dev())
+                var id = get("SessionId").value;
+                var id2 = get("SessionVerification").value;
+
+                var data = new FormData();
+                
+                data.append("id", id);
+                data.append("id2", id2);
+
+                execute_xhr("POST", "/app/lite/notify/unsupported-device", function () {
+
+                }, data);
+
+                if (is_dev())
                     document.body.text = JSON.stringify(ex);
-                else
-                    window.location.href = "/app/lite?r=u";
+                else {
+                    setTimeout(function () {
+                        window.location.href = "/app/lite/" + id + "/" + id2;
+                    }, 500);
+                }
             }
         })();
     </script>

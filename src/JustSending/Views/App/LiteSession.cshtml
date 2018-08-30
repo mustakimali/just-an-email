@@ -2,7 +2,9 @@
 @using Microsoft.Extensions.Configuration
 @inject IConfiguration config
 @{
-    ViewBag.Title = "Sharing session";
+    ViewBag.Title = "[Lite] Sharing session";
+
+    bool hasToken = Model.Token.HasValue;
 }
 @section AboveBody {
     <div class="jumbotron">
@@ -36,64 +38,66 @@
                 </div>
             </div>
         </div>
-        
+
     </div>
 
     <div id="share" class="jumbotron sticky-footer">
         <div class="container">
 
-            @if (Model.Token.HasValue)
-            {
-                <div class="share-panel row">
-                    <div class="col-sm-7 col-xs-12" style="margin-bottom: 5px;">
-                        <form asp-action="CancelShareToken">
-                            <h1 title="Use this PIN to securely connect to this session from another device"><i class="fa fa-lock text-"></i>&nbsp;<span id="token">@Model.Token.Value</span> <button class="cancelShareBtn btn btn-wide btn-danger hidden-xs" title="Dispose this PIN">Cancel</button></h1>
-                            <button class="cancelShareBtn btn btn-block btn-danger hidden-sm hidden-md hidden-lg" title="Dispose this PIN">Cancel</button>
-
-                            <partial name="_LiteFormHiddens" model="@Model" />
-                        </form>
-                    </div>
-                    <div class="col-sm-5 hidden-xs">
-                        <div class="instruction">
-                            <partial name="_ConnectInstructions" />
-                        </div>
-                    </div>
-                </div>
-            }
-            else
-            {
-                <div class="share-actions">
-                    <form asp-action="CreateShareToken">
-                        <button id="shareBtn" class="btn btn-success pull-left">Connect another Device</button>
+            <div id="panel-token" class="share-panel row" style="display: @(hasToken ? "block" : "none")">
+                <div class="col-sm-7 col-xs-12" style="margin-bottom: 5px;">
+                    <form asp-action="CancelShareToken">
+                        <h1 title="Use this PIN to securely connect to this session from another device"><i class="fa fa-lock text-"></i>&nbsp;<span id="token">@Model.Token</span> <button class="cancelShareBtn btn btn-wide btn-danger hidden-xs" title="Dispose this PIN">Cancel</button></h1>
+                        <button class="cancelShareBtn btn btn-block btn-danger hidden-sm hidden-md hidden-lg" title="Dispose this PIN">Cancel</button>
 
                         <partial name="_LiteFormHiddens" model="@Model" />
                     </form>
-                    <form asp-action="EraseSession">
-                        <button class="btn btn-danger pull-right" title="Finish and Erase Everything"><i class="fa fa-trash-o"></i></button>
-
-                        <partial name="_LiteFormHiddens" model="@Model" />
-                    </form>
-                    <span id="connectedDevices" class="btn btn-warning" title="Number of devices connected"><span class="badge">2</span></span>
-                    <div class="clearfix"></div>
                 </div>
-            }
+                <div class="col-sm-5 hidden-xs">
+                    <div class="instruction">
+                        <partial name="_ConnectInstructions" />
+                    </div>
+                </div>
+            </div>
+
+            <div id="panel-connect" class="share-actions" style="display: @(hasToken ? "none" : "block")">
+                <form asp-action="CreateShareToken">
+                    <button id="shareBtn" class="btn btn-success pull-left">Connect another Device</button>
+
+                    <partial name="_LiteFormHiddens" model="@Model" />
+                </form>
+                <form asp-action="EraseSession">
+                    <button class="btn btn-danger pull-right" title="Finish and Erase Everything"><i class="fa fa-trash-o"></i></button>
+
+                    <partial name="_LiteFormHiddens" model="@Model" />
+                </form>
+                <span id="connectedDevices" class="btn btn-warning" title="Number of devices connected"><span class="badge">2</span></span>
+                <div class="clearfix"></div>
+            </div>
         </div>
     </div>
     <a asp-action="LiteSession"
        asp-route-id1="@Model.SessionId"
        asp-route-id2="@Model.SessionVerification"
+       id="refresh"
        class="btn btn-warning btn-block">
         <i class="fa fa-refresh"></i> Refresh
+        <span></span>
     </a>
-    
+
     <noscript>
         <div class="ref-info">Your device doesn't support auto reloading, use the <b>Refresh</b> button <i class="fa fa-arrow-up"></i> to check for new message.</div>
     </noscript>
 }
 
 <div id="conversation">
-    
+
     <div id="conversation-list">
+        @if(Context.Request.Query["r"] == "u") {
+            <div class="alert alert-danger">
+                You have been redirected to the Lite version of this app because a recently connected device lacks some capabilities. Any previouly sent messages need to be sent again 😜
+            </div>
+        }
         <partial name="GetMessages" for="@Model.Messages" />
     </div>
 
@@ -123,7 +127,7 @@
 </div>
 
 @section Scripts
-{
+    {
     <script src="https://ajax.aspnetcdn.com/ajax/jquery.validate/1.14.0/jquery.validate.min.js"></script>
     <script src="https://ajax.aspnetcdn.com/ajax/jquery.validation.unobtrusive/3.2.6/jquery.validate.unobtrusive.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/autosize.js/4.0.0/autosize.min.js"></script>
