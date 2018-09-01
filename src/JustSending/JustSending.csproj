@@ -22,6 +22,9 @@
     <WCFMetadata Include="Connected Services" />
   </ItemGroup>
   <ItemGroup>
+    <Content Update="Views\App\LiteSessionDeletePrompt.cshtml">
+      <Pack>$(IncludeRazorContentInPack)</Pack>
+    </Content>
     <Content Update="Views\App\LiteSession.cshtml">
       <Pack>$(IncludeRazorContentInPack)</Pack>
     </Content>

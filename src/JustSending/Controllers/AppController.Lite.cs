@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,7 +8,6 @@ using JustSending.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
-using IOFile = System.IO.File;
 
 namespace JustSending.Controllers
 {
@@ -45,6 +43,20 @@ namespace JustSending.Controllers
                 Messages = GetMessagesInternal(id1, id2, -1).ToArray()
             };
             ViewData["LiteMode"] = true;
+            return View(vm);
+        }
+
+        [Route("lite/{id1}/{id2}/delete")]
+        public IActionResult LiteSessionDeletePrompt(string id1, string id2)
+        {
+            if (!IsValidSession(id1, id2))
+                return RedirectToAction(nameof(HomeController.Index), "Home");
+
+            var vm = new LiteSessionModel
+            {
+                SessionId = id1,
+                SessionVerification = id2
+            };
             return View(vm);
         }
 

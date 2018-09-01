@@ -1,9 +1,9 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using JustSending.Controllers;
 using JustSending.Data;
 using JustSending.Models;
 using Microsoft.AspNetCore.Hosting;
@@ -34,32 +34,32 @@ namespace JustSending.Services
 
         internal async Task RequestReloadMessage(string sessionId)
         {
-            await GetClients(sessionId).SendAsync("requestReloadMessage");
+            await SignalREvent(sessionId, "requestReloadMessage");
         }
 
         internal async Task ShowSharePanel(string sessionId, int token)
         {
-            await GetClients(sessionId).SendAsync("showSharePanel", token.ToString(Constants.TOKEN_FORMAT_STRING));
+            await SignalREvent(sessionId, "showSharePanel", token.ToString(Constants.TOKEN_FORMAT_STRING));
         }
 
         internal async Task HideSharePanel(string sessionId)
         {
-            await GetClients(sessionId).SendAsync("hideSharePanel");
+            await SignalREvent(sessionId, "hideSharePanel");
         }
 
         internal async Task NotifySessionDeleted(string[] connectionIds)
         {
-            await Clients.Clients(connectionIds).SendAsync("sessionDeleted");
+            await SignalREventToClients(connectionIds, "sessionDeleted");
         }
 
         internal async Task SendNumberOfDevices(string sessionId, int count)
         {
-            await GetClients(sessionId).SendAsync("setNumberOfDevices", count);
+            await SignalREvent(sessionId, "setNumberOfDevices", count);
         }
 
         internal async Task RedirectTo(string sessionId, string relativeUrl)
         {
-            await GetClients(sessionId).SendAsync("redirect", relativeUrl);
+            await SignalREvent(sessionId, "redirect", relativeUrl);
         }
 
         internal async Task<int> SendNumberOfDevices(string sessionId)
@@ -69,7 +69,37 @@ namespace JustSending.Services
             return numConnectedDevices;
         }
 
-        private IClientProxy GetClients(string sessionId, string except = null)
+        private async Task SignalREvent(string sessionId, string message, object data = null)
+        {
+            try
+            {
+                if (data != null)
+                    await GetClientsBySessionId(sessionId).SendAsync(message, data);
+                else
+                    await GetClientsBySessionId(sessionId).SendAsync(message);
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError($"[SignalR/SignalREvent:{message}] {ex.GetBaseException().Message}");
+            }
+        }
+
+        private async Task SignalREventToClients(string[] connectionIds, string message, object data = null)
+        {
+            try
+            {
+                if (data != null)
+                    await Clients.Clients(connectionIds).SendAsync(message, data);
+                else
+                    await Clients.Clients(connectionIds).SendAsync(message);
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError($"[SignalR/SignalREventToClients:{message}] {ex.GetBaseException().Message}");
+            }
+        }
+
+        private IClientProxy GetClientsBySessionId(string sessionId, string except = null)
         {
             var connectionIds = _db.FindClient(sessionId);
 
@@ -81,7 +111,7 @@ namespace JustSending.Services
             return Clients.Clients(connectionIds.ToList());
         }
 
-        private IClientProxy GetClient(string connectionId) => Clients.Client(connectionId);
+        private IClientProxy GetClientByConnectionId(string connectionId) => Clients.Client(connectionId);
 
         public override Task OnConnectedAsync()
         {
@@ -93,7 +123,7 @@ namespace JustSending.Services
         {
             var sessionId = _db.UntrackClientReturnSessionId(Context.ConnectionId);
 
-            if(string.IsNullOrEmpty(sessionId)) return;
+            if (string.IsNullOrEmpty(sessionId)) return;
 
             // Don't Erase session if this session had been converted
             // to a Lite Session in the mean time
@@ -205,7 +235,7 @@ namespace JustSending.Services
             {
                 var sessionId = GetSessionId();
 
-                endpoint = GetClients(sessionId, except: Context.ConnectionId);
+                endpoint = GetClientsBySessionId(sessionId, except: Context.ConnectionId);
 
                 var msg = new StringBuilder("A new device connected.<br/><i class=\"fa fa-lock\"></i> Message is end to end encrypted.");
                 var numDevices = _db.Connections.Count(x => x.SessionId == sessionId);
@@ -217,7 +247,7 @@ namespace JustSending.Services
             }
             else
             {
-                endpoint = GetClient(peerId);
+                endpoint = GetClientByConnectionId(peerId);
             }
 
             await endpoint.SendAsync("callback", method, param);

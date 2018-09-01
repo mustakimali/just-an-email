@@ -286,6 +286,12 @@ namespace JustSending.Controllers
             // Delete the Token
             _db.ShareTokens.Delete(model.Token);
 
+            if(model.NoJs && !session.IsLiteSession)
+            {
+                await ConvertToLiteSession(session.Id, session.IdVerification);
+                session.IsLiteSession = true;
+            }
+            
             if (session.IsLiteSession)
             {
                 await _hub.AddSessionNotification(session.Id, "A new device has been connected!", true);
@@ -321,15 +327,19 @@ namespace JustSending.Controllers
         {
             if (!IsValidSession(id, id2)) return BadRequest();
 
-            // Convert this session to Lite Session
+            await ConvertToLiteSession(id, id2);
+
+            return Ok();
+        }
+
+        private async Task ConvertToLiteSession(string id, string id2)
+        {
             var session = _db.Sessions.FindById(id);
             session.IsLiteSession = true;
             _db.Sessions.Upsert(session);
 
             await _hub.RedirectTo(id, Url.Action(nameof(LiteSession), new { id1 = id, id2, r = "u" }))
                 .ConfigureAwait(false);
-
-            return Ok();
         }
 
         private IActionResult GetMessagesViewInternal(string id, string id2, int @from)

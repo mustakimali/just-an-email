@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using JustSending.Data;
 using JustSending.Models;
@@ -64,6 +65,18 @@ namespace JustSending.Controllers
             }
 
             return true;
+        }
+
+        private void Try(Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception exception)
+            {
+                Trace.TraceError($"[SignalR] {exception.GetBaseException().Message}");
+            }
         }
     }
 

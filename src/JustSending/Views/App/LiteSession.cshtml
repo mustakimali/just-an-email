@@ -24,12 +24,12 @@
                             @Html.TextAreaFor(x => x.ComposerText, new { @class = "form-control", placeholder = "Send file, text, URL etc. (Ctrl+Enter to send)", onfocus = "this.select()" })
 
                             <span class="input-group-btn hidden-xs">
-                                <button class="sendBtn btn btn-success" style="font-weight: bold;" type="submit">Send <i class="fa fa-arrow-circle-right"></i></button>
+                                <input class="sendBtn btn btn-success" style="font-weight: bold;" type="submit" value="Send" />
                             </span>
                         </div>
                         <input id="file" name="file" type="file" />
                         <div class="bg btn-group hidden-sm hidden-md hidden-lg" role="group" aria-label="Action buttons">
-                            <button class="sendBtn btn btn-success" style="font-weight: bold;" type="submit">Send <i class="fa fa-arrow-circle-right"></i></button>
+                            <input class="sendBtn btn btn-success" style="font-weight: bold;" type="submit" value="Send" />
                         </div>
                         @Html.ValidationMessageFor(x => x.ComposerText)
 
@@ -66,11 +66,14 @@
 
                     <partial name="_LiteFormHiddens" model="@Model" />
                 </form>
-                <form asp-action="EraseSession">
-                    <button class="btn btn-danger pull-right" title="Finish and Erase Everything"><i class="fa fa-trash-o"></i></button>
+                <a asp-action="LiteSessionDeletePrompt" 
+                   asp-route-id1="@Model.SessionId" 
+                   asp-route-id2="@Model.SessionVerification" class="btn btn-danger pull-right" title="Finish and Erase Everything"><i class="fa fa-trash-o"></i></a>
+                @*<form asp-action="EraseSession">
+            <button class="btn btn-danger pull-right" title="Finish and Erase Everything"><i class="fa fa-trash-o"></i></button>
 
-                    <partial name="_LiteFormHiddens" model="@Model" />
-                </form>
+            <partial name="_LiteFormHiddens" model="@Model" />
+        </form>*@
                 <span id="connectedDevices" class="btn btn-warning" title="Number of devices connected"><span class="badge">2</span></span>
                 <div class="clearfix"></div>
             </div>

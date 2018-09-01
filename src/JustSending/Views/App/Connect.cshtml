@@ -12,8 +12,11 @@
                 <div class="input-group input-group-lg">
                     @Html.TextBoxFor(x => x.Token, null, new { @class = "form-control", type="number", placeholder = "Enter the PIN", onfocus="this.select()" })
                     <span class="input-group-btn">
-                        <button id="connect" class="btn btn-primary" type="submit">Connect</button>
+                        <input id="connect" class="btn btn-primary" type="submit" />
                     </span>
+                    <noscript>
+                        <input type="hidden" asp-for="NoJs" value="true" />
+                    </noscript>
                 </div>
                 @Html.ValidationMessageFor(x => x.Token)
             </form>
