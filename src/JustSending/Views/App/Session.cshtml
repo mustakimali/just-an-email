@@ -5,7 +5,7 @@
     ViewBag.Title = "Sharing session";
 }
 @section AboveBody {
-    <div class="jumbotron">
+    <div class="jumbotron session">
         <div class="container">
             <div class="conversation">
                 <div class="composer">
@@ -123,17 +123,8 @@
             Please use the lite version as your device isn't compatible with the rich experiences.
         </p>
         <hr/>
-        <a asp-action="LiteSessionNew" class="btn btn-danger btn-block">Take me to the lite experience</a>
+        <a asp-action="LiteSession" asp-route-id1="@Model.SessionId" asp-route-id2="@Model.SessionVerification" class="btn btn-danger btn-block">Take me to the lite experience</a>
     </div>
-
-    <style>
-        #conversation, .jumbotron {
-            display: none;
-        }
-        .alert {
-            margin-top: 20px;
-        }
-    </style>
 </noscript>
 @section Scripts
 {

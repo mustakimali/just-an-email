@@ -436,3 +436,7 @@ body.busy #overlay {
         margin-right: -10px;
     }
 }
+
+.msg-c {
+    border: none !important;
+}

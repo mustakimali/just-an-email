@@ -102,7 +102,7 @@ namespace JustSending.Test
                     .FindElement(By.Id("deleteBtn"))
                     .Click();
 
-                WaitMs(500);
+                WaitMs(1000);
 
                 client2
                     .FindElement(By.ClassName("confirm"))
@@ -172,10 +172,8 @@ namespace JustSending.Test
         {
             ChromeOptions chromeOpt = new ChromeOptions();
 
-#if !DEBUG
             chromeOpt.AddArguments("--headless");
             chromeOpt.AddArguments("--disable-gpu");
-#endif
 
             var driver = new ChromeDriver(_seleniumDriverPath, chromeOpt);
 

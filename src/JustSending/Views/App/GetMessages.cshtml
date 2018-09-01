@@ -14,7 +14,7 @@
 
 @foreach (var message in Model)
 {
-    <div class="msg-c" data-seq="@message.SessionMessageSequence">
+    <div class="msg-c" data-seq="@message.SessionMessageSequence" style="border: 1px solid #ddd;">
         @if(message.IsNotification) {
             <div class="alert alert-dismissible alert-warning notif" role="alert">
                 <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
@@ -57,7 +57,7 @@
                             }
                             else
                             {
-                                <span class="data" data-value="@message.Text">🔍</span>
+                                <span class="data" data-value="@message.Text">😕</span>
                             }
                         </div>
                     }
