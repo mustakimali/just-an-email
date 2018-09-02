@@ -22,19 +22,36 @@ namespace JustSending.Controllers
         public IActionResult Stats([FromServices] AppDbContext db, int date = -1)
         {
             var stat = db.Statistics.FindById(date);
-            if(stat == null) return NotFound();
 
             return View(stat);
         }
 
         [Route("stats/raw")]
-        public IActionResult StatsRaw([FromServices] AppDbContext db) => Json(db.Statistics.FindAll());
+        public IActionResult StatsRaw([FromServices] AppDbContext db)
+        {
+            var data = db
+                        .Statistics
+                        .Find(x => x.Id > 1)
+                        .GroupBy(x => x.Id.ToString().Substring(0, 2))
+                        .Select(x => new
+                        {
+                            Year = x.Key,
+                            Items = x.GroupBy(y => y.Id.ToString().Substring(2, 2))
+                                        .Select(c => new
+                                        {
+                                            Month = c.Key,
+                                            Items = c
+                                        })
+                        });
+
+            return Json(data);
+        }
 
         [Route("api/prime")]
         public IActionResult Prime([FromServices] IHostingEnvironment env)
         {
             Response.Headers.Add("Access-Control-Allow-Origin", "*");
-            
+
             return Json(new
             {
                 Size_1024 = Helper.GetPrime(1024, env),
