@@ -94,6 +94,9 @@ namespace JustSending.Data
             var session = Sessions.FindById(sessionId);
             if (session == null) return;
 
+            if(Connections.Exists(x=> x.ConnectionId == connectionId)) 
+                return;
+
             Connections.Insert(new ConnectionSession
             {
                 ConnectionId = connectionId,
