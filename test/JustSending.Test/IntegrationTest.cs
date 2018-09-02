@@ -20,7 +20,6 @@ using OpenQA.Selenium.Firefox;
 namespace JustSending.Test
 {
     [TestFixture]
-    [Parallelizable(ParallelScope.All)]
     public class IntegrationTest : IDisposable
     {
         private readonly string _seleniumDriverPath;
