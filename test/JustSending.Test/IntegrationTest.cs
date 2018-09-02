@@ -20,6 +20,7 @@ using OpenQA.Selenium.Firefox;
 namespace JustSending.Test
 {
     [TestFixture]
+    [Parallelizable(ParallelScope.All)]
     public class IntegrationTest : IDisposable
     {
         private readonly string _seleniumDriverPath;
@@ -191,8 +192,8 @@ namespace JustSending.Test
         {
             ChromeOptions chromeOpt = new ChromeOptions();
 
-            //chromeOpt.AddArguments("--headless");
-            //chromeOpt.AddArguments("--disable-gpu");
+            chromeOpt.AddArguments("--headless");
+            chromeOpt.AddArguments("--disable-gpu");
 
             var driver = new ChromeDriver(_seleniumDriverPath, chromeOpt);
 
