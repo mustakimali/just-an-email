@@ -50,8 +50,6 @@ namespace JustSending.Test
             {
                 Navigate(client1, client2);
 
-                WaitMs(1000);
-
                 Pair(client1, client2);
 
                 WaitMs(1000);
@@ -92,8 +90,6 @@ namespace JustSending.Test
             {
                 Navigate(client1, client2);
 
-                WaitMs(1000);
-
                 Pair(client1, client2);
 
                 WaitMs(1000);
@@ -115,7 +111,30 @@ namespace JustSending.Test
             }
         }
 
-        [TearDown]
+        [Test]
+        public void RedirectsToLiteSession()
+        {
+            using (var client1 = CreateDriver())
+            using (var client2 = CreateDriver())
+            {
+                var id = Guid.NewGuid().ToString("N");
+                var id2 = Guid.NewGuid().ToString("N");
+
+                client1.Navigate().GoToUrl($"{_appHostName}app/lite/{id}/{id2}");
+
+                client2.FindElement(By.Id("connect")).Click();
+
+                Pair(client1, client2);
+
+                client2.Url.Should().Be(client1.Url);
+
+                client2.FindElement(By.Id("erase")).Click();
+
+                client2.FindElement(By.Id("erase")).Click();
+            }
+        }
+
+        [OneTimeTearDown]
         public void Dispose()
         {
             if (_dotnetProcess != null && !_dotnetProcess.HasExited)
@@ -172,8 +191,8 @@ namespace JustSending.Test
         {
             ChromeOptions chromeOpt = new ChromeOptions();
 
-            chromeOpt.AddArguments("--headless");
-            chromeOpt.AddArguments("--disable-gpu");
+            //chromeOpt.AddArguments("--headless");
+            //chromeOpt.AddArguments("--disable-gpu");
 
             var driver = new ChromeDriver(_seleniumDriverPath, chromeOpt);
 

@@ -1,4 +1,10 @@
-﻿.share-panel,
+﻿@media (min-width: 0px) and (max-width: 340px) {
+    #refresh span {
+        display: none;
+    }
+}
+
+.share-panel,
 .share-actions {
     display: block;
 }
@@ -43,6 +49,7 @@
     #refresh.new {
         opacity: 0.5;
     }
+
         #refresh.new:after {
             content: 'New message below';
             display: block;
