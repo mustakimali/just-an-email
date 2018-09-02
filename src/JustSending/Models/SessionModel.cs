@@ -26,5 +26,6 @@ namespace JustSending.Models
     public class ConnectViewModel
     {
         public int Token { get; set; }
+        public bool NoJs { get; set; }
     }
 }

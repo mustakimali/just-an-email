@@ -377,6 +377,8 @@ body.busy #overlay {
         height: 30px;
         margin: 0;
         min-height: 0;
+        position: inherit;
+        top: auto;
     }
 
     .navbar-brand {
@@ -386,8 +388,31 @@ body.busy #overlay {
     }
 
     body {
-        padding-top: 30px;
+        padding-top: 0px;
     }
+
+    .container h1 {
+        font-size: 23px;
+    }
+
+    p, p.small, li {
+        font-size: 12px;
+    }
+
+    button#connect {
+        display: block;
+        width: 100%;
+        margin-top: 5px;
+        border-radius: 0;
+    }
+
+    .resp-sharing-button__link {
+        margin: 5px 0;
+    }
+
+    ul { padding-left: 20px; }
+
+    #forkongithub { display: none; }
 
     .jumbotron {
         padding: 5px 0;
@@ -398,13 +423,20 @@ body.busy #overlay {
         font-size: 10pt !important;
     }
 
-    .h-nojs {
-        display: none;
-    }
-
     .share-panel h1 {
         padding: 0;
         margin: 0 0 5px 0;
         font-size: 16pt;
     }
+    #conversation {
+        margin-top: 15px;
+    }
+    a#deleteBtn {
+        width: 30px;
+        margin-right: -10px;
+    }
+}
+
+.msg-c {
+    border: none !important;
 }

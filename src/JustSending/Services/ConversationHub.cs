@@ -1,10 +1,11 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using JustSending.Controllers;
 using JustSending.Data;
+using JustSending.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
 
@@ -16,42 +17,49 @@ namespace JustSending.Services
 
         private readonly AppDbContext _db;
         private readonly IHostingEnvironment _env;
+        private readonly BackgroundJobScheduler _jobScheduler;
 
         private readonly string _uploadFolder;
 
-        public ConversationHub(AppDbContext db, IHostingEnvironment env)
+        public ConversationHub(AppDbContext db, IHostingEnvironment env, BackgroundJobScheduler jobScheduler)
         {
             _db = db;
             _env = env;
+            _jobScheduler = jobScheduler;
 
-            _uploadFolder = AppController.GetUploadFolder(string.Empty, _env.WebRootPath);
+            _uploadFolder = Helper.GetUploadFolder(string.Empty, _env.WebRootPath);
 
             if (!Directory.Exists(_uploadFolder)) Directory.CreateDirectory(_uploadFolder);
         }
 
         internal async Task RequestReloadMessage(string sessionId)
         {
-            await GetClients(sessionId).SendAsync("requestReloadMessage");
+            await SignalREvent(sessionId, "requestReloadMessage");
         }
 
         internal async Task ShowSharePanel(string sessionId, int token)
         {
-            await GetClients(sessionId).SendAsync("showSharePanel", token.ToString("### ###"));
+            await SignalREvent(sessionId, "showSharePanel", token.ToString(Constants.TOKEN_FORMAT_STRING));
         }
 
         internal async Task HideSharePanel(string sessionId)
         {
-            await GetClients(sessionId).SendAsync("hideSharePanel");
+            await SignalREvent(sessionId, "hideSharePanel");
         }
 
-        internal async Task SessionDeleted(string sessionId)
+        internal async Task NotifySessionDeleted(string[] connectionIds)
         {
-            await GetClients(sessionId).SendAsync("sessionDeleted");
+            await SignalREventToClients(connectionIds, "sessionDeleted");
         }
 
         internal async Task SendNumberOfDevices(string sessionId, int count)
         {
-            await GetClients(sessionId).SendAsync("setNumberOfDevices", count);
+            await SignalREvent(sessionId, "setNumberOfDevices", count);
+        }
+
+        internal async Task RedirectTo(string sessionId, string relativeUrl)
+        {
+            await SignalREvent(sessionId, "redirect", relativeUrl);
         }
 
         internal async Task<int> SendNumberOfDevices(string sessionId)
@@ -61,7 +69,37 @@ namespace JustSending.Services
             return numConnectedDevices;
         }
 
-        private IClientProxy GetClients(string sessionId, string except = null)
+        private async Task SignalREvent(string sessionId, string message, object data = null)
+        {
+            try
+            {
+                if (data != null)
+                    await GetClientsBySessionId(sessionId).SendAsync(message, data);
+                else
+                    await GetClientsBySessionId(sessionId).SendAsync(message);
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError($"[SignalR/SignalREvent:{message}] {ex.GetBaseException().Message}");
+            }
+        }
+
+        private async Task SignalREventToClients(string[] connectionIds, string message, object data = null)
+        {
+            try
+            {
+                if (data != null)
+                    await Clients.Clients(connectionIds).SendAsync(message, data);
+                else
+                    await Clients.Clients(connectionIds).SendAsync(message);
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError($"[SignalR/SignalREventToClients:{message}] {ex.GetBaseException().Message}");
+            }
+        }
+
+        private IClientProxy GetClientsBySessionId(string sessionId, string except = null)
         {
             var connectionIds = _db.FindClient(sessionId);
 
@@ -73,7 +111,7 @@ namespace JustSending.Services
             return Clients.Clients(connectionIds.ToList());
         }
 
-        private IClientProxy GetClient(string connectionId) => Clients.Client(connectionId);
+        private IClientProxy GetClientByConnectionId(string connectionId) => Clients.Client(connectionId);
 
         public override Task OnConnectedAsync()
         {
@@ -81,15 +119,25 @@ namespace JustSending.Services
             return Task.CompletedTask;
         }
 
-        public override async Task OnDisconnectedAsync(Exception ex)
+        public override async Task OnDisconnectedAsync(Exception exception)
         {
             var sessionId = _db.UntrackClientReturnSessionId(Context.ConnectionId);
+
+            if (string.IsNullOrEmpty(sessionId)) return;
+
+            // Don't Erase session if this session had been converted
+            // to a Lite Session in the mean time
+            //
+            var session = _db.Sessions.FindById(sessionId);
+            if (session.IsLiteSession) return;
+
             if (!string.IsNullOrEmpty(sessionId))
             {
                 var numDevices = await SendNumberOfDevices(sessionId);
                 if (numDevices == 0)
                 {
-                    await EraseSessionInternal(sessionId);
+                    var cIds = _jobScheduler.EraseSessionReturnConnectionIds(sessionId);
+                    await NotifySessionDeleted(cIds);
                 }
                 else
                 {
@@ -98,7 +146,7 @@ namespace JustSending.Services
             }
         }
 
-        private async Task AddSessionNotification(string sessionId, string message)
+        public async Task AddSessionNotification(string sessionId, string message, bool isLiteSession = false)
         {
             var msg = new Message
             {
@@ -106,12 +154,14 @@ namespace JustSending.Services
                 SessionId = sessionId,
                 DateSent = DateTime.UtcNow,
                 Text = message,
-                SocketConnectionId = Context.ConnectionId,
+                SocketConnectionId = Context?.ConnectionId,
                 IsNotification = true
             };
 
             _db.MessagesInsert(msg);
-            await RequestReloadMessage(sessionId);
+
+            if (!isLiteSession)
+                await RequestReloadMessage(sessionId);
         }
 
         public async Task<string> Connect(string sessionId)
@@ -185,7 +235,7 @@ namespace JustSending.Services
             {
                 var sessionId = GetSessionId();
 
-                endpoint = GetClients(sessionId, except: Context.ConnectionId);
+                endpoint = GetClientsBySessionId(sessionId, except: Context.ConnectionId);
 
                 var msg = new StringBuilder("A new device connected.<br/><i class=\"fa fa-lock\"></i> Message is end to end encrypted.");
                 var numDevices = _db.Connections.Count(x => x.SessionId == sessionId);
@@ -197,7 +247,7 @@ namespace JustSending.Services
             }
             else
             {
-                endpoint = GetClient(peerId);
+                endpoint = GetClientByConnectionId(peerId);
             }
 
             await endpoint.SendAsync("callback", method, param);
@@ -260,12 +310,23 @@ namespace JustSending.Services
             var connection = _db.Connections.FindById(Context.ConnectionId);
             if (connection == null) return;
 
-            var shareToken = _db.ShareTokens.FindOne(x => x.SessionId == connection.SessionId);
+            if (CancelShareSessionBySessionId(connection.SessionId))
+            {
+                await HideSharePanel(connection.SessionId);
+            }
+        }
+
+        public bool CancelShareSessionBySessionId(string sessionId)
+        {
+            var shareToken = _db.ShareTokens.FindOne(x => x.SessionId == sessionId);
+
             if (shareToken != null)
             {
                 _db.ShareTokens.Delete(shareToken.Id);
-                await HideSharePanel(connection.SessionId);
+                return true;
             }
+
+            return false;
         }
 
         public async Task EraseSession()
@@ -278,26 +339,8 @@ namespace JustSending.Services
 
         private async Task EraseSessionInternal(string sessionId)
         {
-            _db.Sessions.Delete(sessionId);
-            _db.Messages.Delete(x => x.SessionId == sessionId);
-            _db.ShareTokens.Delete(x => x.SessionId == sessionId);
-
-            await SessionDeleted(sessionId);
-
-            _db.Connections.Delete(x => x.SessionId == sessionId);
-
-            try
-            {
-                var folder = AppController.GetUploadFolder(sessionId, _env.WebRootPath);
-                if (Directory.Exists(folder))
-                {
-                    Directory.Delete(folder, true);
-                }
-            }
-            catch
-            {
-                // ToDo: Schedule delete later
-            }
+            var cIds = _jobScheduler.EraseSessionReturnConnectionIds(sessionId);
+            await NotifySessionDeleted(cIds);
         }
 
         private string GetSessionId() =>

@@ -1,0 +1,137 @@
+﻿@model JustSending.Models.LiteSessionModel
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration config
+@{
+    ViewBag.Title = "[Lite] Sharing session";
+
+    bool hasToken = Model.Token.HasValue;
+}
+@section AboveBody {
+    <div class="jumbotron">
+        <div class="container">
+            <div class="conversation">
+                <div class="composer">
+                    <form id="form"
+                          asp-action="PostLite"
+                          asp-controller="App"
+                          asp-route-lite="true"
+                          data-max-b="@config["MaxUploadSizeBytes"]"
+                          data-max-display="@config["MaxUploadSizeDisplay"]"
+                          enctype="multipart/form-data"
+                          method="POST">
+
+                        <div class="input-group input-group-lg">
+                            @Html.TextAreaFor(x => x.ComposerText, new { @class = "form-control", placeholder = "Send file, text, URL etc. (Ctrl+Enter to send)", onfocus = "this.select()" })
+
+                            <span class="input-group-btn hidden-xs">
+                                <input class="sendBtn btn btn-success" style="font-weight: bold;" type="submit" value="Send" />
+                            </span>
+                        </div>
+                        <input id="file" name="file" type="file" />
+                        <div class="bg btn-group hidden-sm hidden-md hidden-lg" role="group" aria-label="Action buttons">
+                            <input class="sendBtn btn btn-success" style="font-weight: bold;" type="submit" value="Send" />
+                        </div>
+                        @Html.ValidationMessageFor(x => x.ComposerText)
+
+                        <partial name="_LiteFormHiddens" model="@Model" />
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="share" class="jumbotron sticky-footer">
+        <div class="container">
+
+            <div id="panel-token" class="share-panel row" style="display: @(hasToken ? "block" : "none")">
+                <div class="col-sm-7 col-xs-12" style="margin-bottom: 5px;">
+                    <form asp-action="CancelShareToken">
+                        <h1 title="Use this PIN to securely connect to this session from another device"><i class="fa fa-lock text-"></i>&nbsp;<span id="token">@Model.Token?.ToString(JustSending.Models.Constants.TOKEN_FORMAT_STRING)</span> <button class="cancelShareBtn btn btn-wide btn-danger hidden-xs" title="Dispose this PIN">Cancel</button></h1>
+                        <button class="cancelShareBtn btn btn-block btn-danger hidden-sm hidden-md hidden-lg" title="Dispose this PIN">Cancel</button>
+
+                        <partial name="_LiteFormHiddens" model="@Model" />
+                    </form>
+                </div>
+                <div class="col-sm-5 hidden-xs">
+                    <div class="instruction">
+                        <partial name="_ConnectInstructions" />
+                    </div>
+                </div>
+            </div>
+
+            <div id="panel-connect" class="share-actions" style="display: @(hasToken ? "none" : "block")">
+                <form asp-action="CreateShareToken">
+                    <input id="shareBtn" class="btn btn-success pull-left" type="submit" value="Connect" />
+
+                    <partial name="_LiteFormHiddens" model="@Model" />
+                </form>
+                <a id="erase" asp-action="LiteSessionDeletePrompt" 
+                   asp-route-id1="@Model.SessionId" 
+                   asp-route-id2="@Model.SessionVerification" class="btn btn-danger pull-right" title="Finish and Erase Everything"><i class="fa fa-trash-o"></i> Erase</a>
+
+                <div class="clearfix"></div>
+            </div>
+        </div>
+    </div>
+    <a asp-action="LiteSession"
+       asp-route-id1="@Model.SessionId"
+       asp-route-id2="@Model.SessionVerification"
+       id="refresh"
+       class="btn btn-warning btn-block">
+        <i class="fa fa-refresh"></i> Refresh
+        <span></span>
+    </a>
+
+    <noscript>
+        <div class="ref-info">Your device doesn't support auto reloading, use the <b>Refresh</b> button <i class="fa fa-arrow-up"></i> to check for new message.</div>
+    </noscript>
+}
+
+    <div id="conversation">
+        @if (Model.Token.HasValue)
+        {
+            <div class="welcome-note">
+                <div class="alert alert-info alert-dismissible" role="alert">
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h2>Connect another Device</h2>
+
+                    <div class="share-panel">
+                        <ul>
+                            <li>On another device, go to <a style="font-weight: bold;" href="@Context.Request.Scheme://@Context.Request.Host" target="_blank">@Context.Request.Scheme://@Context.Request.Host</a></li>
+                            <li>Click CONNECT</li>
+                            <li>Use the <i class="fa fa-lock"></i> PIN <b>@Model.Token?.ToString(JustSending.Models.Constants.TOKEN_FORMAT_STRING)</b> to connect to this session</li>
+                            <li>Start sharing between connected devices!</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div id="conversation-list">
+            @if (Context.Request.Query["r"] == "u")
+            {
+                <div class="alert alert-danger">
+                    You have been redirected to the Lite version of this app because a recently connected device lacks some capabilities. Any previouly sent messages need to be sent again 😜
+                </div>
+            }
+            <partial name="GetMessages" for="@Model.Messages" />
+        </div>
+
+        @if (!Model.Token.HasValue)
+        {
+            <div class="alert alert-info share-actions">
+                <b><i class="fa fa-info-circle"></i> Connect another device: </b>Click <strong>Connect</strong> on the panel at the bottom of the screen to generate an unique PIN to let other device connect.
+            </div>
+
+        }
+    </div>
+
+@section Scripts
+    {
+    <script src="https://ajax.aspnetcdn.com/ajax/jquery.validate/1.14.0/jquery.validate.min.js"></script>
+    <script src="https://ajax.aspnetcdn.com/ajax/jquery.validation.unobtrusive/3.2.6/jquery.validate.unobtrusive.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/autosize.js/4.0.0/autosize.min.js"></script>
+    <script src="~/js/JustSendingApp.js" asp-append-version="true"></script>
+    <script src="~/js/JustSendingApp.Lite.js" asp-append-version="true"></script>
+}

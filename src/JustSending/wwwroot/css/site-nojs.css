@@ -1,0 +1,10 @@
+﻿#new-session {
+    display: none;
+}
+#conversation, .jumbotron.session {
+    display: none;
+}
+
+.alert {
+    margin-top: 20px;
+}

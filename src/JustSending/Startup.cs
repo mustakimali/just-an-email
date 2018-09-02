@@ -1,4 +1,8 @@
-﻿using JustSending.Data;
+﻿using Hangfire;
+using Hangfire.Dashboard;
+using Hangfire.LiteDB;
+using JustSending;
+using JustSending.Data;
 using JustSending.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -10,12 +14,15 @@ namespace JustALink
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
+        private readonly IHostingEnvironment _hostingEnvironment;
+
+        public Startup(IConfiguration configuration, IHostingEnvironment hostingEnvironment)
         {
+            _hostingEnvironment = hostingEnvironment;
             Configuration = configuration;
         }
 
-        public IConfiguration Configuration { get; }
+        public static IConfiguration Configuration { get; private set; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -35,6 +42,9 @@ namespace JustALink
 
             services.AddSingleton<AppDbContext>();
             services.AddSingleton<ConversationHub>();
+            services.AddTransient<BackgroundJobScheduler>();
+
+            services.AddHangfire(x => x.UseLiteDbStorage(Helper.BuildDbConnectionString("BackgroundJobs", _hostingEnvironment)));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -57,12 +67,37 @@ namespace JustALink
                 routes.MapHub<ConversationHub>("/signalr/hubs");
             });
             
+            app.UseHangfireServer();
+            app.UseHangfireDashboard("/jobs", new DashboardOptions
+            {
+                Authorization = new[] {new CookieAuthFilter(Configuration["HangfireToken"])}
+            });
+
             app.UseMvc(routes =>
             {
                 routes.MapRoute(
                     name: "default",
                     template: "{controller=Home}/{action=Index}/{id?}");
             });
+        }
+    }
+
+    public class CookieAuthFilter : IDashboardAuthorizationFilter
+    {
+        private readonly string _token;
+
+        public CookieAuthFilter(string token)
+        {
+            _token = token;
+        }
+        public bool Authorize(DashboardContext context)
+        {
+            #if DEBUG
+            return true;
+            #endif
+            
+            return context.GetHttpContext().Request.Cookies.TryGetValue("HangfireToken", out var tokenFromCookie) 
+                   && tokenFromCookie == _token;
         }
     }
 }

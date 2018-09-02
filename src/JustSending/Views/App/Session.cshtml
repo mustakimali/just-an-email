@@ -5,7 +5,7 @@
     ViewBag.Title = "Sharing session";
 }
 @section AboveBody {
-    <div class="jumbotron">
+    <div class="jumbotron session">
         <div class="container">
             <div class="conversation">
                 <div class="composer">
@@ -48,7 +48,7 @@
             </div>
             <div class="share-panel row">
                 <div class="col-sm-7 col-xs-12" style="margin-bottom: 5px;">
-                    <h1 title="Use this PIN to securely connect to this session from another device"><i class="fa fa-lock text-"></i>&nbsp;<span id="token">xxxx</span> <a href="#" class="cancelShareBtn btn btn-wide btn-danger hidden-xs" title="Dispose this PIN">Cancel</a></h1>
+                    <h1 title="Use this PIN to securely connect to this session from another device"><i class="fa fa-lock text-"></i>&nbsp;<span id="token">&nbsp;</span> <a href="#" class="cancelShareBtn btn btn-wide btn-danger hidden-xs" title="Dispose this PIN">Cancel</a></h1>
                     <a href="#" class="cancelShareBtn btn btn-block btn-danger hidden-sm hidden-md hidden-lg" title="Dispose this PIN">Cancel</a>
                 </div>
                 <div class="col-sm-5 hidden-xs">
@@ -116,9 +116,18 @@
         </div>
     </div>
 </div>
-
+<noscript>
+    
+    <div class="alert alert-danger">
+        <p>
+            Please use the lite version as your device isn't compatible with the rich experiences.
+        </p>
+        <hr/>
+        <a asp-action="LiteSession" asp-route-id1="@Model.SessionId" asp-route-id2="@Model.SessionVerification" class="btn btn-danger btn-block">Take me to the lite experience</a>
+    </div>
+</noscript>
 @section Scripts
-    {
+{
     <script src="https://ajax.aspnetcdn.com/ajax/jquery.validate/1.14.0/jquery.validate.min.js"></script>
     <script src="https://ajax.aspnetcdn.com/ajax/jquery.validation.unobtrusive/3.2.6/jquery.validate.unobtrusive.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.2.2/jquery.form.min.js"></script>
@@ -133,14 +142,45 @@
     <script src="~/js/JustEncrypt.js" asp-append-version="true"></script>
     <script src="~/js/JustSendingApp.js" asp-append-version="true"></script>
     <script type="text/javascript">
-        $(function () {
-            JustSendingApp.init();
-        });
+        (function() {
+            try {
+                if(!window.Promise) {
+                    throw "Browser does not support Promise()";
+                }
+                JustSendingApp.init();
+            } catch (ex) {
+                var id = get("SessionId").value;
+                var id2 = get("SessionVerification").value;
+
+                var data = new FormData();
+                
+                data.append("id", id);
+                data.append("id2", id2);
+
+                execute_xhr("POST", "/app/lite/notify/unsupported-device", function () {
+
+                }, data);
+
+                if (is_dev())
+                    document.body.text = JSON.stringify(ex);
+                else {
+                    setTimeout(function () {
+                        window.location.href = "/app/lite/" + id + "/" + id2;
+                    }, 500);
+                }
+            }
+        })();
     </script>
+    <noscript>
+        <style>
+            .h-nojs {
+                display: none;
+            }
+        </style>
+    </noscript>
 }
 @section Head
-    {
-    <partial name="_CommonHead"/>
+{
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/embed-js/4.2.3/embed.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/2.4.1/github-markdown.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/styles/github-gist.min.css" />

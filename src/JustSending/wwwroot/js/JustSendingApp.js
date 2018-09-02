@@ -60,7 +60,15 @@
     },
 
     initAutoSizeComposer: function () {
-        autosize($("#ComposerText"));
+        try {
+            autosize($("#ComposerText"));
+        } catch (ex) { }
+    },
+
+    autosizesUpdate: function (text) {
+        try {
+            autosizes.update(text);
+        } catch (ex) { }
     },
 
     lastStatusUpdatedEpoch: 0,
@@ -220,7 +228,7 @@
                 $text.removeAttr("readonly");
                 $text.val($text.data("old"));
                 $text.data("old", "");
-                autosize.update($text);
+                JustSendingApp.autosizesUpdate($text);
                 $fileData.val("");
                 JustSendingApp.initAutoSizeComposer();
                 return false;
@@ -448,6 +456,10 @@
             }
         });
 
+        conn.on("redirect", function (url) {
+            document.location.href = url;
+        });
+
         $("#shareBtn").on("click", function () {
             conn.send("share");
             return false;
@@ -538,7 +550,7 @@
 
         this.loadingMessage = true;
         clearTimeout(this.loadMessageTimer);
-
+        
         var id = $("#SessionId").val();
         var id2 = $("#SessionVerification").val();
         var from = parseInt($(".msg-c:first").data("seq"));
@@ -552,12 +564,10 @@
             },
             function (response) {
 
-                $(response)
-                    .hide()
-                    .prependTo($("#conversation-list"))
-                    .slideDown(250, function () {
-                        JustSendingApp.decryptMessages();
-                    });
+                $($.parseHTML(response))
+                    .prependTo($("#conversation-list"));
+                    
+                JustSendingApp.decryptMessages();
                 
                 JustSendingApp.processTime();
                 JustSendingApp.initViewSource();

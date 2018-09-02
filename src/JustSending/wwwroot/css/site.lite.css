@@ -1,4 +1,63 @@
-﻿.share-panel,
+﻿@media (min-width: 0px) and (max-width: 340px) {
+    #refresh span {
+        display: none;
+    }
+}
+
+.share-panel,
 .share-actions {
     display: block;
 }
+
+.ref-info {
+    text-align: center;
+    font-size: 80%;
+    background-color: #ddd;
+    padding: 5px;
+}
+
+#file {
+    display: block;
+    padding: 10px 0;
+    color: white;
+}
+
+#ComposerText {
+    height: 46px;
+}
+
+#refresh {
+    height: 30px;
+}
+
+    #refresh span {
+        display: block;
+        height: 30px;
+        background-color: #0000001a;
+        z-index: 10000;
+        margin-top: -27px;
+        margin-left: -15px;
+        margin-bottom: -7px;
+        width: 0%;
+    }
+
+    #refresh.updating span {
+        transition: all 5s ease-in;
+        width: 100%;
+    }
+
+    #refresh.new {
+        opacity: 0.5;
+    }
+
+        #refresh.new:after {
+            content: 'New message below';
+            display: block;
+            margin-top: 7px;
+            color: #ffffff;
+            font-size: 12px;
+            text-transform: lowercase;
+            background-color: #d9534f;
+            margin-left: -13px;
+            margin-right: -13px;
+        }

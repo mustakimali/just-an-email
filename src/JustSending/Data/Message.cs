@@ -10,6 +10,8 @@ namespace JustSending.Data
         public int SessionMessageSequence { get; set; }
 
         public string SessionId { get; set; }
+        [BsonIgnore]
+        public string SessionIdVerification { get; set; }
         /// <summary>
         /// Unique for each connected device in a particular session
         /// </summary>

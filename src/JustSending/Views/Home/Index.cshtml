@@ -2,20 +2,25 @@
 @{
     ViewData["Title"] = "Quickly send files, URL or any texts across your devices!";
 }
-@section Head {
-    <css files="~/css/_home.css" type="text/css"></css>
-}
 @section AboveBody
 {
     <div class="jumbotron">
         <div class="container">
             <h1 class="text-lowercase">Pass files or <span title="Long URL, unfinished facebook status, code blocks!" style="border-bottom: 1px dotted #fff;cursor: help;">any texts</span> between your devices</h1>
             
-            <div>
-                <a asp-controller="App" asp-action="NewSession" class="btn btn-lg btn-primary btn-block" style="margin-bottom: 5px">Start</a>
-                <a asp-action="Connect" asp-controller="App" style="opacity: 0.7" class="btn btn-lg btn-primary btn-block" >Connect</a>
+            <div id="connect-panel">
+                <a id="new-session" asp-controller="App" asp-action="NewSession" class="btn btn-lg btn-primary btn-block" style="margin-bottom: 5px; display: none;">Start</a>
+                <noscript>
+                    <a asp-controller="App" asp-action="LiteSessionNew" class="btn btn-lg btn-primary btn-block" style="margin-bottom: 5px">Start*</a>
+                </noscript>
+                <a id="connect" asp-action="Connect" asp-controller="App" style="opacity: 0.7" class="btn btn-lg btn-primary btn-block" >Connect</a>
             </div>
-            
+            <noscript>
+                <p class="small">
+                    * Your device is too outdated to experience the full rich experience of this app
+                </p>
+            </noscript>
+           
         </div>
     </div>
     <div class="jumbotron share">
@@ -41,6 +46,9 @@
                         <li>No login/registration required.</li>
                         <li>All you need is a browser.</li>
                         <li>Share Files <strong>upto @config["MaxUploadSizeDisplay"]</strong>, URL or arbitrary text.</li>
+                        <li>
+                            Very old browser? use <a asp-controller="App" asp-action="LiteSessionNew">Lite version</a>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -67,8 +75,13 @@
 @section Scripts
 {
 <script type="text/javascript">
-    $(function() {
+    (function($) {
+        if(window.innerWidth <= 340){
+            showNoscripts($);
+        }
+
         $("*[title]").tooltip();
-    });
+        $("#new-session").css("display", "block");
+    })(window.jQuery);
 </script>
 }

@@ -101,8 +101,12 @@ function showAjaxError(jqXhr, errorThrown) {
 }
 
 function Log(text) {
-    if (window.location.href.indexOf("localhost") > 0 || window.location.href.indexOf("show_log") > 0)
+    if (is_dev())
         console.log(text);
+}
+
+function is_dev() {
+    return window.location.href.indexOf("localhost") > 0 || window.location.href.indexOf("show_log") > 0;
 }
 
 function app_busy(show) {
@@ -110,6 +114,43 @@ function app_busy(show) {
         $("body").addClass("busy");
     else
         $("body").removeClass("busy");
+}
+
+function onLoad(code) {
+    window.onload = code()
+}
+
+function showNoscripts($) {
+    var el = document.getElementById("new-session");
+    el.href = "/app/lite";
+    el.innerText += "*";
+}
+
+function hasjQuery() {
+    try {
+        var dno = window.$;
+        return true;
+    } catch (ex) {
+        return false;
+    }
+}
+
+function execute_xhr(method, url, onSuccess, data) {
+    var xhr = new XMLHttpRequest();
+
+    xhr.open(method, url, true);
+    xhr.onload = function () {
+        onSuccess(xhr.responseText);
+    }
+
+    if (data != undefined)
+        xhr.send(data);
+    else
+        xhr.send();
+}
+
+function get(id) {
+    return document.getElementById(id);
 }
 
 String.prototype.format = function () {

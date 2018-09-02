@@ -1,0 +1,21 @@
+﻿@model JustSending.Models.LiteSessionModel
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration config
+@{
+    ViewBag.Title = "[Lite] Delete session?";
+}
+
+<h1>Are you sure you want to erase this session?</h1>
+
+<form asp-action="EraseSession">
+    <input id="erase" class="btn btn-danger" value="Finish and Erase Everything" title="Finish and Erase Everything" type="submit" />
+
+    &middot;
+
+    <a asp-action="LiteSession"
+       asp-route-id1="@Model.SessionId"
+       asp-route-id2="@Model.SessionVerification">Cancel and take me back</a>
+
+    <partial name="_LiteFormHiddens" model="@Model" />
+</form>
+

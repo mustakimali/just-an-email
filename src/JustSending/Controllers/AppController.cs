@@ -10,12 +10,14 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
 using IOFile = System.IO.File;
 
 namespace JustSending.Controllers
 {
     [Route("app")]
-    public class AppController : Controller
+    public partial class AppController : Controller
     {
         private readonly AppDbContext _db;
         private readonly ConversationHub _hub;
@@ -77,21 +79,7 @@ namespace JustSending.Controllers
                 return Ok();
             }
 
-            var sessionId = id;
-            var idVerification = id2;
-
-            // Create Session
-            var session = new Session
-            {
-                DateCreated = DateTime.UtcNow,
-                Id = sessionId,
-                IdVerification = idVerification
-            };
-            _db.Sessions.Insert(session);
-
-            // New ShareToken
-            _db.CreateNewShareToken(sessionId);
-            _db.RecordStats(s => s.Sessions++);
+            CreateSession(id, id2);
             return Accepted();
         }
 
@@ -120,13 +108,28 @@ namespace JustSending.Controllers
                 }
             }
 
-            var fileInfo = new FileInfo(postedFilePath);
-            if (fileInfo.Length > Convert.ToInt64(_config["MaxUploadSizeBytes"]))
+            try
+            {
+                var message = SavePostedFile(postedFilePath, model);
+                return await SaveMessageAndReturnResponse(message);
+            }
+            catch (BadHttpRequestException)
             {
                 return BadRequest();
             }
+
+        }
+
+        private Message SavePostedFile(string postedFilePath, SessionModel model)
+        {
+            var fileInfo = new FileInfo(postedFilePath);
+            if (fileInfo.Length > Convert.ToInt64(_config["MaxUploadSizeBytes"]))
+            {
+                BadHttpRequestException.Throw(RequestRejectionReason.InvalidContentLength, HttpMethod.Post);
+            }
+
             var message = GetMessageFromModel(model, true);
-            var uploadDir = GetUploadFolder(model.SessionId, _env.WebRootPath);
+            var uploadDir = Helper.GetUploadFolder(model.SessionId, _env.WebRootPath);
             if (!Directory.Exists(uploadDir)) Directory.CreateDirectory(uploadDir);
 
             // Use original file name
@@ -136,6 +139,7 @@ namespace JustSending.Controllers
                 // if exist then append digits from the session id
                 fileName = Path.GetFileNameWithoutExtension(message.Text) + "_" + message.Id.Substring(0, 6) + Path.GetExtension(message.Text);
             }
+
             var destUploadPath = Path.Combine(uploadDir, fileName);
 
             message.Text = fileName;
@@ -143,8 +147,7 @@ namespace JustSending.Controllers
             message.FileSizeBytes = fileInfo.Length;
 
             IOFile.Move(postedFilePath, destUploadPath);
-
-            return await SaveMessageAndReturnResponse(message);
+            return message;
         }
 
         [Route("post/files")]
@@ -152,14 +155,14 @@ namespace JustSending.Controllers
         public async Task<IActionResult> PostWithFileAfterStreaming(SessionModel model)
         {
             // Locate the file
-            var uploadedPath = Path.Combine(GetUploadFolder(string.Empty, _env.WebRootPath), model.SocketConnectionId + ConversationHub.FILE_EXT);
+            var uploadedPath = Path.Combine(Helper.GetUploadFolder(string.Empty, _env.WebRootPath), model.SocketConnectionId + ConversationHub.FILE_EXT);
             if (!IOFile.Exists(uploadedPath))
             {
                 return NotFound();
             }
 
             var message = GetMessageFromModel(model);
-            var uploadFolder = GetUploadFolder(model.SessionId, _env.WebRootPath);
+            var uploadFolder = Helper.GetUploadFolder(model.SessionId, _env.WebRootPath);
             var moveToPath = Path.Combine(uploadFolder, message.Id + ConversationHub.FILE_EXT);
 
             if (!Directory.Exists(uploadFolder))
@@ -189,29 +192,35 @@ namespace JustSending.Controllers
 
         [Route("post")]
         [HttpPost]
-        public async Task<IActionResult> Post(SessionModel model)
+        public async Task<IActionResult> Post(SessionModel model, bool lite = false)
         {
             var message = GetMessageFromModel(model);
-            return await SaveMessageAndReturnResponse(message);
+            return await SaveMessageAndReturnResponse(message, lite);
         }
 
-        private async Task<IActionResult> SaveMessageAndReturnResponse(Message message)
+        private async Task<IActionResult> SaveMessageAndReturnResponse(Message message, bool lite = false)
         {
             _db.MessagesInsert(message);
             _db.RecordMessageStats(message);
 
+            ScheduleOrExtendSessionCleanup(message.SessionId, lite);
+
             await _hub.RequestReloadMessage(message.SessionId);
 
-            return Accepted();
+            if (lite)
+                return RedirectToAction(nameof(LiteSession), new { id1 = message.SessionId, id2 = message.SessionIdVerification });
+            else
+                return Accepted();
         }
 
         private Message GetMessageFromModel(SessionModel model, bool hasFile = false)
         {
             var utcNow = DateTime.UtcNow;
-            var message = new Message
+            return new Message
             {
                 Id = _db.NewGuid(),
                 SessionId = model.SessionId,
+                SessionIdVerification = model.SessionVerification,
                 SocketConnectionId = model.SocketConnectionId,
                 EncryptionPublicKeyAlias = model.EncryptionPublicKeyAlias,
                 DateSent = utcNow,
@@ -219,7 +228,6 @@ namespace JustSending.Controllers
                 Text = model.ComposerText,
                 HasFile = hasFile
             };
-            return message;
         }
 
         [HttpGet]
@@ -233,22 +241,17 @@ namespace JustSending.Controllers
                 return NotFound();
             }
 
-            var uploadDir = GetUploadFolder(sessionId, _env.WebRootPath);
+            var uploadDir = Helper.GetUploadFolder(sessionId, _env.WebRootPath);
             var path = Path.Combine(uploadDir, msg.Text);
-            if (!System.IO.File.Exists(path))
+            if (!IOFile.Exists(path))
                 return NotFound();
 
             _db.RecordStats(s => s.FilesSizeBytes += msg.FileSizeBytes);
             return PhysicalFile(path, "application/" + Path.GetExtension(path).Trim('.'), msg.Text);
         }
 
-        public static string GetUploadFolder(string sessionId, string root)
-        {
-            return Path.Combine(root, "upload", sessionId);
-        }
-
         [Route("messages"), HttpPost]
-        public IActionResult GetMessages(string id, string id2, int @from) => GetMessagesInternal(id, id2, @from);
+        public IActionResult GetMessages(string id, string id2, int @from) => GetMessagesViewInternal(id, id2, @from);
 
         [Route("connect")]
         public IActionResult Connect()
@@ -282,6 +285,19 @@ namespace JustSending.Controllers
             // Ready to join,
             // Delete the Token
             _db.ShareTokens.Delete(model.Token);
+
+            if(model.NoJs && !session.IsLiteSession)
+            {
+                await ConvertToLiteSession(session.Id, session.IdVerification);
+                session.IsLiteSession = true;
+            }
+            
+            if (session.IsLiteSession)
+            {
+                await _hub.AddSessionNotification(session.Id, "A new device has been connected!", true);
+                return RedirectToAction(nameof(LiteSession), new { id1 = session.Id, id2 = session.IdVerification });
+            }
+
             await _hub.HideSharePanel(session.Id);
 
             TempData[nameof(Data.Session.Id)] = session.Id;
@@ -305,39 +321,32 @@ namespace JustSending.Controllers
             });
         }
 
-
-#if DEBUG
-        [HttpGet]
-        [Route("stress-test")]
-        public async Task<IActionResult> StressTest(string sessionId, string message)
+        [HttpPost]
+        [Route("lite/notify/unsupported-device")]
+        public async Task<IActionResult> NotifyUnsupportedClientConnected(string id, string id2)
         {
-            if (string.IsNullOrEmpty(message))
-                message = Guid.NewGuid().ToString("N");
+            if (!IsValidSession(id, id2)) return BadRequest();
 
-            // find a session with an active device
-            //
-            return await Post(new SessionModel
-            {
-                SessionId = sessionId,
-                ComposerText = message
-            });
+            await ConvertToLiteSession(id, id2);
+
+            return Ok();
         }
-#endif
 
-
-
-        private IActionResult GetMessagesInternal(string id, string id2, int @from)
+        private async Task ConvertToLiteSession(string id, string id2)
         {
             var session = _db.Sessions.FindById(id);
-            if (session == null || session.IdVerification != id2)
-            {
-                return NotFound();
-            }
+            session.IsLiteSession = true;
+            _db.Sessions.Upsert(session);
 
-            var messages = _db
-                .Messages
-                .Find(x => x.SessionId == id && x.SessionMessageSequence > @from)
-                .OrderByDescending(x => x.DateSent);
+            await _hub.RedirectTo(id, Url.Action(nameof(LiteSession), new { id1 = id, id2, r = "u" }))
+                .ConfigureAwait(false);
+        }
+
+        private IActionResult GetMessagesViewInternal(string id, string id2, int @from)
+        {
+            var messages = GetMessagesInternal(id, id2, @from).ToArray();
+            if (messages.Length == 0) return new EmptyResult();
+
             return View("GetMessages", messages);
         }
     }
