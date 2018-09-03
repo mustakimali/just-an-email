@@ -36,11 +36,11 @@ namespace JustSending.Controllers
                         .Select(x => new
                         {
                             Year = x.Key,
-                            Items = x.GroupBy(y => y.Id.ToString().Substring(2, 2))
+                            Months = x.GroupBy(y => y.Id.ToString().Substring(2, 2))
                                         .Select(c => new
                                         {
                                             Month = c.Key,
-                                            Items = c
+                                            Days = c
                                         })
                         });
 
