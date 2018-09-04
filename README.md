@@ -7,7 +7,15 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/3jxpwg2tcwoiaq9b/branch/master?svg=true)](https://ci.appveyor.com/project/mustakimali/justa-ml/branch/master) Production
 [![Build status](https://ci.appveyor.com/api/projects/status/notmi7mr5jd27k8d?svg=true)](https://ci.appveyor.com/project/mustakimali/justa-ml-a82xl) Development (Unstable)
 
-## Getting started
+## Run from docker hub
+
+```
+docker pull mustakimali/justaml
+docker run -p 61452:80 justaml
+```
+Should be running in http://localhost:61452
+
+## Building the code
 * Make sure you have [.NET Core 2.1 SDK](https://www.microsoft.com/net/download/core) (Version >= `2.1.401`) installed
 * Clone
 * `dotnet run` or `dotnet watch run`
