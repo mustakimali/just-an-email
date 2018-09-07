@@ -12,7 +12,7 @@
                 <div class="input-group input-group-lg">
                     @Html.TextBoxFor(x => x.Token, null, new { @class = "form-control", type="number", placeholder = "Enter the PIN", onfocus="this.select()" })
                     <span class="input-group-btn">
-                        <input id="connect" class="btn btn-primary" type="submit" />
+                        <input id="connect" class="btn btn-primary" type="submit" value="Connect" />
                     </span>
                     <noscript>
                         <input type="hidden" asp-for="NoJs" value="true" />
