@@ -52,7 +52,7 @@ namespace JustSending.Test
 
                 Pair(client1, client2);
 
-                WaitMs(1000);
+                WaitMs(2000);
 
                 SendAndVerifyMessage();
 
@@ -91,8 +91,6 @@ namespace JustSending.Test
                 Navigate(client1, client2);
 
                 Pair(client1, client2);
-
-                WaitMs(1000);
 
                 client2
                     .FindElement(By.Id("deleteBtn"))
@@ -165,12 +163,26 @@ namespace JustSending.Test
                         StartInfo = {
                             WorkingDirectory = _contentRoot,
                             FileName = "dotnet",
-                            Arguments = $"bin/{mode}/netcoreapp2.1/{(mode == "Release" ? "publish/" : "")}JustSending.dll"
+                            Arguments = $"bin/{mode}/netcoreapp2.1/{(mode == "Release" ? "publish/" : "")}JustSending.dll --urls {_appHostName}"
                         }
                     };
 
                     _dotnetProcess.Start();
-                    WaitMs(5000);
+                    while (true)
+                    {
+                        try
+                        {
+                            var homePage = await client.GetStringAsync(_appHostName);
+                            if (homePage.Contains("Mustakim Ali"))
+                                break;
+
+                            WaitMs(1000);
+                        }
+                        catch (Exception)
+                        {
+                            // ignore
+                        }
+                    }
                 }
 
             }
@@ -193,6 +205,7 @@ namespace JustSending.Test
 
             chromeOpt.AddArguments("--headless");
             chromeOpt.AddArguments("--disable-gpu");
+            chromeOpt.AddArguments("--no-sandbox");
 
             var driver = new ChromeDriver(_seleniumDriverPath, chromeOpt);
 
@@ -226,6 +239,8 @@ namespace JustSending.Test
 
             client2.FindElement(By.Id("Token")).SendKeys(token);
             client2.FindElement(By.Id("connect")).Click();
+
+            WaitMs(2000);
         }
 
         void Navigate(IWebDriver client1, IWebDriver client2)
@@ -233,6 +248,8 @@ namespace JustSending.Test
             client1.FindElement(By.Id("new-session")).Click();
 
             client2.FindElement(By.Id("connect")).Click();
+
+            WaitMs(2000);
         }
 
         private void WaitMs(int milliseconds)
