@@ -104,8 +104,10 @@ namespace JustSending.Test
 
                 WaitMs(1000);
 
-                client2.Url.Should().Be(_appHostName.ToString());
-                client1.Url.Should().Be(_appHostName.ToString());
+                var redirectsToHome = $"{_appHostName}?ref=app";
+
+                client2.Url.Should().Be(redirectsToHome);
+                client1.Url.Should().Be(redirectsToHome);
             }
         }
 

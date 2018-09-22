@@ -523,7 +523,7 @@
     },
 
     goHome: function() {
-        window.location.replace("/");
+        window.location.replace("/?ref=app");
     },
 
     switchView: function (showSharePanel) {

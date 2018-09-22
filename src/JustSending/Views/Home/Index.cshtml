@@ -3,29 +3,29 @@
     ViewData["Title"] = "Quickly send files, URL or any texts across your devices!";
 }
 @section AboveBody
-{
+    {
     <div class="jumbotron">
         <div class="container">
             <h1 class="text-lowercase">Pass files or <span title="Long URL, unfinished facebook status, code blocks!" style="border-bottom: 1px dotted #fff;cursor: help;">any texts</span> between your devices</h1>
-            
+
             <div id="connect-panel">
                 <a id="new-session" asp-controller="App" asp-action="NewSession" class="btn btn-lg btn-primary btn-block" style="margin-bottom: 5px; display: none;">Start</a>
                 <noscript>
                     <a asp-controller="App" asp-action="LiteSessionNew" class="btn btn-lg btn-primary btn-block" style="margin-bottom: 5px">Start*</a>
                 </noscript>
-                <a id="connect" asp-action="Connect" asp-controller="App" style="opacity: 0.7" class="btn btn-lg btn-primary btn-block" >Connect</a>
+                <a id="connect" asp-action="Connect" asp-controller="App" style="opacity: 0.7" class="btn btn-lg btn-primary btn-block">Connect</a>
             </div>
             <noscript>
                 <p class="small">
                     * Your device is too outdated to experience the full rich experience of this app
                 </p>
             </noscript>
-           
+
         </div>
     </div>
     <div class="jumbotron share">
-        <div class="container">
-            <partial name="_Share"/>
+        <div class="container" id="share-panel">
+            <partial name="_Share" />
         </div>
     </div>
 }
@@ -35,7 +35,7 @@
         Imagine sending a long URL to your PS4 browser! or sending an important file to your friends computer without having to install an app or logging into a site just for that!
     </p>
     <div class="row">
-       
+
         <div class="col-md-6">
             <div class="panel panel-default">
                 <div class="panel-heading">
@@ -72,16 +72,56 @@
     </div>
 </div>
 <span id="forkongithub"><a href="https://mustakimali.github.io/JustA.ML" target="_blank">Fork me on GitHub</a></span>
+<div id="feedbackModal" class="modal fade" role="dialog">
+    <div class="modal-dialog">
+
+        <!-- Modal content-->
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">Did you find it useful?</h4>
+            </div>
+            <div class="modal-body" style="text-align: center;">
+                <p>
+                    <h3><i class="fa fa-thumbs-o-up"></i> Please help spread the world!</h3>
+
+                    <div id="feedbackSharePanel"></div>
+                </p>
+
+                <p>
+                    <h3><i class="fa fa-thumbs-o-down"></i> Any issues?</h3>
+                    Please <a href="https://github.com/mustakimali/JustA.ML/issues/new">report a bug</a>
+                </p>
+            </div>
+        </div>
+
+    </div>
+</div>
 @section Scripts
 {
 <script type="text/javascript">
-    (function($) {
-        if(window.innerWidth <= 340){
+    (function ($) {
+        if (window.innerWidth <= 340) {
             showNoscripts($);
         }
 
         $("*[title]").tooltip();
         $("#new-session").css("display", "block");
+
+        setTimeout(askForFeedback, 500);
+
+        function askForFeedback() {
+            if (location.search.indexOf("?ref=app") == 0) {
+                $("#feedbackSharePanel").html($("#share-panel").html());
+                $("#feedbackModal")
+                    .modal("show")
+                    .on("hidden.bs.modal", function () {
+                        try {
+                            history.replaceState(null, "", "/")
+                        } catch (e) { }
+                    });;
+            }
+        }
     })(window.jQuery);
 </script>
 }
