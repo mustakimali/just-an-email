@@ -7,6 +7,8 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/3jxpwg2tcwoiaq9b/branch/master?svg=true)](https://ci.appveyor.com/project/mustakimali/justa-ml/branch/master) Production
 [![Build status](https://ci.appveyor.com/api/projects/status/notmi7mr5jd27k8d?svg=true)](https://ci.appveyor.com/project/mustakimali/justa-ml-a82xl) Development (Unstable)
 
+[![BuitlWithDot.Net shield](https://builtwithdot.net/project/64/justa.ml/badge)](https://builtwithdot.net/project/64/justa.ml)
+
 ## Run from docker hub
 
 ```
