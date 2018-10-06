@@ -42,6 +42,7 @@ namespace JustALink
 
             services.AddSingleton<AppDbContext>();
             services.AddSingleton<ConversationHub>();
+            services.AddSingleton<SecureLineHub>();
             services.AddTransient<BackgroundJobScheduler>();
 
             services.AddHangfire(x => x.UseLiteDbStorage(Helper.BuildDbConnectionString("BackgroundJobs", _hostingEnvironment)));
@@ -65,6 +66,7 @@ namespace JustALink
             app.UseSignalR(routes =>
             {
                 routes.MapHub<ConversationHub>("/signalr/hubs");
+                routes.MapHub<SecureLineHub>("/signalr/secure-line");
             });
             
             app.UseHangfireServer();
