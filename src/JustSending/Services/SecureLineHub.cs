@@ -11,9 +11,14 @@ namespace JustSending.Services
         private Dictionary<string, string> _connectionIdSessionMap = new Dictionary<string, string>();
         private Dictionary<string, HashSet<string>> _idConnectionIds = new Dictionary<string, HashSet<string>>();
 
-        internal async Task Init(string id)
+        public async Task Init(string id)
         {
             var connectionId = Context.ConnectionId;
+
+            if (!_connectionIdSessionMap.ContainsKey(connectionId))
+            {
+                _connectionIdSessionMap.Add(connectionId, id);
+            }
 
             if (_idConnectionIds.TryGetValue(id, out var entry))
             {
@@ -32,11 +37,6 @@ namespace JustSending.Services
             else
             {
                 _idConnectionIds.Add(id, new HashSet<string> { connectionId });
-            }
-
-            if (!_connectionIdSessionMap.ContainsKey(connectionId))
-            {
-                _connectionIdSessionMap.Add(connectionId, id);
             }
         }
 

@@ -1,4 +1,5 @@
 var SecureLine = {
+    ws: {},
     init: function (id) {
         if (id.length < 32) {
             throw "The id must be at least 32 character long unique shared between two client.";
@@ -9,6 +10,8 @@ var SecureLine = {
             var ws = new signalR.HubConnectionBuilder()
                 .withUrl("/signalr/secure-line")
                 .build();
+
+            this.ws = ws;
             
             ws.on("Broadcast", function (data) {
                 Log("Received: " + data);
@@ -17,7 +20,7 @@ var SecureLine = {
             var onConnected = function () {
                 Log("WebSocket connection established.");
 
-                ws.send("Init", id);
+                ws.send("init", id);
 
             };
             ws.connection.onclose = function(msg) {
