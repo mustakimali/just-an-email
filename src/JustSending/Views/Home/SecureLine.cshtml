@@ -25,11 +25,11 @@
 
     <section class="main-content">
         <h2>Include the script</h2>
-        <pre><code>&lt;scripts src="@context.HttpContext.Request.Scheme://@context.HttpContext.Request.Host.ToUriComponent()/secure-line/script.js" type="text/javascript"&gt;&lt;scripts&gt;</code></pre>
+        <pre><code>&lt;script src="@context.HttpContext.Request.Scheme://@context.HttpContext.Request.Host.ToUriComponent()/secure-line/script.js" type="text/javascript"&gt;&lt;script&gt;</code></pre>
         
         <h2>Initialise</h2>
 <pre>
-<code class="html">&lt;scripts&gt;
+<code class="html">&lt;script&gt;
     // Storing the unique session id in the URL
     if (!location.hash) {
         location.hash = new_guid(); // Method needs to be defined
