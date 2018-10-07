@@ -24,7 +24,6 @@ namespace JustALink
 
         public static IConfiguration Configuration { get; private set; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddSingleton<IConfiguration>(Configuration);
@@ -39,6 +38,7 @@ namespace JustALink
             services.AddMvc();
             services.AddSignalR();
             services.AddMemoryCache();
+            services.AddHttpContextAccessor();
 
             services.AddSingleton<AppDbContext>();
             services.AddSingleton<ConversationHub>();
@@ -48,7 +48,6 @@ namespace JustALink
             services.AddHangfire(x => x.UseLiteDbStorage(Helper.BuildDbConnectionString("BackgroundJobs", _hostingEnvironment)));
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
             if (env.IsDevelopment())

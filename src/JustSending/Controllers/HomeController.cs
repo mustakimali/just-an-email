@@ -18,6 +18,12 @@ namespace JustSending.Controllers
             return View();
         }
 
+        [Route("secure-line")]
+        public IActionResult SecureLine()
+        {
+            return View();
+        }
+
         [Route("stats")]
         public IActionResult Stats([FromServices] AppDbContext db, int date = -1)
         {
