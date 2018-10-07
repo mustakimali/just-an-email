@@ -238,6 +238,10 @@
     finishedStreamingFile: false,
 
     beforeSubmit: function (formData, formObject, formOptions) {
+        if (!$("#form").valid()) {
+            return false;
+        }
+        
         var hasFile = false;
 
         var replaceFormValue = function (name, factory) {
