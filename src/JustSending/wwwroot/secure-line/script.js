@@ -1,9 +1,10 @@
 var SecureLine = {
     webSockerConnection: null,
-    hostname: "https://justa.ml",
+    hostname: "http://localhost:61452", //"https://justa.ml",
     private_key: null,
     on_event: null,
     on_line_secured: null,
+    on_line_disconnected: null,
 
     initiator: true,
 
@@ -40,20 +41,34 @@ var SecureLine = {
                     case "Start":
                         EndToEndEncryption.initKeyExchange(ws);
                         break;
-                    
-                    default:
+
+                    case "GONE":
+                        if (typeof (SecureLine.on_line_disconnected) == "function") {
+                            SecureLine.on_line_disconnected();
+                        }
+                        break;
+
+                    case "GET":
+
                         if (!EndToEndEncryption.isEstablished()) {
                             throw "Message received before secure line was established.";
                         }
-                        try {
-                            var event_decrypted = EndToEndEncryption.decrypt(event, secure_line.private_key);
-                            var data_decrypted = data == null ? "" : EndToEndEncryption.decrypt(data, secure_line.private_key);
 
-                            secure_line.on_event(event_decrypted, data_decrypted);
-                        } catch (e) {
-                            throw "Unrecognised message received: [" + event + "," + data + "]:> Error: " + e;
-                        }
-                        
+                        $.get(secure_line.hostname + "/secure-line/message?id=" + data, function (result) {
+
+                            var messageObject = result;
+
+                            try {
+                                var event_decrypted = EndToEndEncryption.decrypt(messageObject.event, secure_line.private_key);
+                                var data_decrypted = data == null ? "" : EndToEndEncryption.decrypt(messageObject.data, secure_line.private_key);
+
+                                secure_line.on_event(event_decrypted, data_decrypted);
+                            } catch (e) {
+                                throw "Unrecognised message received: [" + event + "," + data + "]:> Error: " + e;
+                            }
+
+                        });
+
                         break;
                 }
             });
@@ -100,11 +115,40 @@ var SecureLine = {
         var event_encrypted = EndToEndEncryption.encrypt(event, this.private_key);
         var data_encrypted = data == null ? "" : EndToEndEncryption.encrypt(data, this.private_key);
 
-        this.webSockerConnection.send("Broadcast", event_encrypted, data_encrypted, false);
+        $.ajax({
+            type: "POST",
+            async: true,
+            url: this.hostname + "/secure-line/message",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            processData: false,
+            data: JSON.stringify({
+                Id: SecureLine.newGuid(),
+                Data: JSON.stringify({
+                    event: event_encrypted,
+                    data: data_encrypted
+                })
+            }),
+            success: function (response) {
+                console.log(response);
+
+                SecureLine.webSockerConnection.send("Broadcast", "GET", response, false);
+            }
+        });
     },
 
     sha256: function (data) {
         return sjcl.codec.hex.fromBits(sjcl.hash.sha256.hash(data));
+    },
+
+    newGuid: function () {
+        function s4() {
+            return Math.floor((1 + Math.random()) * 0x10000)
+                .toString(16)
+                .substring(1);
+        }
+        return s4() + s4() + s4() + s4() + s4() + s4() + s4() + s4();
     },
 
     ensureDependencies: function (then) {

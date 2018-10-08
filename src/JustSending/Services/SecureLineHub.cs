@@ -97,6 +97,8 @@ namespace JustSending.Services
 
         public override Task OnDisconnectedAsync(Exception exception)
         {
+            Broadcast("GONE", "", false);
+
             if (_connectionIdSessionMap.TryGetValue(Context.ConnectionId, out var sessionId))
             {
                 _connectionIdSessionMap.Remove(Context.ConnectionId);

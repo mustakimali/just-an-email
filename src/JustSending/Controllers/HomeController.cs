@@ -11,15 +11,10 @@ using JustSending.Data;
 
 namespace JustSending.Controllers
 {
+
     public class HomeController : Controller
     {
         public IActionResult Index()
-        {
-            return View();
-        }
-
-        [Route("secure-line")]
-        public IActionResult SecureLine()
         {
             return View();
         }

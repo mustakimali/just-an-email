@@ -32,7 +32,7 @@
 <code class="html">&lt;script&gt;
     // Storing the unique session id in the URL
     if (!location.hash) {
-        location.hash = new_guid(); // Method needs to be defined
+        location.hash = SecureLine.newGuid();
     }
 
     var uniqueId = location.hash;
@@ -55,39 +55,59 @@
             <b>Notice</b> this page already added a hash in the URL and ready to establish a secure connection.
             Open this page to another tab or device and check the console for an example.
         </p>
+        <div id="conn" style="display: none;">
+            <h3>Send a test message</h3>
+            <input id="ename" placeholder="Event Name" />
+            <input id="data" placeholder="Data" />
+            <button id="sendBtn">Send</button>
+
+            <div id="message" style="margin-top: 10px;">
+
+            </div>
+
+        </div>
     </section>
     <script src="~/secure-line/script.js" asp-append-version="true"></script>
     <script>
         (function (w, d) {
-
+            
             if (!location.hash) {
-                location.hash = guid();
+                location.hash = SecureLine.newGuid();
             }
+
+            SecureLine.on_line_disconnected = function () {
+                location.reload();
+            };
 
             SecureLine.init(location.hash, function (event, data) {
                 console.log("Message received over secure line: ");
-                console.log({
+                var data = {
                     Event: event,
                     Data: data
-                });
+                };
+                console.log(data);
                 console.log("It was encrypted using shared secred: " + SecureLine.private_key);
+
+                $("<pre />")
+                    .text(JSON.stringify(data))
+                    .prependTo($("#message"));
+
             }, function (initiator) {
                 if (initiator) {
                     console.log("Sending message over a secure line!");
                     SecureLine.send("Greeting", "Hello");
                 }
+
+                $("#conn").show();
+                $("#sendBtn").on("click", function () {
+                    SecureLine.send($("#ename").val(), $("#data").val());
+                    $("<pre />")
+                        .text("Message sent, check other device.")
+                        .prependTo($("#message"));
+                })
             });
 
         })(window, document);
-
-        function guid() {
-            function s4() {
-                return Math.floor((1 + Math.random()) * 0x10000)
-                    .toString(16)
-                    .substring(1);
-            }
-            return s4() + s4() + s4() + s4() + s4() + s4() + s4() + s4();
-        }
     </script>
 </body>
 
