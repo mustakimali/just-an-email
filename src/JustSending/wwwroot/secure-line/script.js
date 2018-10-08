@@ -1,6 +1,6 @@
 var SecureLine = {
     webSockerConnection: null,
-    hostname: "http://localhost:61452", //"https://justa.ml",
+    hostname: "https://justa.ml",
     private_key: null,
     on_event: null,
     on_line_secured: null,
