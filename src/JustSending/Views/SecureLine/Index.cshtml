@@ -1,0 +1,119 @@
+﻿@inject Microsoft.AspNetCore.Http.IHttpContextAccessor context
+@{
+    Layout = null;
+    ViewData["Title"] = "Secure Line!";
+}
+
+<!DOCTYPE html>
+<html lang="en-US">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Secure Line: Javascript SDK to enable realtime 1-1 secure message transfer for your user.</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#157878">
+    <link rel="stylesheet" href="https://mustakimali.github.io/JustA.ML/assets/css/style.css?v=061490a41e69e0aceed5f97b4869328be541fa46">
+</head>
+
+<body>
+    <section class="page-header">
+        <h1 class="project-name">Secure Line</h1>
+        <h2 class="project-tagline">
+            Javascript SDK to enable realtime 1-1 secure message transfer for your user.
+        </h2>
+
+        <a href="#doc" class="btn">View documentation</a>
+        <a asp-controller="Home" asp-action="Index" class="btn">Go Home</a>
+
+    </section>
+
+    <section class="main-content" id="doc">
+        <h2>Include the script</h2>
+        <pre><code>&lt;script src="@context.HttpContext.Request.Scheme://@context.HttpContext.Request.Host.ToUriComponent()/secure-line/script.js" type="text/javascript"&gt;&lt;script&gt;</code></pre>
+        
+        <h2>Initialise</h2>
+<pre>
+<code class="html">&lt;script&gt;
+    // Storing the unique session id in the URL
+    if (!location.hash) {
+        location.hash = SecureLine.newGuid();
+    }
+
+    var uniqueId = location.hash;
+
+    var onLineSecured = function (initiator) {
+        // Secure line established, send any secure message using
+        // SecureLine.send("[Event Name]", "[Optional data]")
+        // [initiator === true] for first client
+    };
+
+    var onMessageReceived = function (event, data) {
+        // Callback when a message is received
+    };
+
+    SecureLine.init(uniqueId, onMessageReceived, onLineSecured);
+&lt;script&gt;</code>
+</pre>
+
+        <p>
+            <b>Notice</b> this page already added a hash in the URL and ready to establish a secure connection.
+            <u>Open this page to another tab or device</u> and check the console for an example.
+        </p>
+        <div id="conn" style="display: none;">
+            <h3>Send a test message</h3>
+            <input id="ename" placeholder="Event Name" />
+            <input id="data" placeholder="Data" />
+            <button id="sendBtn">Send</button>
+
+            <div id="message" style="margin-top: 10px;">
+
+            </div>
+
+        </div>
+    </section>
+    <script src="~/secure-line/script.js" asp-append-version="true"></script>
+    <script>
+        (function (w, d) {
+            
+            if (!location.hash) {
+                location.hash = SecureLine.newGuid();
+            }
+
+            SecureLine.on_line_disconnected = function () {
+                location.reload();
+            };
+
+            SecureLine.init(location.hash, function (event, data) {
+                console.log("Message received over secure line: ");
+                var data = {
+                    Event: event,
+                    Data: data
+                };
+                console.log(data);
+                console.log("It was encrypted using shared secred: " + SecureLine.private_key);
+
+                $("<pre />")
+                    .text(JSON.stringify(data))
+                    .prependTo($("#message"));
+
+            }, function (initiator) {
+                if (initiator) {
+                    console.log("Sending message over a secure line!");
+                    SecureLine.send("Greeting", "Hello");
+                }
+
+                $("#conn").show();
+                $("#sendBtn").on("click", function () {
+                    SecureLine.send($("#ename").val(), $("#data").val());
+                    $("<pre />")
+                        .text("Message sent, check other device.")
+                        .prependTo($("#message"));
+                })
+            });
+
+        })(window, document);
+    </script>
+</body>
+
+</html>
+

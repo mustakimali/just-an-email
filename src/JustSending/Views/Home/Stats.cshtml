@@ -5,61 +5,66 @@
 }
 
 <div class="container" style="margin-top: 50px;">
-<div class="row">
-    <div class="col-xl-3 col-sm-6 mb-3" title="Total messages sent and size">
-        <div class="card text-white bg-info o-hidden h-100">
-        <div class="card-body">
-            <div class="card-body-icon">
-            <i class="fa fa-fw fa-comments"></i>
+    <div class="row">
+        <div class="col-xl-3 col-sm-6 mb-3" title="Total messages sent and size">
+            <div class="card text-white bg-info o-hidden h-100">
+            <div class="card-body">
+                <div class="card-body-icon">
+                <i class="fa fa-fw fa-comments"></i>
+                </div>
+                <div class="mr-5">@Model.Messages.ToString("###,###,###")</div>
             </div>
-            <div class="mr-5">@Model.Messages.ToString("###,###,###")</div>
+            <a class="card-footer text-white clearfix small z-1" href="#">
+                <span class="float-left">@Model.MessagesSizeBytes.ToFileSize()</span>
+            </a>
+            </div>
         </div>
-        <a class="card-footer text-white clearfix small z-1" href="#">
-            <span class="float-left">@Model.MessagesSizeBytes.ToFileSize()</span>
-        </a>
+        <div class="col-xl-3 col-sm-6 mb-3" title="Total files transfered and size">
+            <div class="card text-white bg-danger o-hidden h-100">
+            <div class="card-body">
+                <div class="card-body-icon">
+                <i class="fa fa-fw fa-files-o"></i>
+                </div>
+                <div class="mr-5">@Model.Files.ToString("###,###,###")</div>
+            </div>
+            <a class="card-footer text-white clearfix small z-1" href="#">
+                <span class="float-left">@Model.FilesSizeBytes.ToFileSize()</span>
+            </a>
+            </div>
+        </div>
+        <div class="col-xl-3 col-sm-6 mb-3">
+            <div class="card text-white bg-warning o-hidden h-100">
+            <div class="card-body">
+                <div class="card-body-icon">
+                <i class="fa fa-fw fa-connectdevelop"></i>
+                </div>
+                <div class="mr-5">@Model.Sessions.ToString("###,###,###")</div>
+            </div>
+            <a class="card-footer text-white clearfix small z-1" href="#">
+                <span class="float-left">Sessions</span>
+            </a>
+            </div>
+        </div>
+        <div class="col-xl-3 col-sm-6 mb-3">
+            <div class="card text-white bg-success o-hidden h-100">
+            <div class="card-body">
+                <div class="card-body-icon">
+                <i class="fa fa-fw fa-laptop"></i>
+                </div>
+                <div class="mr-5">@Model.Devices.ToString("###,###,###")</div>
+            </div>
+            <a class="card-footer text-white clearfix small z-1" href="#">
+                <span class="float-left">Devices</span>
+            </a>
+            </div>
         </div>
     </div>
-    <div class="col-xl-3 col-sm-6 mb-3" title="Total files transfered and size">
-        <div class="card text-white bg-danger o-hidden h-100">
-        <div class="card-body">
-            <div class="card-body-icon">
-            <i class="fa fa-fw fa-files-o"></i>
-            </div>
-            <div class="mr-5">@Model.Files.ToString("###,###,###")</div>
-        </div>
-        <a class="card-footer text-white clearfix small z-1" href="#">
-            <span class="float-left">@Model.FilesSizeBytes.ToFileSize()</span>
-        </a>
-        </div>
-    </div>
-    <div class="col-xl-3 col-sm-6 mb-3">
-        <div class="card text-white bg-warning o-hidden h-100">
-        <div class="card-body">
-            <div class="card-body-icon">
-            <i class="fa fa-fw fa-connectdevelop"></i>
-            </div>
-            <div class="mr-5">@Model.Sessions.ToString("###,###,###")</div>
-        </div>
-        <a class="card-footer text-white clearfix small z-1" href="#">
-            <span class="float-left">Sessions</span>
-        </a>
-        </div>
-    </div>
-    <div class="col-xl-3 col-sm-6 mb-3">
-        <div class="card text-white bg-success o-hidden h-100">
-        <div class="card-body">
-            <div class="card-body-icon">
-            <i class="fa fa-fw fa-laptop"></i>
-            </div>
-            <div class="mr-5">@Model.Devices.ToString("###,###,###")</div>
-        </div>
-        <a class="card-footer text-white clearfix small z-1" href="#">
-            <span class="float-left">Devices</span>
-        </a>
-        </div>
-    </div>
-</div>
-<a href="https://wnumbr.ml/?q=Justa.ML">See how these numbers changed over time</a> &mdash; <a asp-action="StatsRaw">View raw data</a>
+    <a href="https://wnumbr.ml/?q=Justa.ML">See how these numbers changed over time</a> &mdash; <a asp-action="StatsRaw">View raw data</a>
+
+    <h3>Other tools</h3>
+    <p>
+        Use <a asp-action="Index" asp-controller="SecureLine">Secure Line</a> javascript SDK to enable secure communication in your app.
+    </p>    
 </div>
 @section Head
 {
