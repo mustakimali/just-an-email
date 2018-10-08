@@ -9,6 +9,7 @@
 
 <head>
     <meta charset="UTF-8">
+    <title>Secure Line: Javascript SDK to enable realtime 1-1 secure message transfer for your user.</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#157878">
     <link rel="stylesheet" href="https://mustakimali.github.io/JustA.ML/assets/css/style.css?v=061490a41e69e0aceed5f97b4869328be541fa46">
@@ -18,12 +19,15 @@
     <section class="page-header">
         <h1 class="project-name">Secure Line</h1>
         <h2 class="project-tagline">
-            
+            Javascript SDK to enable realtime 1-1 secure message transfer for your user.
         </h2>
+
+        <a href="#doc" class="btn">View documentation</a>
+        <a asp-controller="Home" asp-action="Index" class="btn">Go Home</a>
 
     </section>
 
-    <section class="main-content">
+    <section class="main-content" id="doc">
         <h2>Include the script</h2>
         <pre><code>&lt;script src="@context.HttpContext.Request.Scheme://@context.HttpContext.Request.Host.ToUriComponent()/secure-line/script.js" type="text/javascript"&gt;&lt;script&gt;</code></pre>
         
@@ -53,7 +57,7 @@
 
         <p>
             <b>Notice</b> this page already added a hash in the URL and ready to establish a secure connection.
-            Open this page to another tab or device and check the console for an example.
+            <u>Open this page to another tab or device</u> and check the console for an example.
         </p>
         <div id="conn" style="display: none;">
             <h3>Send a test message</h3>

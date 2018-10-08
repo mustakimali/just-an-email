@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.SignalR;
 using System;
 using Newtonsoft.Json;
 using Microsoft.AspNetCore.Hosting;
+using JustSending.Data;
 
 namespace JustSending.Services
 {
@@ -13,10 +14,12 @@ namespace JustSending.Services
         private Dictionary<string, string> _connectionIdSessionMap = new Dictionary<string, string>();
         private Dictionary<string, HashSet<string>> _sessionIdConnectionIds = new Dictionary<string, HashSet<string>>();
         private readonly IHostingEnvironment _env;
+        private readonly AppDbContext _db;
 
-        public SecureLineHub(IHostingEnvironment env)
+        public SecureLineHub(IHostingEnvironment env, AppDbContext db)
         {
             _env = env;
+            _db = db;
         }
 
         public async Task Init(string id)
@@ -39,6 +42,12 @@ namespace JustSending.Services
 
                 if (entry.Count > 1)
                 {
+                    _db.RecordStats(s =>
+                    {
+                        s.Messages++;
+                        s.Sessions++;
+                    });
+
                     await Broadcast("Start", null, true)
                         .ContinueWith(_ => InitKeyExchange(entry.First(), entry.Last()));
                 }
@@ -65,6 +74,12 @@ namespace JustSending.Services
 
         public async Task Broadcast(string @event, string data, bool all = false)
         {
+            _db.RecordStats(s =>
+            {
+                s.Messages++;
+                s.MessagesSizeBytes += @event.Length + (data ?? "").Length;
+            });
+
             await Clients
                 .Clients(GetClients(all).ToArray())
                 .SendAsync("Boradcast", @event, data);
@@ -79,17 +94,20 @@ namespace JustSending.Services
             var initFirstDevice = Clients
                 .Client(firstDeviceId)
                 .SendAsync("startKeyExchange", newDevice, p, g, pka, false);
-            
+
             await initFirstDevice.ContinueWith(async x =>
             {
                 await Clients
                     .Client(newDevice)
                     .SendAsync("startKeyExchange", firstDeviceId, p, g, pka, true);
             });
+
+            _db.RecordStats(s => s.Messages += 2);
         }
 
         public async Task CallPeer(string peerId, string method, string param)
         {
+            _db.RecordStats(s => s.Messages++);
             await Clients
                 .Clients(GetClients(false).ToArray())
                 .SendAsync("callback", method, param);
@@ -97,20 +115,26 @@ namespace JustSending.Services
 
         public override Task OnDisconnectedAsync(Exception exception)
         {
-            Broadcast("GONE", "", false);
-
             if (_connectionIdSessionMap.TryGetValue(Context.ConnectionId, out var sessionId))
             {
-                _connectionIdSessionMap.Remove(Context.ConnectionId);
                 if (_sessionIdConnectionIds.TryGetValue(sessionId, out var maps)
                     && maps.Contains(Context.ConnectionId))
                 {
+                    Broadcast("GONE", "", false);
+
+                    _connectionIdSessionMap.Remove(Context.ConnectionId);
                     maps.Remove(Context.ConnectionId);
 
                 }
             }
 
             return base.OnDisconnectedAsync(exception);
+        }
+
+        public override Task OnConnectedAsync()
+        {
+            _db.RecordStats(s => s.Devices++);
+            return base.OnConnectedAsync();
         }
     }
 }
