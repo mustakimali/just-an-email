@@ -1,6 +1,6 @@
 var SecureLine = {
     webSockerConnection: null,
-    hostname: null,
+    hostname: "https://justa.ml",
     private_key: null,
     on_event: null,
     on_line_secured: null,
@@ -21,18 +21,21 @@ var SecureLine = {
             throw "onLineSecured callback function must be defined.";
         }
 
-        var getLocation = function(href) {
+        var getLocation = function (href) {
             var l = document.createElement("a");
             l.href = href;
             return l;
         };
 
-        var loc = getLocation(document.currentScript.src);
-        this.hostname = loc.protocol + "//" + loc.hostname;
+        if (document.currentScript) {
+            var loc = getLocation(document.currentScript.src);
+            this.hostname = loc.protocol + "//" + loc.hostname;
 
-        if (loc.port != 80 && loc.port != 443) {
-            this.hostname += ":" + loc.port;
+            if (loc.port != 80 && loc.port != 443) {
+                this.hostname += ":" + loc.port;
+            }
         }
+
 
         var secure_line = this;
 
