@@ -36,7 +36,7 @@ var SecureLine = {
             Log("Dependencies loaded");
 
             var ws = new signalR.HubConnectionBuilder()
-                .withUrl("/signalr/secure-line")
+                .withUrl(secure_line.hostname + "/signalr/secure-line")
                 .build();
 
             secure_line.webSockerConnection = ws;

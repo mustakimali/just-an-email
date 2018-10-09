@@ -51,8 +51,6 @@ namespace JustSending.Controllers
         [Route("api/prime")]
         public IActionResult Prime([FromServices] IHostingEnvironment env)
         {
-            Response.Headers.Add("Access-Control-Allow-Origin", "*");
-
             return Json(new
             {
                 Size_1024 = Helper.GetPrime(1024, env),

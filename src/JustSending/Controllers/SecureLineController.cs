@@ -29,8 +29,6 @@ namespace JustSending.Controllers
 
             _inMemoryData.AddOrUpdate(data.Id, data, (_, b) => b);
 
-            Response.Headers.Add("Access-Control-Allow-Origin", "*");
-
             return Created(Url.Action(nameof(Get), "SecureLine", new { id = data.Id }, Request.Protocol), data.Id);
         }
 
@@ -41,7 +39,6 @@ namespace JustSending.Controllers
             if (!_inMemoryData.Remove(id, out var data))
                 return NotFound();
 
-            Response.Headers.Add("Access-Control-Allow-Origin", "*");
             return Content(data.Data, "application/json");
         }
 
