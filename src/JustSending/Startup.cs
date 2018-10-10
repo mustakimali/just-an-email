@@ -50,13 +50,6 @@ namespace JustALink
 
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
-            app.UseCors(builder =>
-            {
-                builder
-                    .AllowAnyOrigin()
-                    .Build();
-            });
-
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
