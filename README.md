@@ -1,5 +1,7 @@
 # Need to send something quick?
 
+> I will just send an email to myself then go to another device, login and download it! 🥳
+
 ### Running live here [https://justa.ml](https://justa.ml)
 
 #### Staging site [justaml.azurewebsites.net](http://justaml.azurewebsites.net)
