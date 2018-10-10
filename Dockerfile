@@ -28,7 +28,7 @@ RUN rm Drivers/chromedriver
 RUN cp Drivers/Linux/chromedriver Drivers/
 
 RUN dotnet build JustSending.Test.csproj
-RUN dotnet test JustSending.Test.csproj -c Debug --no-build
+RUN dotnet test JustSending.Test.csproj -c Debug -v q --no-build
 
 WORKDIR /app/src/JustSending
 RUN cd /app/src/JustSending

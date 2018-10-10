@@ -15,6 +15,7 @@ namespace JustSending.Services
         private Dictionary<string, HashSet<string>> _sessionIdConnectionIds = new Dictionary<string, HashSet<string>>();
         private readonly IHostingEnvironment _env;
         private readonly AppDbContext _db;
+        private object _lock = new object();
 
         public SecureLineHub(IHostingEnvironment env, AppDbContext db)
         {
@@ -25,10 +26,12 @@ namespace JustSending.Services
         public async Task Init(string id)
         {
             var connectionId = Context.ConnectionId;
-
-            if (!_connectionIdSessionMap.ContainsKey(connectionId))
+            lock (_lock)
             {
-                _connectionIdSessionMap.Add(connectionId, id);
+                if (!_connectionIdSessionMap.ContainsKey(connectionId))
+                {
+                    _connectionIdSessionMap.Add(connectionId, id);
+                }
             }
 
             if (_sessionIdConnectionIds.TryGetValue(id, out var entry))
@@ -56,6 +59,7 @@ namespace JustSending.Services
             {
                 _sessionIdConnectionIds.Add(id, new HashSet<string> { connectionId });
             }
+
         }
 
         private IEnumerable<string> GetClients(bool all)

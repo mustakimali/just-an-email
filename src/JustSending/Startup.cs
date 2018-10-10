@@ -60,6 +60,16 @@ namespace JustALink
                 app.UseExceptionHandler("/Home/Error");
             }
 
+            app.UseCors(c =>
+            {
+                c
+                   .AllowAnyHeader()
+                   .AllowAnyMethod()
+                   .AllowAnyOrigin()
+                   .AllowCredentials()
+                   .Build();
+            });
+
             app.UseStaticFiles();
             app.UseWebSockets();
             app.UseSignalR(routes =>
