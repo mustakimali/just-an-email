@@ -18,9 +18,9 @@ FROM mustakimali/dotnet-2.1.401-sdk-chrome-stable AS build-env
 
 COPY . /app
 
-ENV ASPNETCORE_ENVIRONMENT Development
-ENV Logging:LogLevel:Default Error
-ENV Logging:LogLevel:Microsoft Error
+# ENV ASPNETCORE_ENVIRONMENT Development
+# ENV Logging:LogLevel:Default Error
+# ENV Logging:LogLevel:Microsoft Error
 
 WORKDIR /app/test/JustSending.Test
 
