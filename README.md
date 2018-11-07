@@ -2,7 +2,9 @@
 
 > I will just send an email to myself then go to another device, login and download it! 🥳
 
-### Running live here [https://justa.ml](https://justa.ml)
+or you could use just-an-email.com
+
+### Running live here [https://just-an-email.com/](https://just-an-email.com/)
 
 #### Staging site [justaml.azurewebsites.net](http://justaml.azurewebsites.net)
 
