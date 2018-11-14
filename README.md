@@ -4,7 +4,7 @@
 
 or you could use just-an-email.com
 
-### Running live here [https://just-an-email.com/](https://just-an-email.com/)
+### Running live here [just-an-email.com](https://just-an-email.com/)
 
 #### Staging site [justaml.azurewebsites.net](http://justaml.azurewebsites.net)
 
@@ -16,14 +16,14 @@ or you could use just-an-email.com
 ## Run from docker hub
 
 ```
-docker pull mustakimali/justaml
-docker run -p 61452:80 justaml
+docker run -p 61452:80 mustakimali/justaml
 ```
 Should be running in http://localhost:61452
 
 ## Building the code
-* Make sure you have [.NET Core 2.1 SDK](https://www.microsoft.com/net/download/core) (Version >= `2.1.401`) installed
+* Make sure you have [.NET Core SDK](https://www.microsoft.com/net/download/core) installed
 * Clone
+* `cd src\JustSending`
 * `dotnet run` or `dotnet watch run`
 * Should be running in http://localhost:61452
 
