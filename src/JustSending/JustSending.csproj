@@ -7,7 +7,7 @@
     <ApplicationInsightsAnnotationResourceId>/subscriptions/15a2a270-9a75-4f16-bce1-f08edc382c97/resourcegroups/MustakimRG/providers/microsoft.insights/components/JustSending</ApplicationInsightsAnnotationResourceId>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="HangFire" Version="1.6.19" />
+    <PackageReference Include="HangFire" Version="1.6.22" />
     <PackageReference Include="Hangfire.LiteDB" Version="0.1.0" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.4.1" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.0.4" />
