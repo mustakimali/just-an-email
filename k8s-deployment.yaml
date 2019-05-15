@@ -80,7 +80,7 @@ metadata:
 spec:
   ports:
     - name: https
-      port: 443
+      port: 80
       targetPort: 3000
   selector:
     app: justaml-app
@@ -98,7 +98,7 @@ spec:
     - beta.just-an-email.com
   backend:
     serviceName: justaml-service
-    servicePort: 443
+    servicePort: 80
   rules:
     - host: beta.justa.ml
     - host: beta.just-an-email.com
