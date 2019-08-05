@@ -91,17 +91,21 @@ metadata:
   name: justaml-ingress
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      if ($host = 'just-an-email.com' ) {
+        rewrite  ^/(.*)$  https://justa.ml/$1  redirect;
+      }
 spec:
   tls:
   - hosts:
-    - beta.justa.ml
-    - beta.just-an-email.com
+    - justa.ml
+    - just-an-email.com
   backend:
     serviceName: justaml-service
     servicePort: 80
   rules:
-    - host: beta.justa.ml
-    - host: beta.just-an-email.com
+    - host: justa.ml
+    - host: just-an-email.com
 ---
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
