@@ -1,0 +1,122 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: justaml
+spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 1
+  revisionHistoryLimit: 2
+  template:
+    metadata:
+      labels:
+        app: justaml-app
+    spec:
+      volumes:
+        - name: justaml-vol-data
+          hostPath:
+            path: /storage/justaml/data
+        - name: justaml-vol-uploads
+          hostPath:
+            path: /storage/justaml/uploads
+      containers:
+        - name: app
+          image: mustakimali/justaml:190512_0306
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: justaml-vol-data
+              mountPath:  /app/App_Data
+            - name: justaml-vol-uploads
+              mountPath:  /app/wwwroot/upload
+          env:
+            # Hosting Options
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Production"
+
+            - name: ASPNETCORE_URLS
+              value: "http://*:3000"
+
+            # Application Option
+            - name: "Logging__LogLevel__Default"
+              value: "Information"
+
+            - name: "HangfireToken"
+              valueFrom:
+                secretKeyRef:
+                  name: "justaml-secret"
+                  key: "hangfire_token"
+
+          livenessProbe:
+            httpGet:
+              path: /api/test
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/test
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 10
+          resources:
+            requests:
+              memory: "128M"
+              cpu: "128m"
+            limits:
+              memory: "1G"
+              cpu: "1"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: justaml-service
+spec:
+  ports:
+    - name: https
+      port: 80
+      targetPort: 3000
+  selector:
+    app: justaml-app
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: justaml-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      if ($host = 'just-an-email.com' ) {
+        rewrite  ^/(.*)$  https://justa.ml/$1  redirect;
+      }
+spec:
+  tls:
+  - hosts:
+    - justa.ml
+    - just-an-email.com
+  backend:
+    serviceName: justaml-service
+    servicePort: 80
+  rules:
+    - host: justa.ml
+    - host: just-an-email.com
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: justaml-hpa
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: justaml
+  minReplicas: 1
+  maxReplicas: 1
+  targetCPUUtilizationPercentage: 50

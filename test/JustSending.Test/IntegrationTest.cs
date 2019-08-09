@@ -165,7 +165,7 @@ namespace JustSending.Test
                         StartInfo = {
                             WorkingDirectory = _contentRoot,
                             FileName = "dotnet",
-                            Arguments = $"bin/{mode}/netcoreapp2.1/{(mode == "Release" ? "publish/" : "")}JustSending.dll --urls {_appHostName}"
+                            Arguments = $"bin/{mode}/netcoreapp2.2/{(mode == "Release" ? "publish/" : "")}JustSending.dll --urls {_appHostName}"
                         }
                     };
 

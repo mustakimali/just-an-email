@@ -23,7 +23,10 @@ namespace JustSending.Controllers
         public IActionResult Stats([FromServices] AppDbContext db, int date = -1)
         {
             var stat = db.Statistics.FindById(date);
-
+            if (stat == null)
+            {
+                stat = new Stats();
+            }
             return View(stat);
         }
 

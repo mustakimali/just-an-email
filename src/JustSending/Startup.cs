@@ -46,6 +46,7 @@ namespace JustALink
             services.AddTransient<BackgroundJobScheduler>();
 
             services.AddHangfire(x => x.UseLiteDbStorage(Helper.BuildDbConnectionString("BackgroundJobs", _hostingEnvironment)));
+            services.AddHealthChecks();
         }
 
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
@@ -60,14 +61,16 @@ namespace JustALink
                 app.UseExceptionHandler("/Home/Error");
             }
 
+            app.UseHealthChecks("/api/test");
+
             app.UseCors(c =>
             {
                 c
-                   .AllowAnyHeader()
-                   .AllowAnyMethod()
-                   .AllowAnyOrigin()
-                   .AllowCredentials()
-                   .Build();
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowAnyOrigin()
+                    .AllowCredentials()
+                    .Build();
             });
 
             app.UseStaticFiles();
