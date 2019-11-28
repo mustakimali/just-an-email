@@ -4,7 +4,7 @@
 
 or you could use just-an-email.com
 
-### Running live here [just-an-email.com](https://just-an-email.com/)
+### Running live here [justA.ML](https://justa.ml/)
 
 #### Staging site [justaml.azurewebsites.net](http://justaml.azurewebsites.net)
 
