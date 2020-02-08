@@ -61,9 +61,9 @@ namespace JustSending.Services
                         {
                             // The value length limit is enforced by MultipartBodyLengthLimit
                             var value = await streamReader.ReadToEndAsync();
-                            if (String.Equals(value, "undefined", StringComparison.OrdinalIgnoreCase))
+                            if (string.Equals(value, "undefined", StringComparison.OrdinalIgnoreCase))
                             {
-                                value = String.Empty;
+                                value = string.Empty;
                             }
                             formAccumulator.Append(key.Value, value);
 

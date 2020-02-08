@@ -4,7 +4,6 @@ using System;
 using System.Threading;
 using Microsoft.AspNetCore.TestHost;
 using System.Net.Http;
-using JustALink;
 using Microsoft.AspNetCore;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -22,7 +21,7 @@ namespace JustSending.Test
     [TestFixture]
     public class IntegrationTest : IDisposable
     {
-        private readonly string _seleniumDriverPath;
+        private string _seleniumDriverPath;
         private readonly Uri _appHostName = new Uri("http://localhost:5000");
         private readonly string _contentRoot;
         private Process _dotnetProcess;
@@ -165,7 +164,7 @@ namespace JustSending.Test
                         StartInfo = {
                             WorkingDirectory = _contentRoot,
                             FileName = "dotnet",
-                            Arguments = $"bin/{mode}/netcoreapp2.2/{(mode == "Release" ? "publish/" : "")}JustSending.dll --urls {_appHostName}"
+                            Arguments = $"bin/{mode}/netcoreapp3.1/{(mode == "Release" ? "publish/" : "")}JustSending.dll --urls {_appHostName}"
                         }
                     };
 
@@ -192,13 +191,9 @@ namespace JustSending.Test
 
         private IWebDriver CreateDriver()
         {
-#if DEBUG
-            // Developer Machine
+            // Require an working installation if chrome in dev machine
+            // which is installed during docker-build
             return CreateDriverChrome();
-#else
-            // AppVeyor
-            return CreateDriverFirefox();
-#endif
         }
 
         private IWebDriver CreateDriverChrome()
@@ -209,20 +204,12 @@ namespace JustSending.Test
             chromeOpt.AddArguments("--disable-gpu");
             chromeOpt.AddArguments("--no-sandbox");
 
+            if (Platform.CurrentPlatform.IsPlatformType(PlatformType.Unix) && !_seleniumDriverPath.EndsWith("Linux"))
+            {
+                _seleniumDriverPath += "/Linux";
+            }
+
             var driver = new ChromeDriver(_seleniumDriverPath, chromeOpt);
-
-            return InitialiseDriver(driver);
-        }
-
-        private IWebDriver CreateDriverFirefox()
-        {
-            var driverService = FirefoxDriverService.CreateDefaultService();
-
-            driverService.FirefoxBinaryPath = @"C:\Program Files (x86)\Mozilla Firefox\firefox.exe";
-            driverService.HideCommandPromptWindow = true;
-            driverService.SuppressInitialDiagnosticInformation = true;
-
-            var driver = new FirefoxDriver(driverService, new FirefoxOptions(), TimeSpan.FromSeconds(60));
 
             return InitialiseDriver(driver);
         }

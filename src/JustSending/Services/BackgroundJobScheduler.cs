@@ -11,9 +11,9 @@ namespace JustSending.Services
     public class BackgroundJobScheduler
     {
         private readonly AppDbContext _db;
-        private readonly IHostingEnvironment _env;
+        private readonly IWebHostEnvironment _env;
 
-        public BackgroundJobScheduler(AppDbContext db, IHostingEnvironment env)
+        public BackgroundJobScheduler(AppDbContext db, IWebHostEnvironment env)
         {
             _db = db;
             _env = env;

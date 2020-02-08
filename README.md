@@ -2,7 +2,7 @@
 
 > I will just send an email to myself then go to another device, login and download it! 🥳
 
-or you could use just-an-email.com
+or you could use [justa.ml](https://justa.ml)
 
 ### Running live here [justA.ML](https://justa.ml/)
 
