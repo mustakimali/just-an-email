@@ -1,22 +1,24 @@
-﻿using Hangfire;
+﻿using System.IO;
+using Hangfire;
 using Hangfire.Dashboard;
 using Hangfire.LiteDB;
-using JustSending;
 using JustSending.Data;
 using JustSending.Services;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
-namespace JustALink
+namespace JustSending
 {
     public class Startup
     {
-        private readonly IHostingEnvironment _hostingEnvironment;
+        private readonly IWebHostEnvironment _hostingEnvironment;
 
-        public Startup(IConfiguration configuration, IHostingEnvironment hostingEnvironment)
+        public Startup(IConfiguration configuration, IWebHostEnvironment hostingEnvironment)
         {
             _hostingEnvironment = hostingEnvironment;
             Configuration = configuration;
@@ -47,14 +49,16 @@ namespace JustALink
 
             services.AddHangfire(x => x.UseLiteDbStorage(Helper.BuildDbConnectionString("BackgroundJobs", _hostingEnvironment)));
             services.AddHealthChecks();
+            services.AddApplicationInsightsTelemetry();
+            services.AddDataProtection()
+                .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(Directory.GetCurrentDirectory(), "App_Data")));
         }
 
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
-                app.UseBrowserLink();
             }
             else
             {
@@ -69,29 +73,25 @@ namespace JustALink
                     .AllowAnyHeader()
                     .AllowAnyMethod()
                     .AllowAnyOrigin()
-                    .AllowCredentials()
                     .Build();
             });
 
             app.UseStaticFiles();
-            app.UseWebSockets();
-            app.UseSignalR(routes =>
-            {
-                routes.MapHub<ConversationHub>("/signalr/hubs");
-                routes.MapHub<SecureLineHub>("/signalr/secure-line");
-            });
 
             app.UseHangfireServer();
             app.UseHangfireDashboard("/jobs", new DashboardOptions
             {
                 Authorization = new[] { new CookieAuthFilter(Configuration["HangfireToken"]) }
             });
+            
+            app.UseRouting();
 
-            app.UseMvc(routes =>
+            app.UseEndpoints(endpoints =>
             {
-                routes.MapRoute(
-                    name: "default",
-                    template: "{controller=Home}/{action=Index}/{id?}");
+                endpoints.MapHub<ConversationHub>("/signalr/hubs");
+                endpoints.MapHub<SecureLineHub>("/signalr/secure-line");
+
+                endpoints.MapControllers();
             });
         }
     }

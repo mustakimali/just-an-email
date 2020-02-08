@@ -13,11 +13,11 @@ namespace JustSending.Services
     {
         private Dictionary<string, string> _connectionIdSessionMap = new Dictionary<string, string>();
         private Dictionary<string, HashSet<string>> _sessionIdConnectionIds = new Dictionary<string, HashSet<string>>();
-        private readonly IHostingEnvironment _env;
+        private readonly IWebHostEnvironment _env;
         private readonly AppDbContext _db;
         private object _lock = new object();
 
-        public SecureLineHub(IHostingEnvironment env, AppDbContext db)
+        public SecureLineHub(IWebHostEnvironment env, AppDbContext db)
         {
             _env = env;
             _db = db;

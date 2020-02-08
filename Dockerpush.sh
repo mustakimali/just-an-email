@@ -8,7 +8,7 @@ if [[ -z "$dock_version" ]]; then
     dock_version=$(get_version)
 fi
 
-echo "Building image verion:$dock_version"
+echo "Building image version:$dock_version"
 
 docker build . -t justaml
 
@@ -24,3 +24,5 @@ docker rmi $tag
 docker rmi mustakimali/justaml:latest
 
 echo "Tagged mustakimali/justaml:$dock_version"
+
+kubectl set image deployments/justaml *=mustakimali/justaml:${dock_version}

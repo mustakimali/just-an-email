@@ -12,10 +12,10 @@ namespace JustSending.Services.TagHelpers
 {
     public class CssTagHelper : TagHelper
     {
-        private readonly IHostingEnvironment _env;
+        private readonly IWebHostEnvironment _env;
         private readonly IMemoryCache _cache;
 
-        public CssTagHelper(IHostingEnvironment env, IMemoryCache cache)
+        public CssTagHelper(IWebHostEnvironment env, IMemoryCache cache)
         {
             _env = env;
             _cache = cache;

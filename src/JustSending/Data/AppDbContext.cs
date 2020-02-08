@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using JustSending.Services;
 using LiteDB;
 using Microsoft.AspNetCore.Hosting;
 
@@ -8,11 +9,11 @@ namespace JustSending.Data
 {
     public class AppDbContext
     {
-        private readonly IHostingEnvironment _env;
+        private readonly IWebHostEnvironment _env;
         private LiteDatabase _db;
         private readonly Random _random;
 
-        public AppDbContext(IHostingEnvironment env)
+        public AppDbContext(IWebHostEnvironment env)
         {
             _env = env;
             _random = new Random();

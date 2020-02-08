@@ -21,13 +21,13 @@ namespace JustSending.Controllers
     {
         private readonly AppDbContext _db;
         private readonly ConversationHub _hub;
-        private readonly IHostingEnvironment _env;
+        private readonly IWebHostEnvironment _env;
         private readonly IConfiguration _config;
 
         public AppController(
                 AppDbContext db,
                 ConversationHub hub,
-                IHostingEnvironment env,
+                IWebHostEnvironment env,
                 IConfiguration config)
         {
             _db = db;
@@ -125,7 +125,8 @@ namespace JustSending.Controllers
             var fileInfo = new FileInfo(postedFilePath);
             if (fileInfo.Length > Convert.ToInt64(_config["MaxUploadSizeBytes"]))
             {
-                BadHttpRequestException.Throw(RequestRejectionReason.InvalidContentLength, HttpMethod.Post);
+                //BadHttpRequestException.Throw(RequestRejectionReason.InvalidContentLength, HttpMethod.Post);
+                throw new InvalidOperationException();
             }
 
             var message = GetMessageFromModel(model, true);

@@ -1,6 +1,6 @@
 var SecureLine = {
     sockConnection: null,
-    hostname: "https://just-an-email.com",
+    hostname: "https://justa.ml",
     private_key: null,
     on_event: null,
     on_line_secured: null,

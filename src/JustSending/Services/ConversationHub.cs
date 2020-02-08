@@ -16,12 +16,12 @@ namespace JustSending.Services
         public const string FILE_EXT = ".file";
 
         private readonly AppDbContext _db;
-        private readonly IHostingEnvironment _env;
+        private readonly IWebHostEnvironment _env;
         private readonly BackgroundJobScheduler _jobScheduler;
 
         private readonly string _uploadFolder;
 
-        public ConversationHub(AppDbContext db, IHostingEnvironment env, BackgroundJobScheduler jobScheduler)
+        public ConversationHub(AppDbContext db, IWebHostEnvironment env, BackgroundJobScheduler jobScheduler)
         {
             _db = db;
             _env = env;

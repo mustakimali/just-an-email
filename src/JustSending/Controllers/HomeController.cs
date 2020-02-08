@@ -8,12 +8,14 @@ using System.Linq;
 using IOFile = System.IO.File;
 using System;
 using JustSending.Data;
+using JustSending.Services;
 
 namespace JustSending.Controllers
 {
 
     public class HomeController : Controller
     {
+        [Route("/")]
         public IActionResult Index()
         {
             return View();
@@ -52,7 +54,7 @@ namespace JustSending.Controllers
         }
 
         [Route("api/prime")]
-        public IActionResult Prime([FromServices] IHostingEnvironment env)
+        public IActionResult Prime([FromServices] IWebHostEnvironment env)
         {
             return Json(new
             {
