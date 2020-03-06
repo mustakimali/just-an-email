@@ -26,7 +26,7 @@ spec:
             path: /storage/justaml/uploads
       containers:
         - name: app
-          image: mustakimali/justaml:190512_0306
+          image: mustakimali/justaml:latest
           ports:
             - containerPort: 3000
           volumeMounts:
@@ -73,8 +73,8 @@ spec:
               memory: "128M"
               cpu: "128m"
             limits:
-              memory: "1G"
-              cpu: "1"
+              memory: "512M"
+              cpu: "256m"
 ---
 apiVersion: v1
 kind: Service
@@ -115,5 +115,5 @@ spec:
     kind: Deployment
     name: justaml
   minReplicas: 1
-  maxReplicas: 1
-  targetCPUUtilizationPercentage: 50
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 120
