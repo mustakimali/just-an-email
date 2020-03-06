@@ -144,48 +144,64 @@ namespace JustSending.Test
 
         private async Task EnsureAppRunning()
         {
-            using (var client = new HttpClient())
-            {
-                string mode = "Debug";
+            using var client = new HttpClient();
+            string mode = "Debug";
 #if !DEBUG
                 mode = "Release";
 #endif
-                try
+            try
+            {
+                throw new Exception();
+                var homePage = await client.GetStringAsync(_appHostName);
+
+                if (!homePage.Contains("Mustakim Ali"))
+                    Assert.Fail($"Something else is running on {_appHostName}");
+            }
+            catch (Exception)
+            {
+                _dotnetProcess = new Process()
                 {
-                    var homePage = await client.GetStringAsync(_appHostName);
-
-                    if (!homePage.Contains("Mustakim Ali"))
-                        Assert.Fail($"Something else is running on {_appHostName}");
-                }
-                catch (Exception)
+                    StartInfo = {
+                        WorkingDirectory = _contentRoot,
+                        FileName = "dotnet",
+                        Arguments = $"bin/{mode}/netcoreapp3.1/{(mode == "Release" ? "publish/" : "")}JustSending.dll --urls {_appHostName}",
+                        RedirectStandardError = true,
+                        RedirectStandardOutput = true
+                    }
+                };
+                _dotnetProcess.OutputDataReceived += (s, e) =>
                 {
-                    _dotnetProcess = new Process()
+                    Console.WriteLine($"> {e.Data}");
+                };
+                _dotnetProcess.ErrorDataReceived += (s, e) =>
+                {
+                    Console.WriteLine($">> {e.Data}");
+                };
+                    
+                _dotnetProcess.Start();
+                while (true)
+                {
+                    try
                     {
-                        StartInfo = {
-                            WorkingDirectory = _contentRoot,
-                            FileName = "dotnet",
-                            Arguments = $"bin/{mode}/netcoreapp3.1/{(mode == "Release" ? "publish/" : "")}JustSending.dll --urls {_appHostName}"
+                        if (_dotnetProcess.HasExited)
+                        {
+                            Console.WriteLine("Process exited.");
+                            return;
                         }
-                    };
+                        
+                        var homePage = await client.GetStringAsync(_appHostName);
+                        if (homePage.Contains("Mustakim Ali"))
+                            break;
 
-                    _dotnetProcess.Start();
-                    while (true)
+                        WaitMs(1000);
+                    }
+                    catch (Exception e)
                     {
-                        try
-                        {
-                            var homePage = await client.GetStringAsync(_appHostName);
-                            if (homePage.Contains("Mustakim Ali"))
-                                break;
-
-                            WaitMs(1000);
-                        }
-                        catch (Exception)
-                        {
-                            // ignore
-                        }
+                        // ignore
+                        Console.WriteLine($"Error: {e.GetBaseException().Message}");
+                        WaitMs(1000);
                     }
                 }
-
             }
         }
 

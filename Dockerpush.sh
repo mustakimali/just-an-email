@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 get_version() {
   date '+%y%m%d_%H%M'

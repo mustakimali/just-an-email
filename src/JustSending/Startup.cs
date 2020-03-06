@@ -1,7 +1,6 @@
 ﻿using System.IO;
 using Hangfire;
 using Hangfire.Dashboard;
-using Hangfire.LiteDB;
 using JustSending.Data;
 using JustSending.Services;
 using Microsoft.AspNetCore.Builder;
@@ -11,16 +10,14 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using StackExchange.Redis;
 
 namespace JustSending
 {
     public class Startup
     {
-        private readonly IWebHostEnvironment _hostingEnvironment;
-
-        public Startup(IConfiguration configuration, IWebHostEnvironment hostingEnvironment)
+        public Startup(IConfiguration configuration)
         {
-            _hostingEnvironment = hostingEnvironment;
             Configuration = configuration;
         }
 
@@ -47,11 +44,12 @@ namespace JustSending
             services.AddSingleton<SecureLineHub>();
             services.AddTransient<BackgroundJobScheduler>();
 
-            services.AddHangfire(x => x.UseLiteDbStorage(Helper.BuildDbConnectionString("BackgroundJobs", _hostingEnvironment)));
+            var redisConfig = Configuration["RedisInstance"]; 
+            services.AddHangfire(x => x.UseRedisStorage(redisConfig));
             services.AddHealthChecks();
             services.AddApplicationInsightsTelemetry();
             services.AddDataProtection()
-                .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(Directory.GetCurrentDirectory(), "App_Data")));
+                .PersistKeysToStackExchangeRedis(ConnectionMultiplexer.Connect(redisConfig));
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

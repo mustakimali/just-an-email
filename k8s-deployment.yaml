@@ -26,7 +26,7 @@ spec:
             path: /storage/justaml/uploads
       containers:
         - name: app
-          image: mustakimali/justaml:190512_0306
+          image: mustakimali/justaml:latest
           ports:
             - containerPort: 3000
           volumeMounts:
@@ -117,3 +117,41 @@ spec:
   minReplicas: 1
   maxReplicas: 1
   targetCPUUtilizationPercentage: 50
+---
+kind: Deployment
+
+apiVersion: apps/v1
+metadata:
+  name: justaml-redis
+  namespace: default
+  labels:
+    app: justaml--redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: justaml-redis
+  template:
+    metadata:
+      labels:
+        app: justaml-redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:5-stretch
+          ports:
+            - containerPort: 6379
+---
+kind: Service
+
+apiVersion: v1
+metadata:
+  name: justaml-redis-service
+  namespace: default
+spec:
+  selecto:
+    app: justaml-redis
+  ports:
+    - protocol: TCP
+      port: 6379
+      targetPort: 6379
