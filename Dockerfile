@@ -11,12 +11,20 @@ RUN \
    apt-get install -y google-chrome-stable && \
    rm -rf /var/lib/apt/lists/*
 
+
+WORKDIR /app
+COPY src/JustSending/JustSending.csproj ./src/JustSending/JustSending.csproj
+COPY test/JustSending.Test/JustSending.Test.csproj ./test/JustSending.Test/JustSending.Test.csproj
+COPY JustSending.sln .
+RUN dotnet restore
+
 COPY . /app
 
 WORKDIR /app/test/JustSending.Test
 
 RUN rm Drivers/chromedriver
 RUN cp Drivers/Linux/chromedriver Drivers/
+
 
 RUN dotnet build JustSending.Test.csproj
 RUN dotnet test JustSending.Test.csproj -c Debug -v q --no-build

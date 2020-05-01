@@ -31,9 +31,9 @@ spec:
             - containerPort: 3000
           volumeMounts:
             - name: justaml-vol-data
-              mountPath:  /app/App_Data
+              mountPath: /app/App_Data
             - name: justaml-vol-uploads
-              mountPath:  /app/wwwroot/upload
+              mountPath: /app/wwwroot/upload
           env:
             # Hosting Options
             - name: ASPNETCORE_ENVIRONMENT

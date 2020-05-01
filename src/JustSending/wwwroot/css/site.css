@@ -440,3 +440,8 @@ body.busy #overlay {
 .msg-c {
     border: none !important;
 }
+
+#qr-code img {
+    margin-left: auto;
+    margin-right: auto;
+}

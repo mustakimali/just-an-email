@@ -27,6 +27,22 @@
         };
     },
 
+    initQrCode: function () {
+        var qrEl = $("#qr-code");
+        if(qrEl.hasClass("done")) {
+            return;
+        }
+        new QRCode("qr-code", {
+            text: window.location.href,
+            width: 256,
+            height: 256,
+            colorDark : "#000000",
+            colorLight : "#d9edf7",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+        qrEl.addClass("done");
+    },
+
     initPermalink: function (then) {
         var $id = $("#SessionId");
         var $id2 = $("#SessionVerification");
@@ -34,7 +50,7 @@
         var id = $id.val();
         var id2 = $id2.val();
 
-        if (window.location.hash && window.location.hash.length == 65) {
+        if (window.location.hash && window.location.hash.length === 65) {
             var hash = window.location.hash.substr(1);
 
             id = hash.substr(0, 32);
@@ -42,6 +58,7 @@
         } else {
             window.location.hash = id + id2;
         }
+        this.initQrCode();
 
         // Request to create session
         //
@@ -75,12 +92,12 @@
     statusUpdateInterval: 500,
 
     showStatus: function (msg, progress) {
-        if (msg != undefined && progress != undefined && Date.now() - this.lastStatusUpdatedEpoch < this.statusUpdateInterval) {
+        if (msg !== undefined && progress !== undefined && Date.now() - this.lastStatusUpdatedEpoch < this.statusUpdateInterval) {
             return;
         }
 
-        if (msg == undefined) msg = null;
-        if (progress == undefined) progress = null;
+        if (msg === undefined) msg = null;
+        if (progress === undefined) progress = null;
 
         var $el = $("#please-wait");
         var $text = $("#status");
