@@ -1,4 +1,7 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using Hangfire;
 using Hangfire.Dashboard;
 using Hangfire.SQLite;
@@ -10,7 +13,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace JustSending
 {
@@ -38,6 +43,7 @@ namespace JustSending
             });
 
             services.AddMvc();
+            services.AddHealthChecks().AddCheck<DefaultHealthCheck>("database");
             services.AddSignalR();
             services.AddMemoryCache();
             services.AddHttpContextAccessor();
@@ -93,6 +99,31 @@ namespace JustSending
 
                 endpoints.MapControllers();
             });
+        }
+    }
+
+    public class DefaultHealthCheck : IHealthCheck
+    {
+        private readonly AppDbContext _dbContext;
+        private readonly ILogger<DefaultHealthCheck> _logger;
+
+        public DefaultHealthCheck(AppDbContext dbContext, ILogger<DefaultHealthCheck> logger)
+        {
+            _dbContext = dbContext;
+            _logger = logger;
+        }
+        public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = new CancellationToken())
+        {
+            try
+            {
+                var _ = _dbContext.Statistics.Count();
+                return Task.FromResult(HealthCheckResult.Healthy());
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e, "Healthcheck failed.");
+                return Task.FromResult(HealthCheckResult.Unhealthy());
+            }
         }
     }
 

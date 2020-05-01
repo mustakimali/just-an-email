@@ -43,9 +43,6 @@ spec:
               value: "http://*:3000"
 
             # Application Option
-            - name: "Logging__LogLevel__Default"
-              value: "Information"
-
             - name: "HangfireToken"
               valueFrom:
                 secretKeyRef:
