@@ -4,7 +4,6 @@ using System.Linq;
 using Microsoft.AspNetCore.SignalR;
 using System;
 using System.Collections.Concurrent;
-using Newtonsoft.Json;
 using Microsoft.AspNetCore.Hosting;
 using JustSending.Data;
 
@@ -12,11 +11,11 @@ namespace JustSending.Services
 {
     public class SecureLineHub : Hub
     {
-        private ConcurrentDictionary<string, string> _connectionIdSessionMap = new ConcurrentDictionary<string, string>();
-        private ConcurrentDictionary<string, HashSet<string>> _sessionIdConnectionIds = new ConcurrentDictionary<string, HashSet<string>>();
+        private readonly ConcurrentDictionary<string, string> _connectionIdSessionMap = new ConcurrentDictionary<string, string>();
+        private readonly ConcurrentDictionary<string, HashSet<string>> _sessionIdConnectionIds = new ConcurrentDictionary<string, HashSet<string>>();
         private readonly IWebHostEnvironment _env;
         private readonly AppDbContext _db;
-        private object _lock = new object();
+        private readonly object _lock = new object();
 
         public SecureLineHub(IWebHostEnvironment env, AppDbContext db)
         {
@@ -118,14 +117,14 @@ namespace JustSending.Services
                 .SendAsync("callback", method, param);
         }
 
-        public override Task OnDisconnectedAsync(Exception exception)
+        public override async Task OnDisconnectedAsync(Exception exception)
         {
             if (_connectionIdSessionMap.TryGetValue(Context.ConnectionId, out var sessionId))
             {
                 if (_sessionIdConnectionIds.TryGetValue(sessionId, out var maps)
                     && maps.Contains(Context.ConnectionId))
                 {
-                    Broadcast("GONE", "", false);
+                    await Broadcast("GONE", "", false);
 
                     _ = _connectionIdSessionMap.TryRemove(Context.ConnectionId, out _);
                     maps.Remove(Context.ConnectionId);
@@ -133,7 +132,7 @@ namespace JustSending.Services
                 }
             }
 
-            return base.OnDisconnectedAsync(exception);
+            base.OnDisconnectedAsync(exception).GetAwaiter().GetResult();
         }
 
         public override Task OnConnectedAsync()
