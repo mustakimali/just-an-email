@@ -46,11 +46,11 @@ namespace JustSending.Data
             ShareTokens.EnsureIndex(x => x.SessionId);
         }
 
-        public LiteCollection<Session> Sessions => Database.GetCollection<Session>();
-        public LiteCollection<ShareToken> ShareTokens => Database.GetCollection<ShareToken>();
-        public LiteCollection<Message> Messages => Database.GetCollection<Message>();
-        public LiteCollection<ConnectionSession> Connections => Database.GetCollection<ConnectionSession>();
-        public LiteCollection<Stats> Statistics => Database.GetCollection<Stats>();
+        public ILiteCollection<Session> Sessions => Database.GetCollection<Session>();
+        public ILiteCollection<ShareToken> ShareTokens => Database.GetCollection<ShareToken>();
+        public ILiteCollection<Message> Messages => Database.GetCollection<Message>();
+        public ILiteCollection<ConnectionSession> Connections => Database.GetCollection<ConnectionSession>();
+        public ILiteCollection<Stats> Statistics => Database.GetCollection<Stats>();
         
         public string NewGuid() => Guid.NewGuid().ToString("N");
 

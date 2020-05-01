@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace JustSending.Services
 {
@@ -40,15 +41,23 @@ namespace JustSending.Services
                 len /= 1024;
             }
 
-            return string.Format("{0:#,###,##0.##} {1}", len, sizes[order]);
+            return $"{len:#,###,##0.##} {sizes[order]}";
         }
-
-        public static string BuildDbConnectionString(string dbName, IWebHostEnvironment hostingEnvironment)
+        
+        public static string BuildDbConnectionString(string dbName, IWebHostEnvironment hostingEnvironment, bool sqlLite = false)
         {
             var dataDirectory = Path.Combine(hostingEnvironment.ContentRootPath, "App_Data");
             if (!Directory.Exists(dataDirectory)) Directory.CreateDirectory(dataDirectory);
 
-            var connectionString = new StringBuilder($"FileName={Path.Combine(dataDirectory, $"{dbName}.ldb")}");
+            if (sqlLite)
+            {
+                var path = Path.Combine(dataDirectory, dbName);
+                
+                return $"DataSource={path};Cache=Shared;";
+            }
+
+            var connectionString = new StringBuilder($"FileName={Path.Combine(dataDirectory, $"{dbName}.ldb")};Upgrade=true");
+            
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
                 connectionString.Append(";Mode=Exclusive");

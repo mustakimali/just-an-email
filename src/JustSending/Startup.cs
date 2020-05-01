@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using Hangfire;
 using Hangfire.Dashboard;
-using Hangfire.LiteDB;
+using Hangfire.SQLite;
 using JustSending.Data;
 using JustSending.Services;
 using Microsoft.AspNetCore.Builder;
@@ -28,7 +28,7 @@ namespace JustSending
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton<IConfiguration>(Configuration);
+            services.AddSingleton(Configuration);
 
             services.Configure<FormOptions>(x =>
             {
@@ -47,7 +47,7 @@ namespace JustSending
             services.AddSingleton<SecureLineHub>();
             services.AddTransient<BackgroundJobScheduler>();
 
-            services.AddHangfire(x => x.UseLiteDbStorage(Helper.BuildDbConnectionString("BackgroundJobs", _hostingEnvironment)));
+            services.AddHangfire(x => x.UseSQLiteStorage(Helper.BuildDbConnectionString("BackgroundJobs.sqlite", _hostingEnvironment, true)));
             services.AddHealthChecks();
             services.AddApplicationInsightsTelemetry();
             services.AddDataProtection()

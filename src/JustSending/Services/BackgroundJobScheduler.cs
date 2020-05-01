@@ -27,8 +27,8 @@ namespace JustSending.Services
             if (session == null) return new string[0];
 
             _db.Sessions.Delete(sessionId);
-            _db.Messages.Delete(x => x.SessionId == sessionId);
-            _db.ShareTokens.Delete(x => x.SessionId == sessionId);
+            _db.Messages.DeleteMany(x => x.SessionId == sessionId);
+            _db.ShareTokens.DeleteMany(x => x.SessionId == sessionId);
 
             var connectionIds = _db
                 .Connections
@@ -36,7 +36,7 @@ namespace JustSending.Services
                 .Select(x => x.ConnectionId)
                 .ToArray();
 
-            _db.Connections.Delete(x => x.SessionId == sessionId);
+            _db.Connections.DeleteMany(x => x.SessionId == sessionId);
 
             try
             {

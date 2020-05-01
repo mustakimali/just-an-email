@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using Microsoft.AspNetCore.SignalR;
 using System;
+using System.Collections.Concurrent;
 using Newtonsoft.Json;
 using Microsoft.AspNetCore.Hosting;
 using JustSending.Data;
@@ -11,8 +12,8 @@ namespace JustSending.Services
 {
     public class SecureLineHub : Hub
     {
-        private Dictionary<string, string> _connectionIdSessionMap = new Dictionary<string, string>();
-        private Dictionary<string, HashSet<string>> _sessionIdConnectionIds = new Dictionary<string, HashSet<string>>();
+        private ConcurrentDictionary<string, string> _connectionIdSessionMap = new ConcurrentDictionary<string, string>();
+        private ConcurrentDictionary<string, HashSet<string>> _sessionIdConnectionIds = new ConcurrentDictionary<string, HashSet<string>>();
         private readonly IWebHostEnvironment _env;
         private readonly AppDbContext _db;
         private object _lock = new object();
@@ -30,7 +31,7 @@ namespace JustSending.Services
             {
                 if (!_connectionIdSessionMap.ContainsKey(connectionId))
                 {
-                    _connectionIdSessionMap.Add(connectionId, id);
+                    _ = _connectionIdSessionMap.TryAdd(connectionId, id);
                 }
             }
 
@@ -57,7 +58,7 @@ namespace JustSending.Services
             }
             else
             {
-                _sessionIdConnectionIds.Add(id, new HashSet<string> { connectionId });
+                _ = _sessionIdConnectionIds.TryAdd(id, new HashSet<string> { connectionId });
             }
 
         }
@@ -126,7 +127,7 @@ namespace JustSending.Services
                 {
                     Broadcast("GONE", "", false);
 
-                    _connectionIdSessionMap.Remove(Context.ConnectionId);
+                    _ = _connectionIdSessionMap.TryRemove(Context.ConnectionId, out _);
                     maps.Remove(Context.ConnectionId);
 
                 }

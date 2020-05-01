@@ -18,12 +18,12 @@
     
     <partial name="_CommonHead" />
 
-    @RenderSection("Head", false)
-    	
+    @await RenderSectionAsync("Head", false)
+
     @Html.Raw(JavaScriptSnippet.FullScript)
 </head>
 <body>
-    @RenderSection("AboveNav", required: false)
+    @await RenderSectionAsync("AboveNav", required: false)
     <nav class="navbar navbar-inverse navbar-fixed-top">
         <div class="container">
             <div class="navbar-header">
@@ -36,7 +36,7 @@
             </div>
         </div>
     </nav>
-    @RenderSection("AboveBody", required: false)
+    @await RenderSectionAsync("AboveBody", required: false)
 
     <div class="container body-content">
         @RenderBody()
@@ -54,7 +54,7 @@
     </footer>
     <div id="overlay"></div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.9.1/jquery.min.js" integrity="sha256-wS9gmOZBqsqWxgIVgA8Y9WcQOa7PgSIX+rPA0VL2rbQ=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.0/jquery.min.js" integrity="sha256-xNzN2a4ltkB44Mc/Jz3pT4iU1cmeR0FkXs4pru/JxaQ=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha256-U5ZEeKfGNOja007MMD3YBI0A3OSZOQbeG6z2f2Y0hu8=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.js" integrity="sha256-egVvxkq6UBCQyKzRBrDHu8miZ5FOaVrjSqQqauKglKc=" crossorigin="anonymous"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
