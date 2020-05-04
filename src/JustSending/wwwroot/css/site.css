@@ -445,3 +445,7 @@ body.busy #overlay {
     margin-left: auto;
     margin-right: auto;
 }
+
+#feedbackModal {
+    z-index: 10000;
+}
