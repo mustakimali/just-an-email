@@ -1,11 +1,10 @@
 using System;
-using System.Diagnostics;
 using System.IO;
-using System.Net.Http;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Hosting;
 using NUnit.Framework;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
@@ -15,18 +14,16 @@ namespace JustSending.Test
     [TestFixture]
     public class IntegrationTest : IDisposable
     {
+        // ToDo: Use puppeteer-sharp
         private string _seleniumDriverPath;
-        private readonly Uri _appHostName = new Uri("http://localhost:5000");
-        private readonly string _contentRoot;
-        private Process _dotnetProcess;
+        private IHost _host;
+        private Uri _appHostName;
 
         public IntegrationTest()
         {
             var basePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            var relativePath = "../../../../../src/JustSending".Replace('/', Path.DirectorySeparatorChar);
-            _contentRoot = Path.GetFullPath(relativePath, basePath);
 
-            _seleniumDriverPath = Path.Combine(Path.GetFullPath("../../../", basePath), "Drivers");
+            _seleniumDriverPath = Path.Combine(Path.GetFullPath("../../../", basePath!), "Drivers");
         }
 
         [OneTimeSetUp]
@@ -38,52 +35,22 @@ namespace JustSending.Test
         [OneTimeTearDown]
         public void Dispose()
         {
-            if (_dotnetProcess != null && !_dotnetProcess.HasExited) _dotnetProcess.Kill();
+            _host.StopAsync().GetAwaiter().GetResult();
+            _host.Dispose();
         }
 
-        private async Task EnsureAppRunning()
+        private Task EnsureAppRunning()
         {
-            using (var client = new HttpClient())
-            {
-                var mode = "Debug";
-#if !DEBUG
-                mode = "Release";
-#endif
-                try
-                {
-                    var homePage = await client.GetStringAsync(_appHostName);
+            const int port = 5000;
+            Environment.SetEnvironmentVariable("ASPNETCORE_URLS", $"http://*:{port}");
+            Directory.SetCurrentDirectory(Path.Join(
+                "..", "..", "..", "..", "..", "src", "JustSending"));
 
-                    if (!homePage.Contains("Mustakim Ali"))
-                        Assert.Fail($"Something else is running on {_appHostName}");
-                }
-                catch (Exception)
-                {
-                    _dotnetProcess = new Process
-                    {
-                        StartInfo =
-                        {
-                            WorkingDirectory = _contentRoot,
-                            FileName = "dotnet",
-                            Arguments = $"bin/{mode}/netcoreapp3.1/{(mode == "Release" ? "publish/" : "")}JustSending.dll --urls {_appHostName}"
-                        }
-                    };
-
-                    _dotnetProcess.Start();
-                    while (true)
-                        try
-                        {
-                            var homePage = await client.GetStringAsync(_appHostName);
-                            if (homePage.Contains("Mustakim Ali"))
-                                break;
-
-                            WaitMs(1000);
-                        }
-                        catch (Exception)
-                        {
-                            // ignore
-                        }
-                }
-            }
+            _appHostName = new Uri($"http://localhost:{port}");
+            _host = Program.BuildWebHost(new string[] { })
+                .Build();
+            _host.RunAsync();
+            return Task.CompletedTask;
         }
 
         private IWebDriver CreateDriver()

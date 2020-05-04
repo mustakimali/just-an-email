@@ -40,7 +40,7 @@ namespace JustSending
             }
         }
 
-        private static IHostBuilder BuildWebHost(string[] args) =>
+        public static IHostBuilder BuildWebHost(string[] args) =>
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(builder =>
                 {
