@@ -89,7 +89,7 @@ namespace JustSending.Controllers
                 var message = SavePostedFile(postedFilePath, model);
                 await SaveMessageAndReturnResponse(message, true);
             }
-            catch (BadHttpRequestException)
+            catch (Microsoft.AspNetCore.Http.BadHttpRequestException)
             {
                 return BadRequest();
             }

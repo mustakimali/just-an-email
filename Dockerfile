@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/core/sdk:5.0 AS build-env
+FROM mcr.microsoft.com/dotnet/nightly/sdk:5.0.100-preview.5 AS build-env
 # install chrome for testing
 RUN \
    apt-get update && \
@@ -34,7 +34,7 @@ RUN cd /app/src/JustSending
 RUN dotnet publish -c Release -o out
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/core/aspnet:5.0-alpine
+FROM mcr.microsoft.com/dotnet/nightly/aspnet:5.0-alpine
 WORKDIR /app
 COPY --from=build-env /app/src/JustSending/out .
 ENTRYPOINT ["dotnet", "JustSending.dll"]
