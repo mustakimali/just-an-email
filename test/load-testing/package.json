@@ -1,0 +1,14 @@
+{
+  "name": "load-testing",
+  "version": "1.0.0",
+  "description": "",
+  "main": "basic.js",
+  "scripts": {
+    "start": "node basic.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "puppeteer": "^4.0.0"
+  }
+}
