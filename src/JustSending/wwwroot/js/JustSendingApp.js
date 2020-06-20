@@ -633,37 +633,15 @@
 
                 if ($(itm).children().length)
                     return;
-                //$(itm).html(JustSendingApp.replaceURLWithHTMLLinks($(itm).text()));
-                //$(itm)
-                //    .removeClass("text")
-                //    .addClass("text-d");
 
-                try {
-                    var x = new EmbedJS({
-                        input: $(itm)[0],
-                        tweetsEmbed: true,
-                        linkOptions: {
-                            target: "_blank"
-                        },
-                        googleAuthKey: 'AIzaSyCqFouT8h5DKAbxlrTZmjXEmNBjC69f0ts',
-                        inlineEmbed: 'all'
-                    });
-                
-                    x.render();
-                } catch (ex) {
-                    // ignored in IE
-                }
+                $(itm).linkify({
+                    target: "_blank",
+                    defaultProtocol: "https",
+                    className: "linkified"
+                });
                 
                 $(itm).addClass("embedded");
             });
-
-        $('pre code').each(function (i, block) {
-
-            var $el = $(block);
-            $el.html(JustSendingApp.htmlDecode($el.html()));
-            hljs.highlightBlock(block);
-
-        });
     }
 };
 
