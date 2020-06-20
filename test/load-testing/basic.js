@@ -1,11 +1,12 @@
 const puppeteer = require('puppeteer');
+const random = require('random');
 
-(async() => {
+(async () => {
 
     const browser = await puppeteer.launch({
-        headless: false,
+        headless: true,
     });
-    
+
     let page = await newPage();
     await page.click("#new-session");
 
@@ -13,11 +14,10 @@ const puppeteer = require('puppeteer');
         visible: true,
     });
 
-    await page.waitFor("#shareBtn", {
-        visible: true
-    })
-
-    let token = await tokenElement.evaluate(el => el.innerHTML);
+    let token = "&nbsp;";
+    while (token == "&nbsp;") {
+        token = await tokenElement.evaluate(el => el.innerHTML);
+    }
     console.log(`Token is ${token}`);
 
     let page2 = await newPage();
@@ -31,15 +31,19 @@ const puppeteer = require('puppeteer');
         visible: true
     })
 
-    let sentText = new Date().toISOString();
-    await page2.type("#ComposerText", sentText);
-    await page2.click("button.sendBtn");
-
-    await page.waitFor("span.data.embedded");
+    let numMsg = random.int(5, 20);
+    console.log(`Sending ${numMsg} test messages...`);
+    for (var i = 0; i < numMsg; i++)
+        await transmitMessage(page, page2);
     
-    await page2.click(".navbar-brand");
+    console.info("Closing the session...");
+    await page.click("#deleteBtn");
+    await page.waitFor("button.confirm", { visible: true });
 
-    await page2.waitFor("#new-session");
+    await page.click("button.confirm", {delay: 500});
+    await page.waitForNavigation();
+    await page.waitFor(".modal-title", { visible: true });
+    await page2.waitFor(".modal-title", { visible: true });
 
     await browser.close();
 
@@ -49,3 +53,46 @@ const puppeteer = require('puppeteer');
         return page;
     }
 })();
+
+/**
+ * Something 
+ * @param {import('puppeteer').Page} pageOne
+ * @param {import('puppeteer').Page} pageTwo
+ */
+async function transmitMessage(pageOne, pageTwo) {
+    let pageOneSends = random.boolean();
+    let pageToSendFrom = pageOneSends ? pageOne : pageTwo;
+    let pageToReceive = pageOneSends ? pageTwo : pageOne;
+    let messageToSend = uuid();
+
+    if (pageOneSends) {
+        console.log(`Old Client -> New Client: ${messageToSend}`);
+    } else {
+        console.log(`Old Client <- New Client: ${messageToSend}`);
+    }
+
+    await pageToSendFrom.type("#ComposerText", messageToSend);
+    await pageToSendFrom.click("button.sendBtn");
+
+    let started = new Date();
+    while (true) {
+        let newMsgEl = await pageToReceive.waitFor("span.data.embedded");
+        let t = await newMsgEl.evaluate(e => e.textContent);
+
+        if (t !== messageToSend) {
+            if (new Date() - started > 5000) {
+                console.error(`*** The message ${messageToSend} did not arrive ***`);
+                break;
+            }
+            continue;
+        }
+        break;
+    }
+
+    function uuid() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+}
