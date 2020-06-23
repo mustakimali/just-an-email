@@ -55,7 +55,7 @@ namespace JustSending.Services
                 return $"DataSource={path};Cache=Shared;";
             }
 
-            var connectionString = new StringBuilder($"FileName={Path.Combine(dataDirectory, $"{dbName}.ldb")};Upgrade=true");
+            var connectionString = new StringBuilder($"FileName={Path.Combine(dataDirectory, $"{dbName}.ldb")}");
             
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {

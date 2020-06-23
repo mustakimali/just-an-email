@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using Serilog.Events;
 
 namespace JustSending
 {
@@ -13,6 +14,11 @@ namespace JustSending
             Log.Logger = new LoggerConfiguration()
                 .Enrich.FromLogContext()
                 .WriteTo.Console()
+                .WriteTo.Sentry(o =>
+                {
+                    o.MinimumBreadcrumbLevel = LogEventLevel.Debug;
+                    o.MinimumEventLevel = LogEventLevel.Warning;
+                })
                 .Filter.ByExcluding(logEvent =>
                 {
                     if (logEvent.Properties.TryGetValue("RequestPath", out var p))
@@ -33,6 +39,7 @@ namespace JustSending
             catch (Exception ex)
             {
                 Log.Fatal(ex, "Host terminated unexpectedly");
+                throw;
             }
             finally
             {
@@ -44,7 +51,9 @@ namespace JustSending
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(builder =>
                 {
-                    builder.UseStartup<Startup>();
+                    builder
+                        .UseSentry()
+                        .UseStartup<Startup>();
                 })
                 .UseSerilog();
     }

@@ -48,6 +48,11 @@ spec:
                 secretKeyRef:
                   name: "justaml-secret"
                   key: "hangfire_token"
+            - name: "Sentry__Dsn"
+              valueFrom:
+                secretKeyRef:
+                  name: "justaml-secret"
+                  key: "sentry_dsn"
 
           livenessProbe:
             httpGet:
@@ -112,5 +117,5 @@ spec:
     kind: Deployment
     name: justaml
   minReplicas: 1
-  maxReplicas: 5
+  maxReplicas: 1
   targetCPUUtilizationPercentage: 120

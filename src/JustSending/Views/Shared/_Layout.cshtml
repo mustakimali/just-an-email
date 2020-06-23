@@ -57,7 +57,7 @@
     <script src="https://browser.sentry-cdn.com/5.17.0/bundle.min.js" integrity="sha384-lowBFC6YTkvMIWPORr7+TERnCkZdo5ab00oH5NkFLeQUAmBTLGwJpFjF6djuxJ/5" crossorigin="anonymous"></script>
     <script type="text/javascript">
     if (location.href.indexOf("localhost") === -1) {
-        Sentry.init({ dsn: 'https://4fc32f1a13034f2e888a803f4fe17239@o410230.ingest.sentry.io/5283953' });
+        Sentry.init({ dsn: '@Environment.GetEnvironmentVariable("Sentry__Dsn")' });
     }
     </script>
     <script src="~/js/site.js" asp-append-version="true"></script>

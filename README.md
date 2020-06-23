@@ -24,5 +24,6 @@ Should be running in http://localhost:61452
 
 * [Stanford Javascript Crypto Library ](https://github.com/bitwiseshiftleft/sjcl)
 * [bignumber.js](https://github.com/MikeMcl/bignumber.js)
+* [Sentry](https://sentry.io) for sponsoring license
 
 ... and all other third party libraries used in this project.

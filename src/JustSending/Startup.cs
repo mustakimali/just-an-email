@@ -55,7 +55,6 @@ namespace JustSending
 
             services.AddHangfire(x => x.UseSQLiteStorage(Helper.BuildDbConnectionString("BackgroundJobs.sqlite", _hostingEnvironment, true)));
             services.AddHealthChecks();
-            services.AddApplicationInsightsTelemetry();
             services.AddDataProtection()
                 .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(Directory.GetCurrentDirectory(), "App_Data")));
         }
