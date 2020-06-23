@@ -467,7 +467,7 @@
             } else {
                 $el.css("display", "none");
 
-                if (!$(".share-panel").is(":visible")) {
+                if (!$(".connect-instruction-panel").is(":visible")) {
                     swal({
                         title: "Nobody to share to.",
                         text: "Click 'Connect Another Device' to allow other device to connect securely using a PIN.",
@@ -548,7 +548,7 @@
     },
 
     switchView: function (showSharePanel) {
-        var $sharePanel = $(".share-panel");
+        var $sharePanel = $(".connect-instruction-panel");
         var $shareActions = $(".share-actions");
 
         if (showSharePanel) {

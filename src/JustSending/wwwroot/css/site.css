@@ -166,7 +166,7 @@ span.field-validation-error {
     padding: 0;
 }
 .share-actions,
-.share-panel {
+.connect-instruction-panel {
     display: none;
 }
 .navbar {
@@ -406,7 +406,7 @@ body.busy #overlay {
         border-radius: 0;
     }
 
-    .resp-sharing-button__link {
+    .shb_l {
         margin: 5px 0;
     }
 
@@ -423,7 +423,7 @@ body.busy #overlay {
         font-size: 10pt !important;
     }
 
-    .share-panel h1 {
+    .connect-instruction-panel h1 {
         padding: 0;
         margin: 0 0 5px 0;
         font-size: 16pt;

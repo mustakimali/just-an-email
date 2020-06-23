@@ -24,7 +24,7 @@
         </div>
     </div>
     <div class="jumbotron share">
-        <div class="container" id="share-panel">
+        <div class="container" id="connect-instruction-panel">
             <partial name="_Share" />
         </div>
     </div>
@@ -112,7 +112,7 @@
 
         function askForFeedback() {
             if (location.search.indexOf("?ref=app") == 0) {
-                $("#feedbackSharePanel").html($("#share-panel").html());
+                $("#feedbackSharePanel").html($("#connect-instruction-panel").html());
                 $("#feedbackModal")
                     .modal("show")
                     .on("hidden.bs.modal", function () {

@@ -44,7 +44,7 @@
     <div id="share" class="jumbotron sticky-footer">
         <div class="container">
 
-            <div id="panel-token" class="share-panel row" style="display: @(hasToken ? "block" : "none")">
+            <div id="panel-token" class="connect-instruction-panel row" style="display: @(hasToken ? "block" : "none")">
                 <div class="col-sm-7 col-xs-12" style="margin-bottom: 5px;">
                     <form asp-action="CancelShareToken">
                         <h1 title="Use this PIN to securely connect to this session from another device"><i class="fa fa-lock text-"></i>&nbsp;<span id="token">@Model.Token?.ToString(JustSending.Models.Constants.TOKEN_FORMAT_STRING)</span> <button class="cancelShareBtn btn btn-wide btn-danger hidden-xs" title="Dispose this PIN">Cancel</button></h1>
@@ -96,7 +96,7 @@
                     <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                     <h2>Connect another Device</h2>
 
-                    <div class="share-panel">
+                    <div class="connect-instruction-panel">
                         <ul>
                             <li>On another device, go to <a style="font-weight: bold;" href="@Context.Request.Scheme://@Context.Request.Host" target="_blank">@Context.Request.Scheme://@Context.Request.Host</a></li>
                             <li>Click CONNECT</li>
