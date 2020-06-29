@@ -19,6 +19,7 @@ Vagrant.configure("2") do |config|
     install minikube /usr/local/bin/
     sudo apt-get install conntrack -y
     sudo -E minikube start --driver=none
+    sudo minikube addons enable ingress
 
     # kubectl
     sudo apt-get update && sudo apt-get install -y apt-transport-https gnupg2
@@ -33,8 +34,12 @@ Vagrant.configure("2") do |config|
 
     # deploy
     cd /vagrant
-    kubectl apply -f k8s-secret.sample.yaml
-    kubectl apply -f k8s-deployment.yaml
+    curl https://raw.githubusercontent.com/mustakimali/just-an-email/master/k8s-secret.sample.yaml -o k8s-secret-latest.sample.yaml
+    curl https://raw.githubusercontent.com/mustakimali/just-an-email/master/k8s-deployment.yaml -o k8s-deployment-latest.yaml
+
+    kubectl apply -f k8s-secret-latest.sample.yaml
+    kubectl apply -f k8s-deployment-latest.yaml
+
     kubectl rollout status deployments/justaml -w
 
     #sudo kubectl port-forward $(sudo kubectl get po | tail -1 | awk '{print $1}') 8080:80
