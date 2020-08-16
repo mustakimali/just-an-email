@@ -2,9 +2,11 @@
 
 > I will just send an email to myself then go to another device, login and download it! 🥳
 
-or you could use [justa.ml](https://justa.ml)
+or you could use [tnxfr.com](https://tnxfr.com)
 
-### Running live: [https://justa.ml](https://justa.ml/)  🚀
+### Running live: [https://tnxfr.com](https://tnxfr.com)  🚀
+
+(previously [https://justa.ml](https://justa.ml))
 
 ## Run from docker hub
 

@@ -4,15 +4,15 @@
     <TargetFramework>netcoreapp5.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="HangFire" Version="1.7.11" />
+    <PackageReference Include="HangFire" Version="1.7.12" />
     <PackageReference Include="Hangfire.SQLite" Version="1.4.2" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.WebSockets" Version="2.2.1" />
-    <PackageReference Include="LiteDB" Version="5.0.8" />
+    <PackageReference Include="LiteDB" Version="5.0.9" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="5.0.0-preview.3.20181.2" />
-    <PackageReference Include="Sentry" Version="2.1.4" />
-    <PackageReference Include="Sentry.AspNetCore" Version="2.1.4" />
-    <PackageReference Include="Sentry.Serilog" Version="2.1.4" />
-    <PackageReference Include="Serilog.AspNetCore" Version="3.2.0" />
+    <PackageReference Include="Sentry" Version="2.1.5" />
+    <PackageReference Include="Sentry.AspNetCore" Version="2.1.5" />
+    <PackageReference Include="Sentry.Serilog" Version="2.1.5" />
+    <PackageReference Include="Serilog.AspNetCore" Version="3.4.0" />
   </ItemGroup>
 </Project>
