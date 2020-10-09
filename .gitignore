@@ -266,3 +266,4 @@ __pycache__/
 *.pyc
 .ionide
 .vagrant/
+out/

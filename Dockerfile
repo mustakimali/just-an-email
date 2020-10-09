@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/nightly/sdk:5.0.100-preview.5 AS build-env
+FROM mcr.microsoft.com/dotnet/sdk:5.0 AS build-env
 # install chrome for testing
 RUN \
    apt-get update && \
@@ -16,7 +16,7 @@ WORKDIR /app
 COPY src/JustSending/JustSending.csproj ./src/JustSending/JustSending.csproj
 COPY test/JustSending.Test/JustSending.Test.csproj ./test/JustSending.Test/JustSending.Test.csproj
 COPY JustSending.sln .
-RUN dotnet restore
+RUN dotnet restore -r linux-x64
 
 COPY . /app
 
@@ -31,12 +31,13 @@ RUN dotnet test JustSending.Test.csproj -c Debug -v q --no-build
 
 WORKDIR /app/src/JustSending
 RUN cd /app/src/JustSending
-RUN dotnet publish -c Release -o out
+RUN dotnet publish -c Release -r linux-x64 -o out -p:PublishReadyToRun=true
+RUN ls -lsah out/
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/nightly/aspnet:5.0-alpine
+FROM mcr.microsoft.com/dotnet/runtime-deps:5.0
 WORKDIR /app
 COPY --from=build-env /app/src/JustSending/out .
-ENTRYPOINT ["dotnet", "JustSending.dll"]
+ENTRYPOINT ["./JustSending"]
 VOLUME ["App_Data/"]
 VOLUME ["wwwroot/uploads"]
