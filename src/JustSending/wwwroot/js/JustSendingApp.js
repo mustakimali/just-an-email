@@ -437,6 +437,11 @@
     initWebSocket: function () {
         var ws = new signalR.HubConnectionBuilder()
             .withUrl("/signalr/hubs")
+            .withAutomaticReconnect({
+                nextRetryDelayInMilliseconds: () => {
+                    return 2000
+                }
+            })
             .build();
         var conn = ws;
         this.hub = ws;
