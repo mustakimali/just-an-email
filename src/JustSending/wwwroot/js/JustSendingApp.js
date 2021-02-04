@@ -438,7 +438,7 @@
         var ws = new signalR.HubConnectionBuilder()
             .withUrl("/signalr/hubs")
             .withAutomaticReconnect({
-                nextRetryDelayInMilliseconds: () => {
+                nextRetryDelayInMilliseconds: function () {
                     return 2000
                 }
             })
