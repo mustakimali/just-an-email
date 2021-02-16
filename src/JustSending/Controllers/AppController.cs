@@ -35,11 +35,11 @@ namespace JustSending.Controllers
         }
 
         [Route("")]
-        [HttpGet]
+        [ResponseCache(Duration = 3600 * 24, Location = ResponseCacheLocation.Any)]
         public IActionResult NewSession()
         {
-            var id = (string)(TempData[nameof(Data.Session.Id)] ?? _db.NewGuid());
-            var id2 = (string)(TempData[nameof(Data.Session.IdVerification)] ?? _db.NewGuid());
+            var id = _db.NewGuid();
+            var id2 = _db.NewGuid();
 
             return Session(id, id2, verifySessionExistance: false);
         }
@@ -68,8 +68,8 @@ namespace JustSending.Controllers
         [HttpPost]
         public IActionResult CreateSessionAjax(string id, string id2)
         {
-            if ((id != null && id.Length != 32)
-                || (id2 != null && id2.Length != 32))
+            if ((id is {Length: not 32})
+                || (id2 is {Length: not 32}))
                 return BadRequest();
 
             if (_db.Sessions.FindById(id) != null)
@@ -183,7 +183,7 @@ namespace JustSending.Controllers
             return await SaveMessageAndReturnResponse(message);
         }
 
-        private void DeleteIfExists(string path)
+        private static void DeleteIfExists(string path)
         {
             if (IOFile.Exists(path))
                 IOFile.Delete(path);
@@ -299,11 +299,7 @@ namespace JustSending.Controllers
 
             await _hub.HideSharePanel(session.Id);
 
-            TempData[nameof(Data.Session.Id)] = session.Id;
-            TempData[nameof(Data.Session.IdVerification)] = session.IdVerification;
-
-            return RedirectToAction(nameof(NewSession));
-            //return Session(session.Id, session.IdVerification);
+            return Session(session.Id, session.IdVerification);
         }
 
         [HttpPost]

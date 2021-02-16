@@ -4,6 +4,7 @@ using System.Linq;
 using Hangfire;
 using JustSending.Data;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace JustSending.Services
 {
@@ -11,11 +12,13 @@ namespace JustSending.Services
     {
         private readonly AppDbContext _db;
         private readonly IWebHostEnvironment _env;
+        private readonly ILogger<BackgroundJobScheduler> _logger;
 
-        public BackgroundJobScheduler(AppDbContext db, IWebHostEnvironment env)
+        public BackgroundJobScheduler(AppDbContext db, IWebHostEnvironment env, ILogger<BackgroundJobScheduler> logger)
         {
             _db = db;
             _env = env;
+            _logger = logger;
         }
 
         public void Erase(string sessionId) => EraseSessionReturnConnectionIds(sessionId);
@@ -23,7 +26,7 @@ namespace JustSending.Services
         public string[] EraseSessionReturnConnectionIds(string sessionId)
         {
             var session = _db.Sessions.FindById(sessionId);
-            if (session == null) return new string[0];
+            if (session == null) return Array.Empty<string>();
 
             _db.Sessions.Delete(sessionId);
             _db.Messages.DeleteMany(x => x.SessionId == sessionId);
@@ -41,9 +44,10 @@ namespace JustSending.Services
             {
                 DeleteUploadedFiles(sessionId);
             }
-            catch
+            catch (Exception e)
             {
-                BackgroundJob.Schedule(() => DeleteUploadedFiles(sessionId), TimeSpan.FromMinutes(30));
+                _logger.LogWarning(e, "Error deleting uploaded files {message}", e.GetBaseException().Message);
+                BackgroundJob.Schedule(() => DeleteUploadedFiles(sessionId), TimeSpan.FromMinutes(5));
             }
 
             if (!string.IsNullOrEmpty(session.CleanupJobId))
@@ -57,8 +61,14 @@ namespace JustSending.Services
             var folder = Helper.GetUploadFolder(sessionId, _env.WebRootPath);
             if (Directory.Exists(folder))
             {
+                _logger.LogInformation("Deleting folder {path}", folder);
                 Directory.Delete(folder, true);
+                _logger.LogInformation("Folder deleted: {path}", folder);
             }
+            else
+            {
+                _logger.LogInformation("Folder does not exist: {path}", folder);
+            } 
         }
     }
 }

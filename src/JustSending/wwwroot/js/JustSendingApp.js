@@ -21,7 +21,6 @@
             JustSendingApp.goHome();
             return false;
         });
-
         window.onbeforeunload = function(event) {
             JustSendingApp.goHome();
         };
@@ -56,6 +55,7 @@
             id = hash.substr(0, 32);
             id2 = hash.substr(32);
         } else {
+            history.replaceState(null, '', '/app');
             window.location.hash = id + id2;
         }
         this.initQrCode();

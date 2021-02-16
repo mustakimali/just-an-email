@@ -12,6 +12,7 @@
                     <form id="form"
                           asp-action="Post"
                           asp-controller="App"
+                          asp-antiforgery="false"
                           data-max-b="@config["MaxUploadSizeBytes"]"
                           data-max-display="@config["MaxUploadSizeDisplay"]"
                           method="POST">
@@ -156,7 +157,7 @@
     <script src="~/js/JustSendingApp.js" asp-append-version="true"></script>
     *@
 
-    <script type="text/javascript" src="~/js/combined-session.min.js" asp-append-version="true" integrity="sha384-TU7FyQz5mmLb1Hm+fPgvaQQL56M/LdrgSn3HU3UpXQsbkvs23MAQEtO9sQ8KvAv+" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="~/js/combined-session.min.js" asp-append-version="true" crossorigin="anonymous"></script>
 
     <script type="text/javascript">
         (function() {
