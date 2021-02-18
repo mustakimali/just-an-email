@@ -11,16 +11,23 @@ or you could use [tnxfr.com](https://tnxfr.com)
 ## Run from docker hub
 
 ```
-docker run -p 61452:80 mustakimali/justaml
+docker run -p 5050:80 mustakimali/justaml
 ```
-Should be running in http://localhost:61452
+Should be running in http://localhost:5050
+
+## Run locally
+
+### Using Docker
+* Build the docker image: `make docker-build`
+* Run `make docker-run`
+* Access the app using `localhost:5050`
 
 ## Building the code
-* Make sure you have latest preview of [.NET Core SDK 5](https://www.microsoft.com/net/download/core) installed
+* Make sure you have latest preview of [.NET Core SDK 6](https://www.microsoft.com/net/download/core) installed (you can use [this script](https://gist.github.com/mustakimali/1dd2a1f4ea22907760eb112a7cdd9c68) to install latest nightly build and use `dotnet-pre` instead of `dotnet` below)
 * Clone
 * `cd src\JustSending`
 * `dotnet run` or `dotnet watch run`
-* Should be running in http://localhost:61452
+* Should be running in http://localhost:5000
 
 ## A huge thanks to the following projects
 
