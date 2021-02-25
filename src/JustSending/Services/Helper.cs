@@ -9,8 +9,8 @@ namespace JustSending.Services
 {
     public static class Helper
     {
-        public static readonly DateTime BeginningOfUnixTime = new DateTime(1970, 1, 1);
-        public static readonly Random Random = new Random(DateTime.UtcNow.Millisecond);
+        public static readonly DateTime BeginningOfUnixTime = new(1970, 1, 1);
+        public static readonly Random Random = new(DateTime.UtcNow.Millisecond);
 
         public static string GetPrime(int length, IWebHostEnvironment env)
         {

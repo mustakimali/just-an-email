@@ -8,7 +8,7 @@ namespace JustSending.Controllers
     [Route("secure-line")]
     public class SecureLineController : Controller
     {
-        private static readonly ConcurrentDictionary<string, PostModel> _inMemoryData = new ConcurrentDictionary<string, PostModel>();
+        private static readonly ConcurrentDictionary<string, PostModel> _inMemoryData = new();
 
         [Route("")]
         public IActionResult Index()

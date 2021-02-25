@@ -520,7 +520,7 @@
         
         var onConnected = function() {
             conn
-                .send("connect", $("#SessionId").val())
+                .invoke("connect", $("#SessionId").val())
                 .then(function(socketConnectionId) {
 
                     $("#SocketConnectionId").val(socketConnectionId);

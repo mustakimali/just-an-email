@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.Extensions.Logging;
 using IOFile = System.IO.File;
 
 namespace JustSending.Controllers
@@ -21,17 +22,20 @@ namespace JustSending.Controllers
         private readonly ConversationHub _hub;
         private readonly IWebHostEnvironment _env;
         private readonly IConfiguration _config;
+        private readonly ILogger<AppController> _logger;
 
         public AppController(
                 AppDbContext db,
                 ConversationHub hub,
                 IWebHostEnvironment env,
-                IConfiguration config)
+                IConfiguration config,
+                ILogger<AppController> logger)
         {
             _db = db;
             _hub = hub;
             _env = env;
             _config = config;
+            _logger = logger;
         }
 
         [Route("")]
@@ -92,7 +96,7 @@ namespace JustSending.Controllers
             var postedFilePath = Path.GetTempFileName();
             using (var stream = IOFile.Create(postedFilePath))
             {
-                formModel = await Request.StreamFile(stream);
+                formModel = await Request.StreamFile(stream, _logger, HttpContext.RequestAborted);
             }
 
             var model = new SessionModel();

@@ -11,11 +11,11 @@ namespace JustSending.Services
 {
     public class SecureLineHub : Hub
     {
-        private readonly ConcurrentDictionary<string, string> _connectionIdSessionMap = new ConcurrentDictionary<string, string>();
-        private readonly ConcurrentDictionary<string, HashSet<string>> _sessionIdConnectionIds = new ConcurrentDictionary<string, HashSet<string>>();
+        private readonly ConcurrentDictionary<string, string> _connectionIdSessionMap = new();
+        private readonly ConcurrentDictionary<string, HashSet<string>> _sessionIdConnectionIds = new();
         private readonly IWebHostEnvironment _env;
         private readonly AppDbContext _db;
-        private readonly object _lock = new object();
+        private readonly object _lock = new();
 
         public SecureLineHub(IWebHostEnvironment env, AppDbContext db)
         {

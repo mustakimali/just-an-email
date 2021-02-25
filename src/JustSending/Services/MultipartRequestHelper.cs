@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
@@ -31,7 +32,8 @@ namespace JustSending.Services
                    && contentType.IndexOf("multipart/", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
-        public static bool HasFormDataContentDisposition(ContentDispositionHeaderValue contentDisposition)
+        public static bool HasFormDataContentDisposition(
+            [NotNullWhen(true)] ContentDispositionHeaderValue? contentDisposition)
         {
             // Content-Disposition: form-data; name="key";
             return contentDisposition != null
@@ -40,7 +42,8 @@ namespace JustSending.Services
                    && string.IsNullOrEmpty(contentDisposition.FileNameStar.Value);
         }
 
-        public static bool HasFileContentDisposition(ContentDispositionHeaderValue contentDisposition)
+        public static bool HasFileContentDisposition(
+            [NotNullWhen(true)] ContentDispositionHeaderValue? contentDisposition)
         {
             // Content-Disposition: form-data; name="myfile1"; filename="Misc 002.jpg"
             return contentDisposition != null

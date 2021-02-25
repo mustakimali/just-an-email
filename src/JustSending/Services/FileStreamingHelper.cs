@@ -2,20 +2,22 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Logging;
 using Microsoft.Net.Http.Headers;
 
 namespace JustSending.Services
 {
     public static class FileStreamingHelper
     {
-        private static readonly FormOptions _defaultFormOptions = new FormOptions();
+        private static readonly FormOptions DefaultFormOptions = new();
 
-        public static async Task<FormValueProvider> StreamFile(this HttpRequest request, Stream targetStream)
+        public static async Task<FormValueProvider> StreamFile(this HttpRequest request, FileStream fileStream, ILogger logger, CancellationToken ct)
         {
             if (!MultipartRequestHelper.IsMultipartContentType(request.ContentType))
             {
@@ -27,20 +29,22 @@ namespace JustSending.Services
             var formAccumulator = new KeyValueAccumulator();
             var boundary = MultipartRequestHelper.GetBoundary(
                 MediaTypeHeaderValue.Parse(request.ContentType),
-                _defaultFormOptions.MultipartBoundaryLengthLimit);
+                DefaultFormOptions.MultipartBoundaryLengthLimit);
             var reader = new MultipartReader(boundary.Value, request.Body);
 
-            var section = await reader.ReadNextSectionAsync();
+            var section = await reader.ReadNextSectionAsync(ct);
             while (section != null)
             {
-                ContentDispositionHeaderValue contentDisposition;
-                var hasContentDispositionHeader = ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out contentDisposition);
+                var hasContentDispositionHeader = ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out ContentDispositionHeaderValue? contentDisposition);
 
                 if (hasContentDispositionHeader)
                 {
                     if (MultipartRequestHelper.HasFileContentDisposition(contentDisposition))
                     {
-                        await section.Body.CopyToAsync(targetStream);
+                        // write to file
+                        logger.LogInformation("Copying file {name}", contentDisposition.FileName);
+                        await section.Body.CopyToAsync(fileStream, ct);
+                        logger.LogInformation("File copied {name}", contentDisposition.FileName);
                     }
                     else if (MultipartRequestHelper.HasFormDataContentDisposition(contentDisposition))
                     {
@@ -67,9 +71,9 @@ namespace JustSending.Services
                             }
                             formAccumulator.Append(key.Value, value);
 
-                            if (formAccumulator.ValueCount > _defaultFormOptions.ValueCountLimit)
+                            if (formAccumulator.ValueCount > DefaultFormOptions.ValueCountLimit)
                             {
-                                throw new InvalidDataException($"Form key count limit {_defaultFormOptions.ValueCountLimit} exceeded.");
+                                throw new InvalidDataException($"Form key count limit {DefaultFormOptions.ValueCountLimit} exceeded.");
                             }
                         }
                     }
@@ -77,7 +81,7 @@ namespace JustSending.Services
 
                 // Drains any remaining section body that has not been consumed and
                 // reads the headers for the next section.
-                section = await reader.ReadNextSectionAsync();
+                section = await reader.ReadNextSectionAsync(ct);
             }
 
             // Bind form data to a model
@@ -89,17 +93,16 @@ namespace JustSending.Services
             return formValueProvider;
         }
 
-        private static Encoding GetEncoding(MultipartSection section)
+        private static Encoding? GetEncoding(MultipartSection section)
         {
-            MediaTypeHeaderValue mediaType;
-            var hasMediaTypeHeader = MediaTypeHeaderValue.TryParse(section.ContentType, out mediaType);
+            var hasMediaTypeHeader = MediaTypeHeaderValue.TryParse(section.ContentType, out var mediaType);
             // UTF-7 is insecure and should not be honored. UTF-8 will succeed in 
             // most cases.
-            if (!hasMediaTypeHeader || Encoding.UTF7.Equals(mediaType.Encoding))
+            if (!hasMediaTypeHeader || Encoding.UTF7.Equals(mediaType?.Encoding))
             {
                 return Encoding.UTF8;
             }
-            return mediaType.Encoding;
+            return mediaType?.Encoding;
         }
     }
 }
