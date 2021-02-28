@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
 using JustSending.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -27,27 +28,6 @@ namespace JustSending.Controllers
                 stat = new Stats();
             }
             return View(stat);
-        }
-
-        [Route("stats/raw")]
-        public IActionResult StatsRaw([FromServices] AppDbContext db)
-        {
-            var data = db
-                        .Statistics
-                        .Find(x => x.Id > 1)
-                        .GroupBy(x => x.Id.ToString().Substring(0, 2))
-                        .Select(x => new
-                        {
-                            Year = x.Key,
-                            Months = x.GroupBy(y => y.Id.ToString().Substring(2, 2))
-                                        .Select(c => new
-                                        {
-                                            Month = c.Key,
-                                            Days = c
-                                        })
-                        });
-
-            return Json(data);
         }
 
         [Route("api/prime")]
