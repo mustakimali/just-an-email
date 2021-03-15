@@ -160,7 +160,8 @@ namespace JustSending.Controllers
             var session = _db.Sessions.FindById(sessionId);
             if (session == null) return;
 
-            TimeSpan triggerAfter = TimeSpan.FromHours(isLiteSession ? 6 : 24);
+            // cleanup after 1 hour
+            var triggerAfter = TimeSpan.FromHours(1);
 
             if (!string.IsNullOrEmpty(session.CleanupJobId))
                 BackgroundJob.Delete(session.CleanupJobId);

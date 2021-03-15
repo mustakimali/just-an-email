@@ -526,6 +526,7 @@
                     $("#SocketConnectionId").val(socketConnectionId);
 
                     Log("Device Id: " + socketConnectionId);
+                    $(".FilePostUrl").text(JustSendingApp.getPostFromCliPath());
 
                     app_busy(false);
                 });
@@ -550,6 +551,12 @@
 
     goHome: function() {
         window.location.replace("/?ref=app");
+    },
+    
+    // 
+    getPostFromCliPath: function () {
+        var sessionId = $("#SessionId").val();
+        return location.protocol + "//" + location.host + "/f/" + sessionId;
     },
 
     switchView: function (showSharePanel) {

@@ -11,7 +11,7 @@ namespace JustSending.Data
         public int MessagesSizeBytes { get; set; }
         public int Files { get; set; }
         public long FilesSizeBytes { get; set; }
-        
+
         public int Devices { get; set; }
         public int Sessions { get; set; }
 
