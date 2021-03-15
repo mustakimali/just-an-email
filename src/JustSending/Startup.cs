@@ -88,7 +88,7 @@ namespace JustSending
             {
                 Authorization = new[] { new CookieAuthFilter(Configuration["HangfireToken"]) }
             });
-            
+
             app.UseRouting();
 
             app.UseEndpoints(endpoints =>

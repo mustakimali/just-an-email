@@ -24,14 +24,14 @@ namespace JustSending.Services
             return fileLines.Skip(randomLine).FirstOrDefault();
         }
 
-        public static int ToEpoch(this DateTime date) => (int) date.Subtract(BeginningOfUnixTime).TotalSeconds;
+        public static int ToEpoch(this DateTime date) => (int)date.Subtract(BeginningOfUnixTime).TotalSeconds;
 
-        public static string ToFileSize(this int len) => ((long) len).ToFileSize();
+        public static string ToFileSize(this int len) => ((long)len).ToFileSize();
 
         public static string ToFileSize(this long lens)
         {
-            var len = (double) lens;
-            var sizes = new[] {"B", "KB", "MB", "GB", "TB"};
+            var len = (double)lens;
+            var sizes = new[] { "B", "KB", "MB", "GB", "TB" };
             var order = 0;
 
             while (len >= 1024 && order < sizes.Length - 1)
@@ -42,7 +42,7 @@ namespace JustSending.Services
 
             return $"{len:#,###,##0.##} {sizes[order]}";
         }
-        
+
         public static string BuildDbConnectionString(string dbName, IWebHostEnvironment hostingEnvironment, bool sqlLite = false)
         {
             var dataDirectory = Path.Combine(hostingEnvironment.ContentRootPath, "App_Data");
@@ -51,12 +51,12 @@ namespace JustSending.Services
             if (sqlLite)
             {
                 var path = Path.Combine(dataDirectory, dbName);
-                
+
                 return $"DataSource={path};Cache=Shared;";
             }
 
             var connectionString = new StringBuilder($"FileName={Path.Combine(dataDirectory, $"{dbName}.ldb")}");
-            
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
                 connectionString.Append(";Mode=Exclusive");

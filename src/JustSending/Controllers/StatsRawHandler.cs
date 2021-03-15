@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace JustSending.Controllers
 {
     [Route("stats/raw")]
-    public class StatsRawHandler : BaseEndpoint 
+    public class StatsRawHandler : BaseEndpoint
                                         .WithoutRequest
                                         .WithResponse<IEnumerable<StatsRawHandler.StatYear>>
     {

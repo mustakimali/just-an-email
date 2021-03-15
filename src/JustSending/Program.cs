@@ -30,7 +30,7 @@ namespace JustSending
                     return false;
                 })
                 .CreateLogger();
-            
+
             try
             {
                 Log.Information("Starting web host");

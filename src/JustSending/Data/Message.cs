@@ -23,7 +23,7 @@ namespace JustSending.Data
         public DateTimeOffset DateSent { get; set; }
         public bool HasFile { get; internal set; }
         public long FileSizeBytes { get; internal set; }
-        
+
         /// <summary>
         /// Indicate if this is system generated Message
         /// Not a user sent message

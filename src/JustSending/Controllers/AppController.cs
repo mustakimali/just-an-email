@@ -74,8 +74,8 @@ namespace JustSending.Controllers
         [HttpPost]
         public IActionResult CreateSessionAjax(string id, string id2)
         {
-            if ((id is {Length: not 32})
-                || (id2 is {Length: not 32}))
+            if ((id is { Length: not 32 })
+                || (id2 is { Length: not 32 }))
                 return BadRequest();
 
             if (_db.Sessions.FindById(id) != null)
@@ -123,7 +123,7 @@ namespace JustSending.Controllers
             }
 
         }
-        
+
         [Route("/f/{sessionId}")]
         [HttpPost]
         [DisableFormValueModelBinding]
@@ -139,7 +139,7 @@ namespace JustSending.Controllers
                     redirect_uri = Url.Action("NewSession", "App", null, "https") + $"#{sessionId}{_db.NewGuid()}"
                 });
             }
-            
+
             if (!_db.Connections.Exists(s => s.SessionId == sessionId))
             {
                 return StatusCode(400, new
@@ -183,7 +183,7 @@ namespace JustSending.Controllers
                     message_id = message.Id,
                     file_name = message.Text,
                     file_size = file.Length,
-                    downlod_url = Url.Action("DownloadFile", "App", new {id = message.Id, sessionId = sessionId},
+                    downlod_url = Url.Action("DownloadFile", "App", new { id = message.Id, sessionId = sessionId },
                         "https")
                 });
             }
@@ -368,12 +368,12 @@ namespace JustSending.Controllers
             // Delete the Token
             _db.ShareTokens.Delete(model.Token);
 
-            if(model.NoJs && !session.IsLiteSession)
+            if (model.NoJs && !session.IsLiteSession)
             {
                 await ConvertToLiteSession(session.Id, session.IdVerification);
                 session.IsLiteSession = true;
             }
-            
+
             if (session.IsLiteSession)
             {
                 await _hub.AddSessionNotification(session.Id, "A new device has been connected!", true);

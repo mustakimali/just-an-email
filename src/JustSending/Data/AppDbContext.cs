@@ -51,7 +51,7 @@ namespace JustSending.Data
         public ILiteCollection<Message> Messages => Database.GetCollection<Message>();
         public ILiteCollection<ConnectionSession> Connections => Database.GetCollection<ConnectionSession>();
         public ILiteCollection<Stats> Statistics => Database.GetCollection<Stats>();
-        
+
         public string NewGuid() => Guid.NewGuid().ToString("N");
 
         public int NewConnectionId()
@@ -95,7 +95,7 @@ namespace JustSending.Data
             var session = Sessions.FindById(sessionId);
             if (session == null) return;
 
-            if(Connections.Exists(x=> x.ConnectionId == connectionId)) 
+            if (Connections.Exists(x => x.ConnectionId == connectionId))
                 return;
 
             Connections.Insert(new ConnectionSession
@@ -168,7 +168,7 @@ namespace JustSending.Data
                 var today = StatsFindByIdOrNew(utcNow.Year, utcNow.Month, utcNow.Day);
                 update(today);
 
-                Statistics.Upsert(new[] 
+                Statistics.Upsert(new[]
                 {
                     allTime,
                     thisYear,

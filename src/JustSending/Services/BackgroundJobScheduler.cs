@@ -34,7 +34,7 @@ namespace JustSending.Services
                 _logger.LogWarning(e, "Error deleting uploaded files {message}", e.GetBaseException().Message);
                 BackgroundJob.Schedule(() => DeleteUploadedFiles(sessionId), TimeSpan.FromMinutes(5));
             }
-            
+
             var session = _db.Sessions.FindById(sessionId);
             if (session == null) return Array.Empty<string>();
 
@@ -68,7 +68,7 @@ namespace JustSending.Services
             else
             {
                 _logger.LogInformation("Folder does not exist: {path}", folder);
-            } 
+            }
         }
     }
 }
