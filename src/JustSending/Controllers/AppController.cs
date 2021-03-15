@@ -1,12 +1,14 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using JustSending.Data;
 using JustSending.Models;
 using JustSending.Services;
 using JustSending.Services.Attributes;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -116,6 +118,83 @@ namespace JustSending.Controllers
                 return await SaveMessageAndReturnResponse(message);
             }
             catch (Microsoft.AspNetCore.Http.BadHttpRequestException)
+            {
+                return BadRequest();
+            }
+
+        }
+        
+        [Route("/f/{sessionId}")]
+        [HttpPost]
+        [DisableFormValueModelBinding]
+        [IgnoreAntiforgeryToken]
+        [RequestSizeLimit(2_147_483_648)]
+        public async Task<IActionResult> PostFileFromCli([FromRoute] string sessionId, IFormFile? file)
+        {
+            if (!_db.Sessions.Exists(s => s.Id == sessionId))
+            {
+                return StatusCode(400, new
+                {
+                    error = "Invalid Session, follow this redirect_uri to start a session in the browser first.",
+                    redirect_uri = Url.Action("NewSession", "App", null, "https") + $"#{sessionId}{_db.NewGuid()}"
+                });
+            }
+            
+            if (!_db.Connections.Exists(s => s.SessionId == sessionId))
+            {
+                return StatusCode(400, new
+                {
+                    error =
+                        "No client is connected, the session may be lost. Try starting the session again or refreshing the browser window."
+                });
+            }
+
+            if (file == null && Request.Form.Files.Any())
+            {
+                file = Request.Form.Files[0];
+            }
+
+            if (file == null)
+            {
+                return NotFound(new
+                {
+                    error = "No file posted"
+                });
+            }
+
+            var model = new SessionModel
+            {
+                SessionId = sessionId,
+                ComposerText = file.FileName
+            };
+            var tmpFile = Path.GetTempFileName();
+            await using (var f = System.IO.File.OpenWrite(tmpFile))
+            {
+                await file.CopyToAsync(f);
+            }
+
+            try
+            {
+                var message = SavePostedFile(tmpFile, model);
+                var _ = await SaveMessageAndReturnResponse(message);
+                return Json(new
+                {
+                    session_id = sessionId,
+                    message_id = message.Id,
+                    file_name = message.Text,
+                    file_size = file.Length,
+                    downlod_url = Url.Action("DownloadFile", "App", new {id = message.Id, sessionId = sessionId},
+                        "https")
+                });
+            }
+            catch (InvalidOperationException)
+            {
+                return StatusCode(413, new
+                {
+                    error = "The posted file is too large"
+                });
+            }
+            catch (BadHttpRequestException)
             {
                 return BadRequest();
             }

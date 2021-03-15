@@ -25,6 +25,16 @@ namespace JustSending.Services
 
         public string[] EraseSessionReturnConnectionIds(string sessionId)
         {
+            try
+            {
+                DeleteUploadedFiles(sessionId);
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e, "Error deleting uploaded files {message}", e.GetBaseException().Message);
+                BackgroundJob.Schedule(() => DeleteUploadedFiles(sessionId), TimeSpan.FromMinutes(5));
+            }
+            
             var session = _db.Sessions.FindById(sessionId);
             if (session == null) return Array.Empty<string>();
 
@@ -39,16 +49,6 @@ namespace JustSending.Services
                 .ToArray();
 
             _db.Connections.DeleteMany(x => x.SessionId == sessionId);
-
-            try
-            {
-                DeleteUploadedFiles(sessionId);
-            }
-            catch (Exception e)
-            {
-                _logger.LogWarning(e, "Error deleting uploaded files {message}", e.GetBaseException().Message);
-                BackgroundJob.Schedule(() => DeleteUploadedFiles(sessionId), TimeSpan.FromMinutes(5));
-            }
 
             if (!string.IsNullOrEmpty(session.CleanupJobId))
                 BackgroundJob.Delete(session.CleanupJobId);

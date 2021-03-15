@@ -1,7 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
 using JustSending.Data;
 using Microsoft.AspNetCore.Mvc;

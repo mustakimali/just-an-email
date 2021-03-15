@@ -104,6 +104,14 @@
             <hr />
             A PIN can be used to connect exactly one device. Generate multiple PIN to connect more devices.
         </div>
+        
+        <div class="alert alert-success alert-dismissible" role="alert">
+            <i class="fa fa-terminal"></i> Send files from command line
+            <p style="font-family: monospace;">
+                http --form <span class="FilePostUrl">(loading...)</span> file@@/path/to/file.txt<br/>
+                curl <span class="FilePostUrl">(loading...)</span> -F 'file=@@/path/to/file.txt'
+            </p>
+        </div>
     </div>
 </div>
 
