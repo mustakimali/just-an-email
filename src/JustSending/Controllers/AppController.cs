@@ -44,10 +44,7 @@ namespace JustSending.Controllers
         [ResponseCache(Duration = 3600 * 24, Location = ResponseCacheLocation.Any)]
         public IActionResult NewSession()
         {
-            var id = _db.NewGuid();
-            var id2 = _db.NewGuid();
-
-            return Session(id, id2, verifySessionExistance: false);
+            return Session("", "", verifySessionExistance: false);
         }
 
         private IActionResult Session(string id, string id2, bool verifySessionExistance = true)

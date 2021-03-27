@@ -175,8 +175,10 @@
                 }
                 JustSendingApp.init();
             } catch (ex) {
-                var id = get("SessionId").value;
-                var id2 = get("SessionVerification").value;
+                console.log(ex);
+
+                var id = JustSendingApp.getOrGenId();
+                var id2 = JustSendingApp.getOrGenId2();
 
                 var data = new FormData();
                 

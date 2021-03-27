@@ -41,13 +41,35 @@
         });
         qrEl.addClass("done");
     },
+    
+    getOrGenId: function() {
+        var $id = $("#SessionId");
+        if ($id.val() === "") 
+            return this.generateGuid();
+        else
+            return $id.val(); 
+    },
+
+    getOrGenId2: function() {
+        var $id = $("#SessionVerification");
+        if ($id.val() === "")
+            return this.generateGuid();
+        else
+            return $id.val();
+    },
+    
+    generateGuid: function () {
+        function S4() { return Math.floor((1+Math.random())*0x10000).toString(16).substring(1); }
+        var guid = S4() + S4() + S4() + S4() + S4() + S4() + S4() + S4();
+        return guid.toLowerCase();
+    },
 
     initPermalink: function (then) {
         var $id = $("#SessionId");
         var $id2 = $("#SessionVerification");
 
-        var id = $id.val();
-        var id2 = $id2.val();
+        var id = this.getOrGenId();
+        var id2 = this.getOrGenId2();
 
         if (window.location.hash && window.location.hash.length === 65) {
             var hash = window.location.hash.substr(1);
