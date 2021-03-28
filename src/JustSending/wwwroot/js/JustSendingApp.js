@@ -1,5 +1,6 @@
 ﻿var JustSendingApp = {
     hub: null,
+    initialSecretToSend: "",
 
     init: function () {
         app_busy(true);
@@ -71,11 +72,17 @@
         var id = this.getOrGenId();
         var id2 = this.getOrGenId2();
 
-        if (window.location.hash && window.location.hash.length === 65) {
+        if (window.location.hash && window.location.hash.length >= 65) {
             var hash = window.location.hash.substr(1);
 
             id = hash.substr(0, 32);
-            id2 = hash.substr(32);
+            id2 = hash.substr(32, 32);
+            
+            if (hash.substr(64, 1) === "/") {
+                this.initialSecretToSend = atob(hash.substr(65));
+                history.replaceState(null, '', '/app#' + id + id2);
+                window.location.hash = id + id2;
+            }
         } else {
             history.replaceState(null, '', '/app');
             window.location.hash = id + id2;
@@ -551,6 +558,18 @@
                     $(".FilePostUrl").text(JustSendingApp.getPostFromCliPath());
 
                     app_busy(false);
+                    
+                    if (JustSendingApp.initialSecretToSend !== "") {
+                        $("#ComposerText").val(JustSendingApp.initialSecretToSend);
+                        $("#form").submit();
+                        JustSendingApp.initialSecretToSend = "";
+
+                        swal({
+                            title: "Password sent! now connect another device...",
+                            text: "To retrieve this from another device, use the QR code or the code displayed below to securely connect to this session.",
+                            type: "success"
+                        });
+                    }
                 });
         };
 
@@ -572,7 +591,11 @@
     },
 
     goHome: function() {
-        window.location.replace("/?ref=app");
+        var dest = "/?ref=app";
+        try {
+            history.replaceState({}, "", dest);
+        } catch (e) { }
+        window.location.replace(dest);
     },
     
     // 
