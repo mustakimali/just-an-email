@@ -48,17 +48,24 @@ namespace JustSending
             services.AddMemoryCache();
 
             var redisCache = Configuration["RedisCache"];
-            if (redisCache is {Length: >0})
+            var hasRedisCache = redisCache is {Length: >0}; 
+            if (hasRedisCache)
             {
                 // use redis for storage
                 services
                     .AddStackExchangeRedisCache(o => o.Configuration = Configuration["RedisCache"])
                     .AddTransient<IDataStore, DataStoreRedis>();
+                
+                // redis for hangfire jobs
+                services.AddHangfire(x => x.UseRedisStorage(redisCache));
             }
             else
             {
-                // use in memory
+                // use in memory storage
                 services.AddTransient<IDataStore, DataStoreInMemory>();
+                
+                // sqlite for hangfire jobs
+                services.AddHangfire(x => x.UseSQLiteStorage(Helper.BuildDbConnectionString("BackgroundJobs.sqlite", _hostingEnvironment, true)));
             }
 
             services.AddHttpContextAccessor();
@@ -68,7 +75,6 @@ namespace JustSending
             services.AddSingleton<SecureLineHub>();
             services.AddTransient<BackgroundJobScheduler>();
 
-            services.AddHangfire(x => x.UseSQLiteStorage(Helper.BuildDbConnectionString("BackgroundJobs.sqlite", _hostingEnvironment, true)));
             services.AddHealthChecks();
             services.AddDataProtection()
                 .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(Directory.GetCurrentDirectory(), "App_Data")));

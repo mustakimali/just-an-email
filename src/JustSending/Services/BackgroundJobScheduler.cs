@@ -23,7 +23,7 @@ namespace JustSending.Services
             _logger = logger;
         }
 
-        public Task Erase(string sessionId) => EraseSessionReturnConnectionIds(sessionId);
+        public async Task Erase(string sessionId) => await EraseSessionReturnConnectionIds(sessionId);
 
         public async Task<string[]> EraseSessionReturnConnectionIds(string sessionId)
         {
