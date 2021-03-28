@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 namespace JustSending.Data
 {
@@ -8,9 +9,10 @@ namespace JustSending.Data
     {
         private readonly IMemoryCache _memoryCache;
 
-        public DataStoreInMemory(IMemoryCache memoryCache)
+        public DataStoreInMemory(IMemoryCache memoryCache, ILogger logger)
         {
             _memoryCache = memoryCache;
+            logger.LogWarning("In Memory data store in use, in production server configure `RedisCache` to use redis");
         }
 
         Task<byte[]?> IDataStore.GetAsync(string id) => Task.FromResult(_memoryCache.Get<byte[]?>(id));
