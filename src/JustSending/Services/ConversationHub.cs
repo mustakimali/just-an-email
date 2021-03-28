@@ -270,10 +270,10 @@ namespace JustSending.Services
             //
 
             // Get session from connection
-            var sessionId = await _db.Get<string?>(Context.ConnectionId);
-            if (sessionId != null)
+            var sessionMeta = await _db.Get<SessionMetaByConnectionId>(Context.ConnectionId);
+            if (sessionMeta != null)
             {
-                var devices = await _db.FindClient(sessionId);
+                var devices = await _db.FindClient(sessionMeta.SessionId);
                 if (devices.Contains(peerId))
                 {
                     // OK
@@ -313,7 +313,7 @@ namespace JustSending.Services
 
         private async Task<string?> GetSessionIdFromConnection()
         {
-            return await _db.Get<string?>(Context.ConnectionId);
+            return (await _db.Get<SessionMetaByConnectionId>(Context.ConnectionId))?.SessionId;
         }
 
         public async Task CancelShare()

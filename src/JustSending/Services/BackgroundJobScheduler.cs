@@ -53,7 +53,7 @@ namespace JustSending.Services
 
             // remove all connections
             foreach (var connectionId in session.ConnectionIds)
-                await _db.Remove<string>(connectionId);
+                await _db.Remove<SessionMetaByConnectionId>(connectionId);
 
             // remove share token
             var sessionShareToken = await _db.Get<SessionShareToken>(sessionId);

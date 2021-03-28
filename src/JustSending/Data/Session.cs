@@ -12,8 +12,8 @@ namespace JustSending.Data
         public bool IsLiteSession { get; set; }
         public string CleanupJobId { get; set; }
 
-        public int NumberOfMessages { get; set; }
-
         public HashSet<string> ConnectionIds { get; set; } = new();
     }
+
+    public record SessionMetaByConnectionId(string SessionId);
 }

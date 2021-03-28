@@ -139,21 +139,21 @@ namespace JustSending.Data
 
             session.ConnectionIds.Add(connectionId);
             await Set(sessionId, session);
-            await Set(connectionId, sessionId);
+            await Set(connectionId, new SessionMetaByConnectionId(sessionId));
         }
 
         public async Task<string?> UntrackClientReturnSessionId(string connectionId)
         {
-            var sessionId = await Get<string>(connectionId);
-            if (sessionId == null) return null;
-            var session = await Get<Session>(sessionId);
+            var connectionIdSession = await Get<SessionMetaByConnectionId>(connectionId);
+            if (connectionIdSession == null) return null;
+            var session = await Get<Session>(connectionIdSession.SessionId);
             if (session == null) return null;
             
             session.ConnectionIds.Remove(connectionId);
-            await Set(sessionId, session);
-            await Remove<string>(connectionId);
+            await Set(session.Id, session);
+            await Remove<SessionMetaByConnectionId>(connectionId);
 
-            return sessionId;
+            return connectionIdSession.SessionId;
         }
 
         public async Task<IEnumerable<string>> FindClient(string sessionId)

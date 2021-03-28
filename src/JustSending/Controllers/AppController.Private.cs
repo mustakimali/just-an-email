@@ -48,7 +48,7 @@ namespace JustSending.Controllers
 
             var result = new List<Message>();
             var count = await _db.Count<Message>(id);
-            for (int i = from; i <= count; i++)
+            for (int i = from + 1; i <= count; i++)
             {
                 var messageId = await _db.Get<string>($"{id}-{i}");
                 if (messageId == null) continue;
