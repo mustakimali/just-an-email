@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using JustSending.Data;
+using JustSending.Data.Models;
 using JustSending.Models;
 using JustSending.Services;
 using JustSending.Services.Attributes;
@@ -134,7 +135,7 @@ namespace JustSending.Controllers
                 return StatusCode(400, new
                 {
                     error = "Invalid Session, follow this redirect_uri to start a session in the browser first.",
-                    redirect_uri = Url.Action("NewSession", "App", null, "https") + $"#{sessionId}{_db.NewGuid()}"
+                    redirect_uri = Url.Action("NewSession", "App", null, "https") + $"#{sessionId}{AppDbContext.NewGuid()}"
                 });
             }
 
@@ -280,6 +281,11 @@ namespace JustSending.Controllers
 
         private async Task<IActionResult> SaveMessageAndReturnResponse(Message message, bool lite = false)
         {
+            // validate
+            var session = await _db.GetSession(message.SessionId, message.SessionIdVerification);
+            if (session == null)
+                return BadRequest();
+
             await _db.MessagesInsert(message);
             _db.RecordMessageStats(message);
 
@@ -298,7 +304,7 @@ namespace JustSending.Controllers
             var utcNow = DateTime.UtcNow;
             return new Message
             {
-                Id = _db.NewGuid(),
+                Id = AppDbContext.NewGuid(),
                 SessionId = model.SessionId,
                 SessionIdVerification = model.SessionVerification,
                 SocketConnectionId = model.SocketConnectionId,

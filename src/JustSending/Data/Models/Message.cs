@@ -1,6 +1,6 @@
 using System;
 
-namespace JustSending.Data
+namespace JustSending.Data.Models
 {
     public class Message
     {

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using JustSending.Data;
+using JustSending.Data.Models;
 using JustSending.Models;
 using Microsoft.AspNetCore.Mvc;
 

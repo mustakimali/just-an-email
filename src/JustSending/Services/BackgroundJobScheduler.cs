@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Hangfire;
 using JustSending.Data;
+using JustSending.Data.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 

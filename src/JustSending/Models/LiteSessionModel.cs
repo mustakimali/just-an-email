@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using JustSending.Data;
+using JustSending.Data.Models;
 
 namespace JustSending.Models
 {

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace JustSending.Data
+namespace JustSending.Data.Models
 {
     public class Session
     {

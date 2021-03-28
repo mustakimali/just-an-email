@@ -2,38 +2,50 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using JustSending.Data.Models;
+using JustSending.Data.Models.Bson;
 using JustSending.Services;
 using LiteDB;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Caching.Distributed;
-using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace JustSending.Data
 {
     public class AppDbContext
     {
         private readonly IWebHostEnvironment _env;
-        private readonly IDistributedCache _cache;
+        private readonly IDataStore _dataStore;
         private LiteDatabase? _db;
         private readonly Random _random;
 
-        public AppDbContext(IWebHostEnvironment env, IDistributedCache cache)
+        public AppDbContext(IWebHostEnvironment env, IDataStore dataStore)
         {
             _env = env;
-            _cache = cache;
-            _random = new Random();
+            _dataStore = dataStore;
+            _random = new Random(DateTime.UtcNow.Millisecond);
         }
 
-        public LiteDatabase Database
+        private LiteDatabase Database
             => _db ??= new LiteDatabase(Helper.BuildDbConnectionString("AppDb", _env));
 
         public ILiteCollection<Stats> Statistics => Database.GetCollection<Stats>();
         
-        public string NewGuid() => Guid.NewGuid().ToString("N");
+        #region Core Methods
+
+        public Task<T?> Get<T>(string id) => _dataStore.Get<T>(id);
+
+        public Task Set<T>(string id, T model) => _dataStore.Set(id, model);
+
+        public Task Remove<T>(string id) => _dataStore.Remove<T>(id);
+
+        private static string GetKey<T>(string id) => $"{typeof(T).Name.ToLower()}-{id}";
+
+        #endregion
+        
+        public static string NewGuid() => Guid.NewGuid().ToString("N");
 
         public async Task<bool> Exist<TModel>(string id)
         {
-            var data = await _cache.GetAsync(GetKey<TModel>(id));
+            var data = await _dataStore.Get<TModel>(id);
             return data != null;
         }
         
@@ -52,43 +64,16 @@ namespace JustSending.Data
                 await Set(key, count.Value);
         }
 
-        public async Task Insert<T>(string id, T model)
-        {
-            await Set(id, model);
-        }
-
-        public Task<Session?> GetSession(string id, string id2)
+        public async Task<Session?> GetSession(string id, string id2)
         {
             // ToDo: lock
-            return Get<Session>(GetKey<Session>(id + id2));
+            var session = await Get<Session>(id);
+            return session?.IdVerification == id2
+                ? session
+                : null;
         }
 
-        public async Task<T?> Get<T>(string id)
-        {
-            var key = GetKey<T>(id);
-            var data = await _cache.GetAsync(key);
-            if (data == null) return default;
-            return JsonSerializer.Deserialize<T>(data);
-        }
-
-        public async Task Set<T>(string id, T model)
-        {
-            var key = GetKey<T>(id);
-            await _cache.SetAsync(key, JsonSerializer.SerializeToUtf8Bytes(model),
-                new DistributedCacheEntryOptions()
-                    .SetSlidingExpiration(TimeSpan.FromHours(6)));
-        }
-        
-        public async Task Remove<T>(string id)
-        {
-            var key = GetKey<T>(id);
-            await _cache.RemoveAsync(key);
-        }
-
-        private static string GetKey<T>(string id) => $"{typeof(T).Name.ToLower()}-{id}";
-
-
-        public async Task<int> NewConnectionId()
+        private async Task<int> NewConnectionId()
         {
             //ToDo: Lock
             //lock (this)
@@ -122,9 +107,9 @@ namespace JustSending.Data
             var count = await Count<Message>(msg.SessionId);
             msg.SessionMessageSequence = ++count;
 
-            await Insert(msg.Id, msg);
+            await Set(msg.Id, msg);
             // messageId by sequence number
-            await Insert($"{msg.SessionId}-{count}", msg.Id);
+            await Set($"{msg.SessionId}-{count}", msg.Id);
             await SetCount<Message>(msg.SessionId, msg.SessionMessageSequence);
         }
 
@@ -229,7 +214,7 @@ namespace JustSending.Data
             return items ?? new Stats { Id = id, DateCreatedUtc = DateTime.UtcNow };
         }
 
-        private int StatsGetIdFor(int? year, int? month = null, int? day = null)
+        private static int StatsGetIdFor(int? year, int? month = null, int? day = null)
         {
             if (!year.HasValue)
                 return -1;

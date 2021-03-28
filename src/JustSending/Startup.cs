@@ -45,10 +45,22 @@ namespace JustSending
             services.AddMvc();
             services.AddHealthChecks().AddCheck<DefaultHealthCheck>("database");
             services.AddSignalR();
-            services
-                .AddMemoryCache()
-                .AddMemoryCache()
-                .AddStackExchangeRedisCache(o => o.Configuration = Configuration["RedisCache"]);
+            services.AddMemoryCache();
+
+            var redisCache = Configuration["RedisCache"];
+            if (redisCache is {Length: >0})
+            {
+                // use redis for storage
+                services
+                    .AddStackExchangeRedisCache(o => o.Configuration = Configuration["RedisCache"])
+                    .AddTransient<IDataStore, DataStoreRedis>();
+            }
+            else
+            {
+                // use in memory
+                services.AddTransient<IDataStore, DataStoreInMemory>();
+            }
+
             services.AddHttpContextAccessor();
 
             services.AddSingleton<AppDbContext>();

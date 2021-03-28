@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Hangfire;
 using JustSending.Data;
+using JustSending.Data.Models;
 using JustSending.Models;
 using JustSending.Services;
 using Microsoft.AspNetCore.Http;

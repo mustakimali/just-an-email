@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using JustSending.Data;
+using JustSending.Data.Models;
 using JustSending.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
@@ -157,7 +158,7 @@ namespace JustSending.Services
         {
             var msg = new Message
             {
-                Id = _db.NewGuid(),
+                Id = AppDbContext.NewGuid(),
                 SessionId = sessionId,
                 DateSent = DateTime.UtcNow,
                 Text = message,
