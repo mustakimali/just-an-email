@@ -1,62 +1,97 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using JustSending.Services;
 using LiteDB;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Caching.Distributed;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace JustSending.Data
 {
     public class AppDbContext
     {
         private readonly IWebHostEnvironment _env;
-        private LiteDatabase _db;
+        private readonly IDistributedCache _cache;
+        private LiteDatabase? _db;
         private readonly Random _random;
 
-        public AppDbContext(IWebHostEnvironment env)
+        public AppDbContext(IWebHostEnvironment env, IDistributedCache cache)
         {
             _env = env;
+            _cache = cache;
             _random = new Random();
         }
 
         public LiteDatabase Database
-        {
-            get
-            {
-                if (_db == null)
-                {
-                    _db = new LiteDatabase(Helper.BuildDbConnectionString("AppDb", _env));
+            => _db ??= new LiteDatabase(Helper.BuildDbConnectionString("AppDb", _env));
 
-                    EnsureIndex();
-                }
-
-                return _db;
-            }
-        }
-
-        private void EnsureIndex()
-        {
-            Connections.EnsureIndex(x => x.SessionId);
-
-            Messages.EnsureIndex(x => x.SessionMessageSequence);
-            Messages.EnsureIndex(x => x.SessionId);
-
-            Sessions.EnsureIndex(x => x.IdVerification);
-
-            ShareTokens.EnsureIndex(x => x.SessionId);
-        }
-
-        public ILiteCollection<Session> Sessions => Database.GetCollection<Session>();
-        public ILiteCollection<ShareToken> ShareTokens => Database.GetCollection<ShareToken>();
-        public ILiteCollection<Message> Messages => Database.GetCollection<Message>();
-        public ILiteCollection<ConnectionSession> Connections => Database.GetCollection<ConnectionSession>();
         public ILiteCollection<Stats> Statistics => Database.GetCollection<Stats>();
-
+        
         public string NewGuid() => Guid.NewGuid().ToString("N");
 
-        public int NewConnectionId()
+        public async Task<bool> Exist<TModel>(string id)
         {
-            lock (this)
+            var data = await _cache.GetAsync(GetKey<TModel>(id));
+            return data != null;
+        }
+        
+        public async Task<int> Count<TModel>(string id)
+        {
+            var key = $"{typeof(TModel).Name.ToLower()}-count-{id}";
+            return await Get<int>(key);
+        }
+        
+        public async Task SetCount<TModel>(string id, int? count)
+        {
+            var key = $"{typeof(TModel).Name.ToLower()}-count-{id}";
+            if (count == null)
+                await Remove<int>(key);
+            else
+                await Set(key, count.Value);
+        }
+
+        public async Task Insert<T>(string id, T model)
+        {
+            await Set(id, model);
+        }
+
+        public Task<Session?> GetSession(string id, string id2)
+        {
+            // ToDo: lock
+            return Get<Session>(GetKey<Session>(id + id2));
+        }
+
+        public async Task<T?> Get<T>(string id)
+        {
+            var key = GetKey<T>(id);
+            var data = await _cache.GetAsync(key);
+            if (data == null) return default;
+            return JsonSerializer.Deserialize<T>(data);
+        }
+
+        public async Task Set<T>(string id, T model)
+        {
+            var key = GetKey<T>(id);
+            await _cache.SetAsync(key, JsonSerializer.SerializeToUtf8Bytes(model),
+                new DistributedCacheEntryOptions()
+                    .SetSlidingExpiration(TimeSpan.FromHours(6)));
+        }
+        
+        public async Task Remove<T>(string id)
+        {
+            var key = GetKey<T>(id);
+            await _cache.RemoveAsync(key);
+        }
+
+        private static string GetKey<T>(string id) => $"{typeof(T).Name.ToLower()}-{id}";
+
+
+        public async Task<int> NewConnectionId()
+        {
+            //ToDo: Lock
+            //lock (this)
             {
                 var min = 100000;
                 var max = 1000000;
@@ -64,7 +99,7 @@ namespace JustSending.Data
 
                 var number = _random.Next(min, max - 1);
 
-                while (ShareTokens.Exists(x => x.Id == number))
+                while (await Exist<ShareToken>(number.ToString()))
                 {
                     if (tries > (max - min) / 2)
                     {
@@ -82,53 +117,62 @@ namespace JustSending.Data
             }
         }
 
-        public void MessagesInsert(Message msg)
+        public async Task MessagesInsert(Message msg)
         {
-            var count = Messages.Count(x => x.SessionId == msg.SessionId);
+            var count = await Count<Message>(msg.SessionId);
             msg.SessionMessageSequence = ++count;
 
-            Messages.Insert(msg);
+            await Insert(msg.Id, msg);
+            // messageId by sequence number
+            await Insert($"{msg.SessionId}-{count}", msg.Id);
+            await SetCount<Message>(msg.SessionId, msg.SessionMessageSequence);
         }
 
-        public void TrackClient(string sessionId, string connectionId)
+        public async Task TrackClient(string sessionId, string connectionId)
         {
-            var session = Sessions.FindById(sessionId);
+            // ToDo: lock
+            var session = await Get<Session>(sessionId);
             if (session == null) return;
 
-            if (Connections.Exists(x => x.ConnectionId == connectionId))
+            if (session.ConnectionIds.Contains(connectionId))
                 return;
 
-            Connections.Insert(new ConnectionSession
-            {
-                ConnectionId = connectionId,
-                SessionId = sessionId
-            });
+            session.ConnectionIds.Add(connectionId);
+            await Set(sessionId, session);
+            await Set(connectionId, sessionId);
         }
 
-        public string UntrackClientReturnSessionId(string connectionId)
+        public async Task<string?> UntrackClientReturnSessionId(string connectionId)
         {
-            var item = Connections.FindById(connectionId);
-            if (item == null) return null;
+            var sessionId = await Get<string>(connectionId);
+            if (sessionId == null) return null;
+            var session = await Get<Session>(sessionId);
+            if (session == null) return null;
+            
+            session.ConnectionIds.Remove(connectionId);
+            await Set(sessionId, session);
+            await Remove<string>(connectionId);
 
-            Connections.Delete(connectionId);
-            return item.SessionId;
+            return sessionId;
         }
 
-        public IEnumerable<string> FindClient(string sessionId)
+        public async Task<IEnumerable<string>> FindClient(string sessionId)
         {
-            return Connections
-                .Find(x => x.SessionId == sessionId)
-                .Select(x => x.ConnectionId);
+            var session = await Get<Session>(sessionId);
+            if (session == null) return Enumerable.Empty<string>();
+
+            return session.ConnectionIds;
         }
 
-        public int CreateNewShareToken(string sessionId)
+        public async Task<int> CreateNewShareToken(string sessionId)
         {
             var shareToken = new ShareToken
             {
-                Id = NewConnectionId(),
+                Id = await NewConnectionId(),
                 SessionId = sessionId
             };
-            ShareTokens.Insert(shareToken);
+            await Set(shareToken.Id.ToString(), shareToken);
+            await Set(sessionId, new SessionShareToken(shareToken.Id));
             return shareToken.Id;
         }
 

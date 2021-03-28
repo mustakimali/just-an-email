@@ -13,7 +13,7 @@ namespace JustSending.Models
     {
         public string MessageHtml { get; set; }
         public bool HasToken { get; set; }
-        public string Token { get; set; }
+        public string? Token { get; set; }
         public bool HasSession { get; set; }
     }
 

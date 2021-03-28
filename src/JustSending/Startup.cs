@@ -45,7 +45,10 @@ namespace JustSending
             services.AddMvc();
             services.AddHealthChecks().AddCheck<DefaultHealthCheck>("database");
             services.AddSignalR();
-            services.AddMemoryCache();
+            services
+                .AddMemoryCache()
+                .AddMemoryCache()
+                .AddStackExchangeRedisCache(o => o.Configuration = Configuration["RedisCache"]);
             services.AddHttpContextAccessor();
 
             services.AddSingleton<AppDbContext>();

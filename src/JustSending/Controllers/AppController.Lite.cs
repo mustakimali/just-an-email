@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Hangfire;
+using JustSending.Data;
 using JustSending.Models;
 using JustSending.Services;
 using Microsoft.AspNetCore.Http;
@@ -19,16 +20,16 @@ namespace JustSending.Controllers
         public async Task<IActionResult> LiteSession(string id1, string id2)
         {
             int? token = null;
-            var session = _db.Sessions.FindById(id1);
+            var session = await _db.Get<Session>(id1);
             if (session != null && session.IdVerification == id2)
             {
                 // Connected
                 _db.RecordStats(s => s.Devices++);
-                token = _db.ShareTokens.FindOne(x => x.SessionId == id1)?.Id;
+                token = (await _db.Get<SessionShareToken>(id1))?.Token;
             }
             else
             {
-                token = CreateSession(id1, id2, liteSession: true);
+                token = await CreateSession(id1, id2, liteSession: true);
 
                 await _hub.AddSessionNotification(id1, "Session Created", true);
             }
@@ -39,16 +40,16 @@ namespace JustSending.Controllers
                 SessionVerification = id2,
 
                 Token = token,
-                Messages = GetMessagesInternal(id1, id2, -1).ToArray()
+                Messages = await GetMessagesInternal(id1, id2, -1)
             };
             ViewData["LiteMode"] = true;
             return View(vm);
         }
 
         [Route("lite/{id1}/{id2}/delete")]
-        public IActionResult LiteSessionDeletePrompt(string id1, string id2)
+        public async Task<IActionResult> LiteSessionDeletePrompt(string id1, string id2)
         {
-            if (!IsValidSession(id1, id2))
+            if (!await IsValidSession(id1, id2))
                 return RedirectToAction(nameof(HomeController.Index), "Home");
 
             var vm = new LiteSessionModel
@@ -62,7 +63,7 @@ namespace JustSending.Controllers
         [HttpPost]
         [Route("lite/post/files")]
         //[RequestSizeLimit(2_147_483_648)]
-        public async Task<IActionResult> PostLite(SessionModel model, IFormFile file)
+        public async Task<IActionResult> PostLite(SessionModel model, IFormFile? file)
         {
             if (file == null)
             {
@@ -98,11 +99,11 @@ namespace JustSending.Controllers
 
         [HttpPost]
         [Route("lite/share-token/cancel")]
-        public IActionResult CancelShareToken(SessionModel model)
+        public async Task<IActionResult> CancelShareToken(SessionModel model)
         {
-            if (IsValidRequest(model))
+            if (await IsValidRequest(model))
             {
-                _hub.CancelShareSessionBySessionId(model.SessionId);
+                await _hub.CancelShareSessionBySessionId(model.SessionId);
             }
 
             return RedirectToLiteSession(model);
@@ -110,11 +111,11 @@ namespace JustSending.Controllers
 
         [HttpPost]
         [Route("lite/share-token/new")]
-        public IActionResult CreateShareToken(SessionModel model)
+        public async Task<IActionResult> CreateShareToken(SessionModel model)
         {
-            if (IsValidRequest(model))
+            if (await IsValidRequest(model))
             {
-                CreateShareToken(model.SessionId);
+                await CreateShareToken(model.SessionId);
             }
 
             return RedirectToLiteSession(model);
@@ -124,9 +125,9 @@ namespace JustSending.Controllers
         [Route("lite/erase-session")]
         public async Task<IActionResult> EraseSession(SessionModel model, [FromServices] BackgroundJobScheduler jobScheduler)
         {
-            if (IsValidRequest(model))
+            if (await IsValidRequest(model))
             {
-                var cIds = jobScheduler.EraseSessionReturnConnectionIds(model.SessionId);
+                var cIds = await jobScheduler.EraseSessionReturnConnectionIds(model.SessionId);
                 await _hub.NotifySessionDeleted(cIds);
             }
             return RedirectToAction(nameof(HomeController.Index), "Home");
@@ -138,12 +139,12 @@ namespace JustSending.Controllers
         {
             var data = new LiteSessionStatus();
 
-            var token = _db.ShareTokens.FindOne(s => s.SessionId == id);
-            var messages = GetMessagesInternal(id, id2, from).ToArray();
+            var token = (await _db.Get<SessionShareToken>(id))?.Token;
+            var messages = await GetMessagesInternal(id, id2, from);
 
             data.HasToken = token != null;
-            data.HasSession = IsValidSession(id, id2);
-            data.Token = token?.Id.ToString(Constants.TOKEN_FORMAT_STRING);
+            data.HasSession = await IsValidSession(id, id2);
+            data.Token = token?.ToString(Constants.TOKEN_FORMAT_STRING);
 
             ViewData["LiteMode"] = true;
 
@@ -155,9 +156,10 @@ namespace JustSending.Controllers
 
         private IActionResult RedirectToLiteSession(SessionModel model) => RedirectToAction(nameof(LiteSession), new { id1 = model.SessionId, id2 = model.SessionVerification });
 
-        private void ScheduleOrExtendSessionCleanup(string sessionId, bool isLiteSession)
+        private async Task ScheduleOrExtendSessionCleanup(string sessionId, bool isLiteSession)
         {
-            var session = _db.Sessions.FindById(sessionId);
+            // ToDo: lock
+            var session = await _db.Get<Session>(sessionId);
             if (session == null) return;
 
             // cleanup after 1 hour
@@ -167,7 +169,7 @@ namespace JustSending.Controllers
                 BackgroundJob.Delete(session.CleanupJobId);
             var id = BackgroundJob.Schedule<BackgroundJobScheduler>(b => b.Erase(sessionId), triggerAfter);
             session.CleanupJobId = id;
-            _db.Sessions.Upsert(session);
+            await _db.Set(sessionId, session);
         }
     }
 }
