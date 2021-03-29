@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Azure.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -24,6 +25,8 @@ namespace JustSending
 {
     public class Startup
     {
+        private static bool _usingAzureSignalR;
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -44,8 +47,17 @@ namespace JustSending
 
             services.AddMvc();
             services.AddHealthChecks().AddCheck<DefaultHealthCheck>("database");
-            services.AddSignalR();
             services.AddMemoryCache();
+
+            var signalrBuilder = services
+                .AddSignalR()
+                .AddJsonProtocol(); 
+            var signalrConfig = Configuration["SignalrConfig"];
+            _usingAzureSignalR = signalrConfig is {Length: >0};
+            if (_usingAzureSignalR)
+            {
+                signalrBuilder.AddAzureSignalR(signalrConfig);
+            }
 
             var redisCache = Configuration["RedisCache"];
             var hasRedisCache = redisCache is {Length: >0}; 
@@ -127,14 +139,32 @@ namespace JustSending
             });
 
             app.UseRouting();
+            
+            if (_usingAzureSignalR)
+            {
+                app.UseAzureSignalR(endpoints =>
+                {
+                    endpoints.MapHub<ConversationHub>("/signalr/hubs");
+                    endpoints.MapHub<SecureLineHub>("/signalr/secure-line");
+                });
+            }
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapHub<ConversationHub>("/signalr/hubs");
-                endpoints.MapHub<SecureLineHub>("/signalr/secure-line");
+                if (!_usingAzureSignalR)
+                {
+                    endpoints.MapHub<ConversationHub>("/signalr/hubs");
+                    endpoints.MapHub<SecureLineHub>("/signalr/secure-line");
+                }
 
                 endpoints.MapControllers();
             });
+        }
+
+        private static void MapHubs(ServiceRouteBuilder endpoints)
+        {
+            endpoints.MapHub<ConversationHub>("/signalr/hubs");
+            endpoints.MapHub<SecureLineHub>("/signalr/secure-line");
         }
     }
 
