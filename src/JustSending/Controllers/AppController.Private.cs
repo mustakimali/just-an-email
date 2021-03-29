@@ -36,7 +36,7 @@ namespace JustSending.Controllers
         private async Task<int> CreateShareToken(string sessionId)
         {
             var token = await _db.CreateNewShareToken(sessionId);
-            _db.RecordStats(s => s.Sessions++);
+            _statDb.RecordStats(s => s.Sessions++);
             return token;
         }
 

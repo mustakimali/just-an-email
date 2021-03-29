@@ -9,6 +9,7 @@ using JustSending.Data.Models;
 using JustSending.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace JustSending.Services
 {
@@ -17,14 +18,20 @@ namespace JustSending.Services
         public const string FILE_EXT = ".file";
 
         private readonly AppDbContext _db;
+        private readonly IServiceProvider _serviceProvider;
         private readonly IWebHostEnvironment _env;
         private readonly BackgroundJobScheduler _jobScheduler;
 
         private readonly string _uploadFolder;
 
-        public ConversationHub(AppDbContext db, IWebHostEnvironment env, BackgroundJobScheduler jobScheduler)
+        public ConversationHub(
+            AppDbContext db, 
+            IServiceProvider serviceProvider, 
+            IWebHostEnvironment env, 
+            BackgroundJobScheduler jobScheduler)
         {
             _db = db;
+            _serviceProvider = serviceProvider;
             _env = env;
             _jobScheduler = jobScheduler;
 
@@ -123,7 +130,8 @@ namespace JustSending.Services
 
         public override Task OnConnectedAsync()
         {
-            _db.RecordStats(s => s.Devices++);
+            using var statsDb = _serviceProvider.GetRequiredService<StatsDbContext>();
+            statsDb.RecordStats(s => s.Devices++);
             return Task.CompletedTask;
         }
 

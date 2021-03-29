@@ -25,7 +25,7 @@ namespace JustSending.Controllers
             if (session != null && session.IdVerification == id2)
             {
                 // Connected
-                _db.RecordStats(s => s.Devices++);
+                _statDb.RecordStats(s => s.Devices++);
                 token = (await _db.Get<SessionShareToken>(id1))?.Token;
             }
             else

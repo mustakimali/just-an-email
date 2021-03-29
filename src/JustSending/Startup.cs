@@ -70,9 +70,14 @@ namespace JustSending
 
             services.AddHttpContextAccessor();
 
-            services.AddSingleton<AppDbContext>();
-            services.AddSingleton<ConversationHub>();
-            services.AddSingleton<SecureLineHub>();
+            services
+                .AddTransient<AppDbContext>()
+                .AddTransient<StatsDbContext>();
+
+            services
+                .AddSingleton<ConversationHub>()
+                .AddSingleton<SecureLineHub>();
+
             services.AddTransient<BackgroundJobScheduler>();
 
             services.AddHealthChecks();
@@ -124,10 +129,10 @@ namespace JustSending
 
     public class DefaultHealthCheck : IHealthCheck
     {
-        private readonly AppDbContext _dbContext;
+        private readonly StatsDbContext _dbContext;
         private readonly ILogger<DefaultHealthCheck> _logger;
 
-        public DefaultHealthCheck(AppDbContext dbContext, ILogger<DefaultHealthCheck> logger)
+        public DefaultHealthCheck(StatsDbContext dbContext, ILogger<DefaultHealthCheck> logger)
         {
             _dbContext = dbContext;
             _logger = logger;

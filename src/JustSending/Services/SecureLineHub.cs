@@ -6,6 +6,7 @@ using System;
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Hosting;
 using JustSending.Data;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace JustSending.Services
 {
@@ -14,13 +15,13 @@ namespace JustSending.Services
         private readonly ConcurrentDictionary<string, string> _connectionIdSessionMap = new();
         private readonly ConcurrentDictionary<string, HashSet<string>> _sessionIdConnectionIds = new();
         private readonly IWebHostEnvironment _env;
-        private readonly AppDbContext _db;
+        private readonly IServiceProvider _serviceProvider;
         private readonly object _lock = new();
 
-        public SecureLineHub(IWebHostEnvironment env, AppDbContext db)
+        public SecureLineHub(IWebHostEnvironment env, IServiceProvider serviceProvider)
         {
             _env = env;
-            _db = db;
+            _serviceProvider = serviceProvider;
         }
 
         public async Task Init(string id)
@@ -45,7 +46,8 @@ namespace JustSending.Services
 
                 if (entry.Count > 1)
                 {
-                    _db.RecordStats(s =>
+                    using var db = _serviceProvider.GetRequiredService<StatsDbContext>();
+                    db.RecordStats(s =>
                     {
                         s.Messages++;
                         s.Sessions++;
@@ -78,7 +80,8 @@ namespace JustSending.Services
 
         public async Task Broadcast(string @event, string data, bool all = false)
         {
-            _db.RecordStats(s =>
+            using var db = _serviceProvider.GetRequiredService<StatsDbContext>();
+            db.RecordStats(s =>
             {
                 s.Messages++;
                 s.MessagesSizeBytes += @event.Length + (data ?? "").Length;
@@ -106,12 +109,14 @@ namespace JustSending.Services
                     .SendAsync("startKeyExchange", firstDeviceId, p, g, pka, true);
             });
 
-            _db.RecordStats(s => s.Messages += 2);
+            using var db = _serviceProvider.GetRequiredService<StatsDbContext>();
+            db.RecordStats(s => s.Messages += 2);
         }
 
         public async Task CallPeer(string peerId, string method, string param)
         {
-            _db.RecordStats(s => s.Messages++);
+            using var db = _serviceProvider.GetRequiredService<StatsDbContext>();
+            db.RecordStats(s => s.Messages++);
             await Clients
                 .Clients(GetClients(false).ToArray())
                 .SendAsync("callback", method, param);
@@ -137,7 +142,8 @@ namespace JustSending.Services
 
         public override Task OnConnectedAsync()
         {
-            _db.RecordStats(s => s.Devices++);
+            using var db = _serviceProvider.GetRequiredService<StatsDbContext>();
+            db.RecordStats(s => s.Devices++);
             return base.OnConnectedAsync();
         }
     }

@@ -12,13 +12,13 @@ namespace JustSending.Controllers
                                         .WithoutRequest
                                         .WithResponse<IEnumerable<StatsRawHandler.StatYear>>
     {
-        private readonly AppDbContext _dbContext;
+        private readonly StatsDbContext _dbContext;
 
         public record StatMonth(string Month, IGrouping<string, Stats> Days);
         public record StatYear(string Year, IEnumerable<StatMonth> Months);
 
 
-        public StatsRawHandler(AppDbContext dbContext)
+        public StatsRawHandler(StatsDbContext dbContext)
         {
             _dbContext = dbContext;
         }

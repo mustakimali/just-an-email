@@ -22,6 +22,7 @@ namespace JustSending.Controllers
     public partial class AppController : Controller
     {
         private readonly AppDbContext _db;
+        private readonly StatsDbContext _statDb;
         private readonly ConversationHub _hub;
         private readonly IWebHostEnvironment _env;
         private readonly IConfiguration _config;
@@ -29,12 +30,14 @@ namespace JustSending.Controllers
 
         public AppController(
                 AppDbContext db,
+                StatsDbContext statDb,
                 ConversationHub hub,
                 IWebHostEnvironment env,
                 IConfiguration config,
                 ILogger<AppController> logger)
         {
             _db = db;
+            _statDb = statDb;
             _hub = hub;
             _env = env;
             _config = config;
@@ -287,7 +290,7 @@ namespace JustSending.Controllers
                 return BadRequest();
 
             await _db.MessagesInsert(message);
-            _db.RecordMessageStats(message);
+            _statDb.RecordMessageStats(message);
 
             await ScheduleOrExtendSessionCleanup(message.SessionId, lite);
 
@@ -332,7 +335,7 @@ namespace JustSending.Controllers
             if (!IOFile.Exists(path))
                 return NotFound();
 
-            _db.RecordStats(s => s.FilesSizeBytes += msg.FileSizeBytes);
+            _statDb.RecordStats(s => s.FilesSizeBytes += msg.FileSizeBytes);
             return PhysicalFile(path, "application/" + Path.GetExtension(path).Trim('.'), msg.Text);
         }
 
