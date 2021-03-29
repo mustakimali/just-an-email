@@ -131,7 +131,7 @@ namespace JustSending.Services
         public override Task OnConnectedAsync()
         {
             using var statsDb = _serviceProvider.GetRequiredService<StatsDbContext>();
-            statsDb.RecordStats(s => s.Devices++);
+            statsDb.RecordStats(StatsDbContext.RecordType.Device);
             return Task.CompletedTask;
         }
 

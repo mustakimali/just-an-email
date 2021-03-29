@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
 using JustSending.Data;
 using JustSending.Data.Models;
@@ -36,7 +34,7 @@ namespace JustSending.Controllers
         private async Task<int> CreateShareToken(string sessionId)
         {
             var token = await _db.CreateNewShareToken(sessionId);
-            _statDb.RecordStats(s => s.Sessions++);
+            _statDb.RecordStats(StatsDbContext.RecordType.Session);
             return token;
         }
 

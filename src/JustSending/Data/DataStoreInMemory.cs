@@ -9,7 +9,8 @@ namespace JustSending.Data
     {
         private readonly IMemoryCache _memoryCache;
 
-        public DataStoreInMemory(IMemoryCache memoryCache, ILogger logger)
+        // ReSharper disable once SuggestBaseTypeForParameter
+        public DataStoreInMemory(IMemoryCache memoryCache, ILogger<DataStoreInMemory> logger)
         {
             _memoryCache = memoryCache;
             logger.LogWarning("In Memory data store in use, in production server configure `RedisCache` to use redis");

@@ -1,4 +1,6 @@
 using System;
+using System.Threading.Tasks;
+using Hangfire;
 using JustSending.Data.Models;
 using JustSending.Data.Models.Bson;
 using JustSending.Services;
@@ -10,11 +12,13 @@ namespace JustSending.Data
     public class StatsDbContext : IDisposable
     {
         private readonly IWebHostEnvironment _env;
+        private readonly ILock _lock;
         private LiteDatabase? _db;
 
-        public StatsDbContext(IWebHostEnvironment env)
+        public StatsDbContext(IWebHostEnvironment env, ILock @lock)
         {
             _env = env;
+            _lock = @lock;
         }
         
         private LiteDatabase Database
@@ -22,50 +26,89 @@ namespace JustSending.Data
 
         public ILiteCollection<Stats> Statistics => Database.GetCollection<Stats>();
         
+        public void RecordStats(RecordType type, int inc = 1)
+        {
+            BackgroundJob.Enqueue(() => RecordBg(DateTime.UtcNow, type, inc));
+        }
+        
         public void RecordMessageStats(Message msg)
         {
-            RecordStats(s =>
+            long? fileSize = msg.HasFile
+                ? msg.FileSizeBytes
+                : null;
+
+            BackgroundJob.Enqueue(() => RecordMsgBg(DateTime.UtcNow, msg.Text.Length, fileSize));
+        }
+        
+        public void RecordMessageStats(int msgSize)
+        {
+            BackgroundJob.Enqueue(() => RecordMsgBg(DateTime.UtcNow, msgSize, null));
+        }
+        
+        
+        // Job
+        public Task RecordMsgBg(DateTime date, int msgSizeBytes, long? fileSizeBytes)
+        {
+            return RecordStats(s =>
             {
                 s.Messages++;
-                s.MessagesSizeBytes += msg.Text?.Length ?? 0;
+                s.MessagesSizeBytes += msgSizeBytes;
 
-                if (msg.HasFile)
+                if (fileSizeBytes.HasValue)
                 {
                     s.Files++;
-                    s.FilesSizeBytes += msg.FileSizeBytes;
+                    s.FilesSizeBytes += fileSizeBytes.Value;
                 }
-            });
+            }, date);
         }
-        public void RecordStats(Action<Stats> update)
+        
+        // job
+
+        public enum RecordType
         {
-            lock (this)
+            Session,
+            Device,
+            Message
+        }
+        public Task RecordBg(DateTime date, RecordType type, int inc)
+        {
+            return type switch
             {
-                var utcNow = DateTime.UtcNow;
+                RecordType.Session => RecordStats(s => s.Sessions += inc, date),
+                RecordType.Device => RecordStats(s => s.Devices += inc, date),
+                RecordType.Message => RecordStats(s => s.Messages += inc, date),
+                _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+            };
+        }
 
-                // All time stats
-                var allTime = StatsFindByIdOrNew(null);
-                update(allTime);
+        private async Task RecordStats(Action<Stats> update, DateTime? date = null)
+        {
+            var utcNow = date ?? DateTime.UtcNow;
+            using var _ = await _lock.AcquireLock($"stat-{utcNow:u)}");
 
-                // This year
-                var thisYear = StatsFindByIdOrNew(utcNow.Year);
-                update(thisYear);
+            // All time stats
+            var allTime = StatsFindByIdOrNew(null);
+            update(allTime);
 
-                // This month
-                var thisMonth = StatsFindByIdOrNew(utcNow.Year, utcNow.Month);
-                update(thisMonth);
+            // This year
+            var thisYear = StatsFindByIdOrNew(utcNow.Year);
+            update(thisYear);
 
-                // Today
-                var today = StatsFindByIdOrNew(utcNow.Year, utcNow.Month, utcNow.Day);
-                update(today);
+            // This month
+            var thisMonth = StatsFindByIdOrNew(utcNow.Year, utcNow.Month);
+            update(thisMonth);
 
-                Statistics.Upsert(new[]
-                {
-                    allTime,
-                    thisYear,
-                    thisMonth,
-                    today
-                });
-            }
+            // Today
+            var today = StatsFindByIdOrNew(utcNow.Year, utcNow.Month, utcNow.Day);
+            update(today);
+
+            Statistics.Upsert(new[]
+            {
+                allTime,
+                thisYear,
+                thisMonth,
+                today
+            });
         }
 
         private Stats StatsFindByIdOrNew(int? year, int? month = null, int? day = null)

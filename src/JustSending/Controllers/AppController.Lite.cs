@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Hangfire;
 using JustSending.Data;
@@ -25,7 +24,7 @@ namespace JustSending.Controllers
             if (session != null && session.IdVerification == id2)
             {
                 // Connected
-                _statDb.RecordStats(s => s.Devices++);
+                _statDb.RecordStats(StatsDbContext.RecordType.Device);
                 token = (await _db.Get<SessionShareToken>(id1))?.Token;
             }
             else

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using JustSending.Data;
 using JustSending.Data.Models;
@@ -335,7 +334,6 @@ namespace JustSending.Controllers
             if (!IOFile.Exists(path))
                 return NotFound();
 
-            _statDb.RecordStats(s => s.FilesSizeBytes += msg.FileSizeBytes);
             return PhysicalFile(path, "application/" + Path.GetExtension(path).Trim('.'), msg.Text);
         }
 

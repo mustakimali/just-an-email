@@ -47,11 +47,8 @@ namespace JustSending.Services
                 if (entry.Count > 1)
                 {
                     using var db = _serviceProvider.GetRequiredService<StatsDbContext>();
-                    db.RecordStats(s =>
-                    {
-                        s.Messages++;
-                        s.Sessions++;
-                    });
+                    db.RecordStats(StatsDbContext.RecordType.Message);
+                    db.RecordStats(StatsDbContext.RecordType.Device);
 
                     await Broadcast("Start", null, true)
                         .ContinueWith(_ => InitKeyExchange(entry.First(), entry.Last()));
@@ -78,14 +75,10 @@ namespace JustSending.Services
                 return clients.Where(c => c != Context.ConnectionId);
         }
 
-        public async Task Broadcast(string @event, string data, bool all = false)
+        public async Task Broadcast(string @event, string? data, bool all = false)
         {
             using var db = _serviceProvider.GetRequiredService<StatsDbContext>();
-            db.RecordStats(s =>
-            {
-                s.Messages++;
-                s.MessagesSizeBytes += @event.Length + (data ?? "").Length;
-            });
+            db.RecordMessageStats(@event.Length + (data ?? "").Length);
 
             await Clients
                 .Clients(GetClients(all).ToArray())
@@ -110,13 +103,13 @@ namespace JustSending.Services
             });
 
             using var db = _serviceProvider.GetRequiredService<StatsDbContext>();
-            db.RecordStats(s => s.Messages += 2);
+            db.RecordStats(StatsDbContext.RecordType.Message, 2);
         }
 
         public async Task CallPeer(string peerId, string method, string param)
         {
             using var db = _serviceProvider.GetRequiredService<StatsDbContext>();
-            db.RecordStats(s => s.Messages++);
+            db.RecordStats(StatsDbContext.RecordType.Message);
             await Clients
                 .Clients(GetClients(false).ToArray())
                 .SendAsync("callback", method, param);
@@ -143,7 +136,7 @@ namespace JustSending.Services
         public override Task OnConnectedAsync()
         {
             using var db = _serviceProvider.GetRequiredService<StatsDbContext>();
-            db.RecordStats(s => s.Devices++);
+            db.RecordStats(StatsDbContext.RecordType.Device);
             return base.OnConnectedAsync();
         }
     }

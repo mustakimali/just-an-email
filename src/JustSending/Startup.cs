@@ -1,10 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Hangfire;
 using Hangfire.Dashboard;
-using Hangfire.SQLite;
 using JustSending.Data;
 using JustSending.Services;
 using Microsoft.AspNetCore.Builder;
@@ -16,16 +16,16 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using RedLockNet.SERedis;
+using RedLockNet.SERedis.Configuration;
+using StackExchange.Redis;
 
 namespace JustSending
 {
     public class Startup
     {
-        private readonly IWebHostEnvironment _hostingEnvironment;
-
-        public Startup(IConfiguration configuration, IWebHostEnvironment hostingEnvironment)
+        public Startup(IConfiguration configuration)
         {
-            _hostingEnvironment = hostingEnvironment;
             Configuration = configuration;
         }
 
@@ -58,14 +58,25 @@ namespace JustSending
                 
                 // redis for hangfire jobs
                 services.AddHangfire(x => x.UseRedisStorage(redisCache));
+                
+                // redis lock
+                services
+                    .AddSingleton<RedLockFactory>(sp => RedLockFactory.Create(new List<RedLockMultiplexer>
+                    {
+                        new(ConnectionMultiplexer.Connect(redisCache))
+                    }))
+                    .AddTransient<ILock, RedisLock>();
             }
             else
             {
                 // use in memory storage
                 services.AddTransient<IDataStore, DataStoreInMemory>();
                 
-                // sqlite for hangfire jobs
-                services.AddHangfire(x => x.UseSQLiteStorage(Helper.BuildDbConnectionString("BackgroundJobs.sqlite", _hostingEnvironment, true)));
+                // in memory hangfire storage
+                services.AddHangfire(x => x.UseInMemoryStorage());
+                
+                // no-op lock
+                services.AddTransient<ILock, NoOpLock>();
             }
 
             services.AddHttpContextAccessor();
