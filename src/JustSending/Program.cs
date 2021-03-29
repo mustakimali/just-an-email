@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
+using Serilog.Formatting.Compact;
 
 namespace JustSending
 {
@@ -13,7 +14,7 @@ namespace JustSending
         {
             Log.Logger = new LoggerConfiguration()
                 .Enrich.FromLogContext()
-                .WriteTo.Console()
+                .WriteTo.Console(new RenderedCompactJsonFormatter())
                 .WriteTo.Sentry(o =>
                 {
                     o.MinimumBreadcrumbLevel = LogEventLevel.Debug;

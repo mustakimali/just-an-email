@@ -3,21 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using JustSending.Data.Models;
-using LiteDB;
 using Microsoft.AspNetCore.Hosting;
 
 namespace JustSending.Data
 {
     public class AppDbContext
     {
-        private readonly IWebHostEnvironment _env;
         private readonly IDataStore _dataStore;
-        private LiteDatabase? _db;
         private readonly Random _random;
 
-        public AppDbContext(IWebHostEnvironment env, IDataStore dataStore)
+        public AppDbContext(IDataStore dataStore)
         {
-            _env = env;
             _dataStore = dataStore;
             _random = new Random(DateTime.UtcNow.Millisecond);
         }

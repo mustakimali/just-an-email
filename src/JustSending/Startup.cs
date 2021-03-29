@@ -25,8 +25,6 @@ namespace JustSending
 {
     public class Startup
     {
-        private static bool _usingAzureSignalR;
-
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -51,31 +49,28 @@ namespace JustSending
 
             var signalrBuilder = services
                 .AddSignalR()
-                .AddJsonProtocol(); 
-            var signalrConfig = Configuration["SignalrConfig"];
-            _usingAzureSignalR = signalrConfig is {Length: >0};
-            if (_usingAzureSignalR)
-            {
-                signalrBuilder.AddAzureSignalR(signalrConfig);
-            }
+                .AddJsonProtocol();
 
-            var redisCache = Configuration["RedisCache"];
-            var hasRedisCache = redisCache is {Length: >0}; 
+            var redisConfig = Configuration["RedisCache"];
+            var hasRedisCache = redisConfig is {Length: >0}; 
             if (hasRedisCache)
             {
+                signalrBuilder
+                    .AddStackExchangeRedis(redisConfig);
+
                 // use redis for storage
                 services
-                    .AddStackExchangeRedisCache(o => o.Configuration = Configuration["RedisCache"])
+                    .AddStackExchangeRedisCache(o => o.Configuration = redisConfig)
                     .AddTransient<IDataStore, DataStoreRedis>();
                 
                 // redis for hangfire jobs
-                services.AddHangfire(x => x.UseRedisStorage(redisCache));
+                services.AddHangfire(x => x.UseRedisStorage(redisConfig));
                 
                 // redis lock
                 services
                     .AddSingleton<RedLockFactory>(sp => RedLockFactory.Create(new List<RedLockMultiplexer>
                     {
-                        new(ConnectionMultiplexer.Connect(redisCache))
+                        new(ConnectionMultiplexer.Connect(redisConfig))
                     }))
                     .AddTransient<ILock, RedisLock>();
             }
@@ -139,32 +134,14 @@ namespace JustSending
             });
 
             app.UseRouting();
-            
-            if (_usingAzureSignalR)
-            {
-                app.UseAzureSignalR(endpoints =>
-                {
-                    endpoints.MapHub<ConversationHub>("/signalr/hubs");
-                    endpoints.MapHub<SecureLineHub>("/signalr/secure-line");
-                });
-            }
 
             app.UseEndpoints(endpoints =>
             {
-                if (!_usingAzureSignalR)
-                {
-                    endpoints.MapHub<ConversationHub>("/signalr/hubs");
-                    endpoints.MapHub<SecureLineHub>("/signalr/secure-line");
-                }
+                endpoints.MapHub<ConversationHub>("/signalr/hubs");
+                endpoints.MapHub<SecureLineHub>("/signalr/secure-line");
 
                 endpoints.MapControllers();
             });
-        }
-
-        private static void MapHubs(ServiceRouteBuilder endpoints)
-        {
-            endpoints.MapHub<ConversationHub>("/signalr/hubs");
-            endpoints.MapHub<SecureLineHub>("/signalr/secure-line");
         }
     }
 

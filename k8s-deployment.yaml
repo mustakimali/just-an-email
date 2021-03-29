@@ -1,7 +1,58 @@
+##############################################################################
+#                                NAMESPACE                                   #
+##############################################################################
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: justaml
+---
+##############################################################################
+#                                   REDIS                                    #
+##############################################################################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: justaml
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:5-stretch
+          ports:
+            - containerPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: justaml
+spec:
+  ports:
+    - name: http
+      port: 6379
+      targetPort: 6379
+  selector:
+    app: redis
+---
+##############################################################################
+#                         INGRESS+DEPLOYMENTS                                #
+##############################################################################
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: justaml
+  namespace: justaml
 spec:
   strategy:
     type: RollingUpdate
@@ -26,7 +77,7 @@ spec:
             path: /storage/justaml/uploads
       containers:
         - name: app
-          image: mustakimali/justaml:latest
+          image: mustakimali/justaml:210330_0019
           ports:
             - containerPort: 3000
           volumeMounts:
@@ -48,28 +99,33 @@ spec:
                 secretKeyRef:
                   name: "justaml-secret"
                   key: "hangfire_token"
+
             - name: "Sentry__Dsn"
               valueFrom:
                 secretKeyRef:
                   name: "justaml-secret"
                   key: "sentry_dsn"
 
+            # use redis for data+bg jobs storage & signalr backplane
+            - name: "RedisCache"
+              value: "redis-service:6379,defaultDatabase=0"
+
           livenessProbe:
             httpGet:
               path: /api/test
               port: 3000
               scheme: HTTP
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 10
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
           readinessProbe:
             httpGet:
               path: /api/test
               port: 3000
               scheme: HTTP
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 10
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
           resources:
             requests:
               memory: "128M"
@@ -78,10 +134,14 @@ spec:
               memory: "512M"
               cpu: "256m"
 ---
+##############################################################################
+#                                  SERVICE                                   #
+##############################################################################
 apiVersion: v1
 kind: Service
 metadata:
   name: justaml-service
+  namespace: justaml
 spec:
   ports:
     - name: https
@@ -90,50 +150,55 @@ spec:
   selector:
     app: justaml-app
 ---
+##############################################################################
+#                                  INGRESS                                   #
+##############################################################################
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: justaml-ingress
+  namespace: justaml
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "100m"
 spec:
   tls:
   - hosts:
-    - tnxfr.com
+    - beta.tnxfr.com
   backend:
     serviceName: justaml-service
     servicePort: 80
   rules:
-    - host: tnxfr.com
+    - host: beta.tnxfr.com
 ---
 #
 # redirect from justa.ml to tnxfr.com
 #
-apiVersion: extensions/v1beta1
-kind: Ingress
-metadata:
-  name: justaml-ingress-redirect
-  annotations:
-    nginx.ingress.kubernetes.io/server-snippet: |
-      server_name justa.ml;
-      return 301 $scheme://tnxfr.com$request_uri;
-spec:
-  tls:
-    - hosts:
-        - justa.ml
-  rules:
-    - host: justa.ml
+#apiVersion: extensions/v1beta1
+#kind: Ingress
+#metadata:
+#  name: justaml-ingress-redirect
+#  namespace: justaml
+#  annotations:
+#    nginx.ingress.kubernetes.io/server-snippet: |
+#      server_name justa.ml;
+#      return 301 $scheme://tnxfr.com$request_uri;
+#spec:
+#  tls:
+#    - hosts:
+#        - justa.ml
+#  rules:
+#    - host: justa.ml
 ---
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
 metadata:
   name: justaml-hpa
-  namespace: default
+  namespace: justaml
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: justaml
-  minReplicas: 1
-  maxReplicas: 1
+  minReplicas: 2
+  maxReplicas: 5
   targetCPUUtilizationPercentage: 120

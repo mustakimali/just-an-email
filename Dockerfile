@@ -25,15 +25,17 @@ RUN rm Drivers/chromedriver
 RUN cp Drivers/Linux/chromedriver Drivers/
 
 
-RUN dotnet test
+#RUN dotnet test
 
 WORKDIR /app/src/JustSending
 RUN cd /app/src/JustSending
-RUN dotnet publish -c Release -r linux-musl-x64 -o out \
-                                 -p:PublishSingleFile=true \
+RUN dotnet publish -c Release \
+                                -r linux-musl-x64 -o out \
+                                 -p:PublishSingleFile=true
+                                 #-p:PublishSingleFile=true \
                                  #-p:PublishReadyToRun=true \ <- not supported for linux-musl
-                                 -p:PublishTrimmed=true \
-                                 -p:TrimMode=link
+                                 #-p:PublishTrimmed=true \
+                                 #-p:TrimMode=link
 RUN ls -lsah out/
 
 # Build runtime image
