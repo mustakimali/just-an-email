@@ -267,3 +267,4 @@ __pycache__/
 .ionide
 .vagrant/
 out/
+**/appsettings.*.json
