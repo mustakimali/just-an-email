@@ -15,9 +15,9 @@ namespace JustSending.Data
 
         Task<byte[]?> IDataStore.GetAsync(string id) => _distributedCache.GetAsync(id);
 
-        Task IDataStore.SetAsync(string id, byte[] data) => _distributedCache.SetAsync(id, data,
+        Task IDataStore.SetAsync(string id, byte[] data, TimeSpan ttl) => _distributedCache.SetAsync(id, data,
             new DistributedCacheEntryOptions()
-                .SetSlidingExpiration(TimeSpan.FromHours(6)));
+                .SetSlidingExpiration(ttl));
         Task IDataStore.RemoveAsync(string id) => _distributedCache.RemoveAsync(id);
     }
 }

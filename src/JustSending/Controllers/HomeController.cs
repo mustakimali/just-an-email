@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using JustSending.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -25,13 +27,22 @@ namespace JustSending.Controllers
         }
 
         [Route("stats")]
-        public IActionResult Stats([FromServices] StatsDbContext db, int date = -1)
+        public async Task<IActionResult> Stats([FromServices] StatsDbContext db, [FromServices] IDataStore store, int date = -1)
         {
-            var stat = db.Statistics.FindById(date);
+            var stat = await store.Get<Stats>(date.ToString());
             if (stat == null)
             {
-                stat = new Stats();
+                stat = db.Statistics.FindById(date);
+                if (stat == null)
+                {
+                    stat = new Stats();
+                }
+                else
+                {
+                    await store.Set(date.ToString(), stat, TimeSpan.FromHours(1));
+                }
             }
+
             return View(stat);
         }
 

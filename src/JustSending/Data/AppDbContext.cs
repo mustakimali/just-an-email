@@ -22,7 +22,8 @@ namespace JustSending.Data
 
         public Task<T?> Get<T>(string id) => _dataStore.Get<T>(id);
 
-        public Task Set<T>(string id, T model) => _dataStore.Set(id, model);
+        public Task Set<T>(string id, T model, TimeSpan? ttl = null) =>
+            _dataStore.Set(id, model, ttl ?? TimeSpan.FromHours(6));
 
         public Task Remove<T>(string id) => _dataStore.Remove<T>(id);
 

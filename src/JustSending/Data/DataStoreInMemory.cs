@@ -18,9 +18,9 @@ namespace JustSending.Data
 
         Task<byte[]?> IDataStore.GetAsync(string id) => Task.FromResult(_memoryCache.Get<byte[]?>(id));
 
-        Task IDataStore.SetAsync(string id, byte[] data) => Task.FromResult(_memoryCache.Set(id, data,
+        Task IDataStore.SetAsync(string id, byte[] data, TimeSpan ttl) => Task.FromResult(_memoryCache.Set(id, data,
             new MemoryCacheEntryOptions()
-                .SetSlidingExpiration(TimeSpan.FromHours(6))));
+                .SetSlidingExpiration(ttl)));
 
         Task IDataStore.RemoveAsync(string id)
         {
