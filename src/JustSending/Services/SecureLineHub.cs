@@ -16,23 +16,26 @@ namespace JustSending.Services
         private readonly ConcurrentDictionary<string, HashSet<string>> _sessionIdConnectionIds = new();
         private readonly IWebHostEnvironment _env;
         private readonly IServiceProvider _serviceProvider;
-        private readonly object _lock = new();
+        private readonly ILock _lock;
 
-        public SecureLineHub(IWebHostEnvironment env, IServiceProvider serviceProvider)
+        public SecureLineHub(
+            IWebHostEnvironment env, 
+            IServiceProvider serviceProvider,
+            ILock @lock)
         {
             _env = env;
             _serviceProvider = serviceProvider;
+            _lock = @lock;
         }
 
         public async Task Init(string id)
         {
+            using var lck = await _lock.Acquire(id);
+
             var connectionId = Context.ConnectionId;
-            lock (_lock)
+            if (!_connectionIdSessionMap.ContainsKey(connectionId))
             {
-                if (!_connectionIdSessionMap.ContainsKey(connectionId))
-                {
-                    _ = _connectionIdSessionMap.TryAdd(connectionId, id);
-                }
+                _ = _connectionIdSessionMap.TryAdd(connectionId, id);
             }
 
             if (_sessionIdConnectionIds.TryGetValue(id, out var entry))

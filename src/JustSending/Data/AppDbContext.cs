@@ -3,18 +3,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using JustSending.Data.Models;
-using Microsoft.AspNetCore.Hosting;
 
 namespace JustSending.Data
 {
     public class AppDbContext
     {
+        private static readonly TimeSpan MessageTtl = TimeSpan.FromMinutes(15);
+
         private readonly IDataStore _dataStore;
+        private readonly ILock _lock;
         private readonly Random _random;
 
-        public AppDbContext(IDataStore dataStore)
+        public AppDbContext(IDataStore dataStore, ILock @lock)
         {
             _dataStore = dataStore;
+            _lock = @lock;
             _random = new Random(DateTime.UtcNow.Millisecond);
         }
 
@@ -43,18 +46,17 @@ namespace JustSending.Data
             return await Get<int>(key);
         }
         
-        public async Task SetCount<TModel>(string id, int? count)
+        public async Task SetCount<TModel>(string id, int? count, TimeSpan? ttl = null)
         {
             var key = $"{typeof(TModel).Name.ToLower()}-count-{id}";
             if (count == null)
                 await Remove<int>(key);
             else
-                await Set(key, count.Value);
+                await Set(key, count.Value, ttl);
         }
 
         public async Task<Session?> GetSession(string id, string id2)
         {
-            // ToDo: lock
             var session = await Get<Session>(id);
             return session?.IdVerification == id2
                 ? session
@@ -63,42 +65,42 @@ namespace JustSending.Data
 
         private async Task<int> NewConnectionId()
         {
-            //ToDo: Lock
-            //lock (this)
+            using var _ = await _lock.Acquire("new-connection-id");
+
+            var min = 100000;
+            var max = 1000000;
+            var tries = 0;
+
+            var number = _random.Next(min, max - 1);
+
+            while (await Exist<ShareToken>(number.ToString()))
             {
-                var min = 100000;
-                var max = 1000000;
-                var tries = 0;
-
-                var number = _random.Next(min, max - 1);
-
-                while (await Exist<ShareToken>(number.ToString()))
+                if (tries > (max - min) / 2)
                 {
-                    if (tries > (max - min) / 2)
-                    {
-                        tries = 0;
+                    tries = 0;
 
-                        min *= 10;
-                        max *= 10;
-                    }
-
-                    tries++;
-                    number = _random.Next(min, max - 1);
+                    min *= 10;
+                    max *= 10;
                 }
 
-                return number;
+                tries++;
+                number = _random.Next(min, max - 1);
             }
+
+            return number;
         }
 
         public async Task MessagesInsert(Message msg)
         {
+            using var _ = await _lock.Acquire(msg.SessionId);
+
             var count = await Count<Message>(msg.SessionId);
             msg.SessionMessageSequence = ++count;
 
-            await Set(msg.Id, msg);
+            await Set(msg.Id, msg, MessageTtl);
             // messageId by sequence number
-            await Set($"{msg.SessionId}-{count}", msg.Id);
-            await SetCount<Message>(msg.SessionId, msg.SessionMessageSequence);
+            await Set($"{msg.SessionId}-{count}", msg.Id, MessageTtl);
+            await SetCount<Message>(msg.SessionId, msg.SessionMessageSequence, MessageTtl);
         }
 
         public async Task TrackClient(string sessionId, string connectionId)

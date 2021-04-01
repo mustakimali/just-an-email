@@ -2,13 +2,18 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using JustSending.Services;
 
 namespace JustSending.Data
 {
     public class JsonShortNamePolicy : JsonNamingPolicy
     {
+        private static readonly Dictionary<string, string> Cache = new();
         public override string ConvertName(string name)
         {
+            if (Cache.TryGetValue(name, out var shortName))
+                return shortName;
+
             var toTake = new List<char?>();
             char? lastLetter = null;
             foreach (var l in name)
@@ -25,25 +30,11 @@ namespace JustSending.Data
 
                 lastLetter = l;
             }
+            
+            shortName = string.Join("", toTake).ToLower() + name.ToSha1(2);
+            Cache[name] = shortName;
 
-            var shortName = string.Join("", toTake).ToLower() + Hash(name, 2);
             return shortName;
-        }
-
-        private static string Hash(string input, int? take = null)
-        {
-            using SHA1Managed sha1 = new();
-            var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(input));
-            var sb = new StringBuilder(hash.Length * 2);
-
-            foreach (var b in hash)
-            {
-                sb.Append(b.ToString("x2"));
-                if (take != null && sb.Length >= take)
-                    break;
-            }
-
-            return sb.ToString();
         }
     }
 }

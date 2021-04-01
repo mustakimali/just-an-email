@@ -45,16 +45,20 @@ namespace JustSending.Controllers
                 return Array.Empty<Message>();
             }
 
+            var expiredMessage = new Message {IsNotification = true, Text = "Message Expired"};
             var result = new List<Message>();
             var count = await _db.Count<Message>(id);
             for (int i = from + 1; i <= count; i++)
             {
                 var messageId = await _db.Get<string>($"{id}-{i}");
-                if (messageId == null) continue;
+                if (messageId == null)
+                {
+                    result.Add(expiredMessage);
+                    continue;
+                }
 
                 var message = await _db.Get<Message>(messageId);
-                if (message != null)
-                    result.Add(message);
+                result.Add(message ?? expiredMessage);
             }
 
             result.Reverse();

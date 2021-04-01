@@ -55,8 +55,8 @@ namespace JustSending
             var hasRedisCache = redisConfig is {Length: >0}; 
             if (hasRedisCache)
             {
-                signalrBuilder
-                    .AddStackExchangeRedis(redisConfig);
+                // signalrBuilder
+                //     .AddStackExchangeRedis(redisConfig);
 
                 // use redis for storage
                 services

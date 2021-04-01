@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Hosting;
 
@@ -68,6 +69,22 @@ namespace JustSending.Services
         public static string GetUploadFolder(string sessionId, string root)
         {
             return Path.Combine(root, "upload", sessionId);
+        }
+        
+        public static string ToSha1(this string input, int? take = null)
+        {
+            using SHA1Managed sha1 = new();
+            var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(input));
+            var sb = new StringBuilder(hash.Length * 2);
+
+            foreach (var b in hash)
+            {
+                sb.Append(b.ToString("x2"));
+                if (take != null && sb.Length >= take)
+                    break;
+            }
+
+            return sb.ToString();
         }
     }
 }

@@ -84,7 +84,7 @@ namespace JustSending.Data
         private async Task RecordStats(Action<Stats> update, DateTime? date = null)
         {
             var utcNow = date ?? DateTime.UtcNow;
-            using var _ = await _lock.AcquireLock($"stat-{utcNow:u)}");
+            using var _ = await _lock.Acquire($"stat-{utcNow:d}");
 
             // All time stats
             var allTime = StatsFindByIdOrNew(null);
