@@ -1,22 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using Hangfire;
-using Hangfire.Dashboard;
 using JustSending.Data;
 using JustSending.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.Azure.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using RedLockNet.SERedis;
 using RedLockNet.SERedis.Configuration;
 using StackExchange.Redis;
@@ -55,6 +48,8 @@ namespace JustSending
             var hasRedisCache = redisConfig is {Length: >0}; 
             if (hasRedisCache)
             {
+                // Redis backplane is too slow and Azure is expensive :(
+
                 // signalrBuilder
                 //     .AddStackExchangeRedis(redisConfig);
 
@@ -130,7 +125,9 @@ namespace JustSending
             app.UseHangfireServer();
             app.UseHangfireDashboard("/jobs", new DashboardOptions
             {
-                Authorization = new[] { new CookieAuthFilter(Configuration["HangfireToken"]) }
+                DisplayStorageConnectionString = false,
+                DashboardTitle = "Just An Email",
+                Authorization = new []{new InsecureAuthFilter()}
             });
 
             app.UseRouting();
@@ -142,50 +139,6 @@ namespace JustSending
 
                 endpoints.MapControllers();
             });
-        }
-    }
-
-    public class DefaultHealthCheck : IHealthCheck
-    {
-        private readonly StatsDbContext _dbContext;
-        private readonly ILogger<DefaultHealthCheck> _logger;
-
-        public DefaultHealthCheck(StatsDbContext dbContext, ILogger<DefaultHealthCheck> logger)
-        {
-            _dbContext = dbContext;
-            _logger = logger;
-        }
-        public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = new())
-        {
-            try
-            {
-                var _ = _dbContext.Statistics.Count();
-                return Task.FromResult(HealthCheckResult.Healthy());
-            }
-            catch (Exception e)
-            {
-                _logger.LogWarning(e, "Healthcheck failed.");
-                return Task.FromResult(HealthCheckResult.Unhealthy());
-            }
-        }
-    }
-
-    public class CookieAuthFilter : IDashboardAuthorizationFilter
-    {
-        private readonly string _token;
-
-        public CookieAuthFilter(string token)
-        {
-            _token = token;
-        }
-        public bool Authorize(DashboardContext context)
-        {
-#if DEBUG
-            return true;
-#endif
-
-            return context.GetHttpContext().Request.Cookies.TryGetValue("HangfireToken", out var tokenFromCookie)
-                   && tokenFromCookie == _token;
         }
     }
 }
