@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build-env
+FROM mcr.microsoft.com/dotnet/sdk:6.0.100-preview.3 AS build-env
 # install chrome for testing
 RUN \
    apt-get update && \
@@ -39,7 +39,7 @@ RUN dotnet publish -c Release \
 RUN ls -lsah out/
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/runtime-deps:6.0-alpine3.13
+FROM mcr.microsoft.com/dotnet/runtime-deps:6.0.0-preview.3-alpine3.13-amd64
 WORKDIR /app
 COPY --from=build-env /app/src/JustSending/out .
 
