@@ -1,5 +1,5 @@
 #!/bin/bash
-set -u
+set -eu
 
 # ./combine-scripts.sh src/JustSending/Views/Shared/_Layout.cshtml src/JustSending/wwwroot/js combined-main
 # ./combine-scripts.sh src/JustSending/Views/Shared/_Layout.cshtml src/JustSending/wwwroot/js combined-session
@@ -47,6 +47,9 @@ do
    echo "/* Source: $i */" >> $OUTPUT_FILENAME
    cat $i >> $OUTPUT_FILENAME
 done
+
+# fix for this weird character being prepended in local file
+sed -i 's/﻿//g' $OUTPUT_FILENAME
 
 ls -lsah $OUTPUT_FILENAME
 
