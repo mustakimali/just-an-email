@@ -25,6 +25,7 @@ echo Getting list
 SESSION_EXTERNAL=($(cat $INPUT_FILE | grep "script src" | sed 's/@@/@/g' | awk -F "\"" '{print $2}' | grep https))
 SESSION_INTERNAL=($(cat $INPUT_FILE | grep "script src" | sed 's/@@/@/g' | awk -F "\"" '{print $2}' | grep '~/' | sed 's/\~/src\/JustSending\/wwwroot/g'))
 
+echo "Clearing any existing file @ $OUTPUT_FILENAME"
 rm $OUTPUT_FILENAME || true
 
 # download and cat external scripts
@@ -49,17 +50,17 @@ done
 
 ls -lsah $OUTPUT_FILENAME
 
-if command -v uglifyjs &> /dev/null
+if command -v terser &> /dev/null
 then
     # minify
     echo "Minifing..."
-    uglifyjs $OUTPUT_FILENAME > $OUTPUT_FILENAME_MIN
+    terser $OUTPUT_FILENAME > $OUTPUT_FILENAME_MIN
     rm $OUTPUT_FILENAME
     ls -lsah $OUTPUT_FILENAME_MIN
 else
     echo -e "${red}Could not minify the output."
-    echo -e "Install uglifyjs and try again.$reset"
-    echo "$ npm install uglify-js -g"
+    echo -e "Install terser and try again.$reset"
+    echo "$ sudo npm install terser -g"
 fi
 
 function show_hash()
