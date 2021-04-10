@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
         - name: redis
-          image: redis:5-stretch
+          image: redis:6.2.1-alpine
           ports:
             - containerPort: 6379
 ---
@@ -77,7 +77,7 @@ spec:
             path: /storage/justaml/uploads
       containers:
         - name: app
-          image: mustakimali/justaml:210330_0019
+          image: mustakimali/justaml:210401_1958
           ports:
             - containerPort: 3000
           volumeMounts:
@@ -129,10 +129,10 @@ spec:
           resources:
             requests:
               memory: "128M"
-              cpu: "128m"
+              cpu: "256m"
             limits:
               memory: "512M"
-              cpu: "256m"
+              cpu: "512m"
 ---
 ##############################################################################
 #                                  SERVICE                                   #
@@ -170,24 +170,22 @@ spec:
   rules:
     - host: beta.tnxfr.com
 ---
-#
 # redirect from justa.ml to tnxfr.com
-#
-#apiVersion: extensions/v1beta1
-#kind: Ingress
-#metadata:
-#  name: justaml-ingress-redirect
-#  namespace: justaml
-#  annotations:
-#    nginx.ingress.kubernetes.io/server-snippet: |
-#      server_name justa.ml;
-#      return 301 $scheme://tnxfr.com$request_uri;
-#spec:
-#  tls:
-#    - hosts:
-#        - justa.ml
-#  rules:
-#    - host: justa.ml
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: justaml-ingress-redirect
+  namespace: justaml
+  annotations:
+    nginx.ingress.kubernetes.io/server-snippet: |
+      server_name justa.ml;
+      return 301 $scheme://tnxfr.com$request_uri;
+spec:
+  tls:
+    - hosts:
+        - justa.ml
+  rules:
+    - host: justa.ml
 ---
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
@@ -199,6 +197,6 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: justaml
-  minReplicas: 2
-  maxReplicas: 5
+  minReplicas: 1
+  maxReplicas: 1
   targetCPUUtilizationPercentage: 120
