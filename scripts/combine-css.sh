@@ -1,7 +1,16 @@
 #!/bin/bash
-set -eu
+# combined multiple css files (remote and local) and creates a single file.
+# optionally minified using uglifycss (if already installed)
+# $ sudo npm install uglifycss -g
+# usage:
+# ./combine-css.sh <.cshtml file to parser> <out folder> <name>
+# example:
+# ./combine-css.sh _CommonHead.cshtml src/JustSending/wwwroot/css combined-main
+#
+# creates src/JustSending/wwwroot/css/combined-main.min.css (if minified)
+#      or src/JustSending/wwwroot/css/combined-main.css (if not minified)
 
-# ./combine-scripts.sh _CommonHead.cshtml src/JustSending/wwwroot/css combined-main
+set -eu
 
 grey='\e[2m'
 red='\e[91m'
@@ -54,6 +63,19 @@ sed -i 's/﻿//g' $OUTPUT_FILENAME
 
 ls -lsah $OUTPUT_FILENAME
 
+if command -v uglifycss &> /dev/null
+then
+    # minify
+    echo "Minifing..."
+    uglifycss $OUTPUT_FILENAME > $OUTPUT_FILENAME_MIN
+    rm $OUTPUT_FILENAME
+    ls -lsah $OUTPUT_FILENAME_MIN
+else
+    echo -e "${red}Could not minify the output."
+    echo -e "Install uglifycss and try again.$reset"
+    echo "$ sudo npm install uglifycss -g"
+fi
+
 function show_hash()
 {
     file=$1
@@ -66,4 +88,4 @@ function show_hash()
 }
 
 show_hash $OUTPUT_FILENAME "~/css/$OUTPUT_FILE.css"
-#show_hash $OUTPUT_FILENAME_MIN "~/css/$OUTPUT_FILE.min.css" 
+show_hash $OUTPUT_FILENAME_MIN "~/css/$OUTPUT_FILE.min.css" 

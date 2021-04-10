@@ -15,7 +15,7 @@ WORKDIR /app
 COPY src/JustSending/JustSending.csproj ./src/JustSending/JustSending.csproj
 COPY test/JustSending.Test/JustSending.Test.csproj ./test/JustSending.Test/JustSending.Test.csproj
 COPY JustSending.sln .
-RUN dotnet restore -r linux-musl-x64
+RUN dotnet restore -r linux-x64
 
 COPY . /app
 
@@ -30,16 +30,13 @@ RUN cp Drivers/Linux/chromedriver Drivers/
 WORKDIR /app/src/JustSending
 RUN cd /app/src/JustSending
 RUN dotnet publish -c Release \
-                                -r linux-musl-x64 -o out \
-                                 -p:PublishSingleFile=true
-                                 #-p:PublishSingleFile=true \
-                                 #-p:PublishReadyToRun=true \ <- not supported for linux-musl
-                                 #-p:PublishTrimmed=true \
-                                 #-p:TrimMode=link
+                                -r linux-x64 -o out \
+                                 -p:PublishSingleFile=true \
+                                 -p:PublishReadyToRun=true
 RUN ls -lsah out/
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/runtime-deps:6.0.0-preview.3-alpine3.13-amd64
+FROM mcr.microsoft.com/dotnet/runtime-deps:6.0.0-preview.3
 WORKDIR /app
 COPY --from=build-env /app/src/JustSending/out .
 

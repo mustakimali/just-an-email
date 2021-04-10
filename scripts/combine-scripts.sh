@@ -1,8 +1,18 @@
 #!/bin/bash
-set -eu
-
+# combined multiple js files (remote and local) and creates a single file.
+# optionally minified using terser (if already installed)
+# $ sudo npm install terser -g
+# usage:
+# ./combine-scripts.sh <.cshtml file to parser> <out folder> <name>
+# example:
 # ./combine-scripts.sh src/JustSending/Views/Shared/_Layout.cshtml src/JustSending/wwwroot/js combined-main
+# creates src/JustSending/wwwroot/js/combined-main.min.js (if minified)
+#      or src/JustSending/wwwroot/js/combined-main.js (if not minified)
+#
+# more example:
 # ./combine-scripts.sh src/JustSending/Views/Shared/_Layout.cshtml src/JustSending/wwwroot/js combined-session
+
+set -eu
 
 grey='\e[2m'
 red='\e[91m'
