@@ -1,10 +1,6 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using Hangfire;
-using Hangfire.Dashboard;
-using Hangfire.SQLite;
 using JustSending.Data;
 using JustSending.Services;
 using Microsoft.AspNetCore.Builder;
@@ -13,19 +9,17 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using RedLockNet.SERedis;
+using RedLockNet.SERedis.Configuration;
+using StackExchange.Redis;
 
 namespace JustSending
 {
     public class Startup
     {
-        private readonly IWebHostEnvironment _hostingEnvironment;
-
-        public Startup(IConfiguration configuration, IWebHostEnvironment hostingEnvironment)
+        public Startup(IConfiguration configuration)
         {
-            _hostingEnvironment = hostingEnvironment;
             Configuration = configuration;
         }
 
@@ -44,16 +38,61 @@ namespace JustSending
 
             services.AddMvc();
             services.AddHealthChecks().AddCheck<DefaultHealthCheck>("database");
-            services.AddSignalR();
             services.AddMemoryCache();
+
+            var signalrBuilder = services
+                .AddSignalR()
+                .AddJsonProtocol();
+
+            var redisConfig = Configuration["RedisCache"];
+            var hasRedisCache = redisConfig is {Length: >0}; 
+            if (hasRedisCache)
+            {
+                // Redis backplane is too slow and Azure is expensive :(
+
+                // signalrBuilder
+                //     .AddStackExchangeRedis(redisConfig);
+
+                // use redis for storage
+                services
+                    .AddStackExchangeRedisCache(o => o.Configuration = redisConfig)
+                    .AddTransient<IDataStore, DataStoreRedis>();
+                
+                // redis for hangfire jobs
+                services.AddHangfire(x => x.UseRedisStorage(redisConfig));
+                
+                // redis lock
+                services
+                    .AddSingleton<RedLockFactory>(sp => RedLockFactory.Create(new List<RedLockMultiplexer>
+                    {
+                        new(ConnectionMultiplexer.Connect(redisConfig))
+                    }))
+                    .AddTransient<ILock, RedisLock>();
+            }
+            else
+            {
+                // use in memory storage
+                services.AddTransient<IDataStore, DataStoreInMemory>();
+                
+                // in memory hangfire storage
+                services.AddHangfire(x => x.UseInMemoryStorage());
+                
+                // no-op lock
+                services.AddTransient<ILock, NoOpLock>();
+            }
+
             services.AddHttpContextAccessor();
 
-            services.AddSingleton<AppDbContext>();
-            services.AddSingleton<ConversationHub>();
-            services.AddSingleton<SecureLineHub>();
+            services
+                .AddTransient<AppDbContext>()
+                .AddTransient<StatsDbContext>();
+
+            services
+                .AddSingleton<ConversationHub>()
+                .AddSingleton<SecureLineHub>();
+
             services.AddTransient<BackgroundJobScheduler>();
 
-            services.AddHangfire(x => x.UseSQLiteStorage(Helper.BuildDbConnectionString("BackgroundJobs.sqlite", _hostingEnvironment, true)));
             services.AddHealthChecks();
             services.AddDataProtection()
                 .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(Directory.GetCurrentDirectory(), "App_Data")));
@@ -86,7 +125,9 @@ namespace JustSending
             app.UseHangfireServer();
             app.UseHangfireDashboard("/jobs", new DashboardOptions
             {
-                Authorization = new[] { new CookieAuthFilter(Configuration["HangfireToken"]) }
+                DisplayStorageConnectionString = false,
+                DashboardTitle = "Just An Email",
+                Authorization = new []{new InsecureAuthFilter()}
             });
 
             app.UseRouting();
@@ -98,50 +139,6 @@ namespace JustSending
 
                 endpoints.MapControllers();
             });
-        }
-    }
-
-    public class DefaultHealthCheck : IHealthCheck
-    {
-        private readonly AppDbContext _dbContext;
-        private readonly ILogger<DefaultHealthCheck> _logger;
-
-        public DefaultHealthCheck(AppDbContext dbContext, ILogger<DefaultHealthCheck> logger)
-        {
-            _dbContext = dbContext;
-            _logger = logger;
-        }
-        public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = new())
-        {
-            try
-            {
-                var _ = _dbContext.Statistics.Count();
-                return Task.FromResult(HealthCheckResult.Healthy());
-            }
-            catch (Exception e)
-            {
-                _logger.LogWarning(e, "Healthcheck failed.");
-                return Task.FromResult(HealthCheckResult.Unhealthy());
-            }
-        }
-    }
-
-    public class CookieAuthFilter : IDashboardAuthorizationFilter
-    {
-        private readonly string _token;
-
-        public CookieAuthFilter(string token)
-        {
-            _token = token;
-        }
-        public bool Authorize(DashboardContext context)
-        {
-#if DEBUG
-            return true;
-#endif
-
-            return context.GetHttpContext().Request.Cookies.TryGetValue("HangfireToken", out var tokenFromCookie)
-                   && tokenFromCookie == _token;
         }
     }
 }

@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build-env
+FROM mcr.microsoft.com/dotnet/sdk:6.0.100-preview.3 AS build-env
 # install chrome for testing
 RUN \
    apt-get update && \
@@ -15,7 +15,7 @@ WORKDIR /app
 COPY src/JustSending/JustSending.csproj ./src/JustSending/JustSending.csproj
 COPY test/JustSending.Test/JustSending.Test.csproj ./test/JustSending.Test/JustSending.Test.csproj
 COPY JustSending.sln .
-RUN dotnet restore -r linux-musl-x64
+RUN dotnet restore -r linux-x64
 
 COPY . /app
 
@@ -25,19 +25,18 @@ RUN rm Drivers/chromedriver
 RUN cp Drivers/Linux/chromedriver Drivers/
 
 
-RUN dotnet test
+#RUN dotnet test
 
 WORKDIR /app/src/JustSending
 RUN cd /app/src/JustSending
-RUN dotnet publish -c Release -r linux-musl-x64 -o out \
+RUN dotnet publish -c Release \
+                                -r linux-x64 -o out \
                                  -p:PublishSingleFile=true \
-                                 #-p:PublishReadyToRun=true \ <- not supported for linux-musl
-                                 -p:PublishTrimmed=true \
-                                 -p:TrimMode=link
+                                 -p:PublishReadyToRun=true
 RUN ls -lsah out/
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/runtime-deps:6.0-alpine3.13
+FROM mcr.microsoft.com/dotnet/runtime-deps:6.0.0-preview.3
 WORKDIR /app
 COPY --from=build-env /app/src/JustSending/out .
 

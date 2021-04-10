@@ -1,8 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Hangfire;
 using JustSending.Data;
+using JustSending.Data.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -21,9 +23,9 @@ namespace JustSending.Services
             _logger = logger;
         }
 
-        public void Erase(string sessionId) => EraseSessionReturnConnectionIds(sessionId);
+        public async Task Erase(string sessionId) => await EraseSessionReturnConnectionIds(sessionId);
 
-        public string[] EraseSessionReturnConnectionIds(string sessionId)
+        public async Task<string[]> EraseSessionReturnConnectionIds(string sessionId)
         {
             try
             {
@@ -35,25 +37,41 @@ namespace JustSending.Services
                 BackgroundJob.Schedule(() => DeleteUploadedFiles(sessionId), TimeSpan.FromMinutes(5));
             }
 
-            var session = _db.Sessions.FindById(sessionId);
+            var session = await _db.Get<Session>(sessionId);
             if (session == null) return Array.Empty<string>();
 
-            _db.Sessions.Delete(sessionId);
-            _db.Messages.DeleteMany(x => x.SessionId == sessionId);
-            _db.ShareTokens.DeleteMany(x => x.SessionId == sessionId);
+            var messageCount = await _db.Count<Message>(sessionId);
+            for (var i = 0; i <= messageCount; i++)
+            {
+                var id = $"{session.Id}-{i}";
+                var messageId = await _db.Get<string>(id);
+                if (messageId != null)
+                    await _db.Remove<Message>(messageId);
+                await _db.Remove<string>(id);
+            }
 
-            var connectionIds = _db
-                .Connections
-                .Find(x => x.SessionId == sessionId)
-                .Select(x => x.ConnectionId)
-                .ToArray();
+            await _db.SetCount<Message>(sessionId, null);
 
-            _db.Connections.DeleteMany(x => x.SessionId == sessionId);
+            // remove all connections
+            foreach (var connectionId in session.ConnectionIds)
+                await _db.Remove<SessionMetaByConnectionId>(connectionId);
+
+            // remove share token
+            var sessionShareToken = await _db.Get<SessionShareToken>(sessionId);
+            if (sessionShareToken != null)
+            {
+                await _db.Remove<ShareToken>(sessionShareToken.Token.ToString());
+                await _db.Remove<SessionShareToken>(sessionId);
+            }
+
+            var connectionIds = session.ConnectionIds;
 
             if (!string.IsNullOrEmpty(session.CleanupJobId))
                 BackgroundJob.Delete(session.CleanupJobId);
+            
+            await _db.Remove<Session>(sessionId);
 
-            return connectionIds;
+            return connectionIds.ToArray();
         }
 
         public void DeleteUploadedFiles(string sessionId)

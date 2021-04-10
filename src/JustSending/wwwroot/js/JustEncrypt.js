@@ -316,7 +316,7 @@ var EndToEndEncryption = {
     },
 
     encrypt: function (data, secret) {
-        return sjcl.encrypt(secret, data);
+        return CryptoJS.AES.encrypt(data, secret).toString();
     },
 
     encryptWithPrivateKey: function (data) {
@@ -324,7 +324,7 @@ var EndToEndEncryption = {
     },
 
     decrypt: function (data, secret) {
-        return sjcl.decrypt(secret, data);
+        return CryptoJS.AES.decrypt(data, secret).toString(CryptoJS.enc.Utf8);
     }
 }
 
