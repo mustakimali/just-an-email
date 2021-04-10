@@ -268,3 +268,5 @@ __pycache__/
 .vagrant/
 out/
 **/appsettings.*.json
+
+post_message.sh
