@@ -22,7 +22,7 @@ namespace JustSending.Data
         }
         
         private LiteDatabase Database
-            => _db ??= new LiteDatabase(Helper.BuildDbConnectionString("AppDb_Beta", _env));
+            => _db ??= new LiteDatabase(Helper.BuildDbConnectionString("AppDb", _env));
 
         public ILiteCollection<Stats> Statistics => Database.GetCollection<Stats>();
         

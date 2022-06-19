@@ -77,7 +77,7 @@ spec:
             path: /storage/justaml/uploads
       containers:
         - name: app
-          image: mustakimali/justaml:210401_1958
+          image: mustakimali/justaml:220619_1727
           ports:
             - containerPort: 3000
           volumeMounts:
@@ -94,12 +94,6 @@ spec:
               value: "http://*:3000"
 
             # Application Option
-            - name: "HangfireToken"
-              valueFrom:
-                secretKeyRef:
-                  name: "justaml-secret"
-                  key: "hangfire_token"
-
             - name: "Sentry__Dsn"
               valueFrom:
                 secretKeyRef:
@@ -163,29 +157,29 @@ metadata:
 spec:
   tls:
   - hosts:
-    - beta.tnxfr.com
+    - tnxfr.com
   backend:
     serviceName: justaml-service
     servicePort: 80
   rules:
-    - host: beta.tnxfr.com
+    - host: tnxfr.com
 ---
 # redirect from justa.ml to tnxfr.com
-apiVersion: extensions/v1beta1
-kind: Ingress
-metadata:
-  name: justaml-ingress-redirect
-  namespace: justaml
-  annotations:
-    nginx.ingress.kubernetes.io/server-snippet: |
-      server_name justa.ml;
-      return 301 $scheme://tnxfr.com$request_uri;
-spec:
-  tls:
-    - hosts:
-        - justa.ml
-  rules:
-    - host: justa.ml
+ apiVersion: extensions/v1beta1
+ kind: Ingress
+ metadata:
+   name: justaml-ingress-redirect
+   namespace: justaml
+   annotations:
+     nginx.ingress.kubernetes.io/server-snippet: |
+       server_name justa.ml;
+       return 301 $scheme://tnxfr.com$request_uri;
+ spec:
+   tls:
+     - hosts:
+         - justa.ml
+   rules:
+     - host: justa.ml
 ---
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
