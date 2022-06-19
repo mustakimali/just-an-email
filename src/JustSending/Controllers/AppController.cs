@@ -284,7 +284,7 @@ namespace JustSending.Controllers
         private async Task<IActionResult> SaveMessageAndReturnResponse(Message message, bool lite = false)
         {
             // validate
-            var session = await _db.GetSession(message.SessionId, message.SessionIdVerification);
+            var session = await _db.GetSession(message.SessionId);
             if (session == null)
                 return BadRequest();
 
@@ -422,7 +422,7 @@ namespace JustSending.Controllers
             session.IsLiteSession = true;
             await _db.Set(id, session);
 
-            await _hub.RedirectTo(id, Url.Action(nameof(LiteSession), new {id1 = id, id2, r = "u"}))
+            await _hub.RedirectTo(id, Url.Action(nameof(LiteSession), new {id1 = id, id2, r = "u"})!)
                 .ConfigureAwait(false);
         }
 

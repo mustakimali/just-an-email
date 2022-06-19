@@ -57,10 +57,15 @@ namespace JustSending.Data
 
         public async Task<Session?> GetSession(string id, string id2)
         {
-            var session = await Get<Session>(id);
+            var session = await GetSession(id);
             return session?.IdVerification == id2
                 ? session
                 : null;
+        }
+        
+        public Task<Session?> GetSession(string id)
+        {
+            return Get<Session>(id);
         }
 
         private async Task<int> NewConnectionId()
