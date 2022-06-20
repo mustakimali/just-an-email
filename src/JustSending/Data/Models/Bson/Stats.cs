@@ -1,7 +1,7 @@
 using System;
 using LiteDB;
 
-namespace JustSending.Data
+namespace JustSending.Data.Models.Bson
 {
     public class Stats
     {

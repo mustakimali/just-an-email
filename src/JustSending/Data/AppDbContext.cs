@@ -1,196 +1,159 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using JustSending.Services;
-using LiteDB;
-using Microsoft.AspNetCore.Hosting;
+using System.Threading.Tasks;
+using JustSending.Data.Models;
 
 namespace JustSending.Data
 {
     public class AppDbContext
     {
-        private readonly IWebHostEnvironment _env;
-        private LiteDatabase _db;
+        private static readonly TimeSpan MessageTtl = TimeSpan.FromMinutes(15);
+
+        private readonly IDataStore _dataStore;
+        private readonly ILock _lock;
         private readonly Random _random;
 
-        public AppDbContext(IWebHostEnvironment env)
+        public AppDbContext(IDataStore dataStore, ILock @lock)
         {
-            _env = env;
-            _random = new Random();
+            _dataStore = dataStore;
+            _lock = @lock;
+            _random = new Random(DateTime.UtcNow.Millisecond);
         }
 
-        public LiteDatabase Database
-        {
-            get
-            {
-                if (_db == null)
-                {
-                    _db = new LiteDatabase(Helper.BuildDbConnectionString("AppDb", _env));
+        #region Core Methods
 
-                    EnsureIndex();
+        public Task<T?> Get<T>(string id) => _dataStore.Get<T>(id);
+
+        public Task Set<T>(string id, T model, TimeSpan? ttl = null) =>
+            _dataStore.Set(id, model, ttl ?? TimeSpan.FromHours(6));
+
+        public Task Remove<T>(string id) => _dataStore.Remove<T>(id);
+
+        #endregion
+        
+        public static string NewGuid() => Guid.NewGuid().ToString("N");
+
+        public async Task<bool> Exist<TModel>(string id)
+        {
+            var data = await _dataStore.Get<TModel>(id);
+            return data != null;
+        }
+        
+        public async Task<int> Count<TModel>(string id)
+        {
+            var key = $"{typeof(TModel).Name.ToLower()}-count-{id}";
+            return await Get<int>(key);
+        }
+        
+        public async Task SetCount<TModel>(string id, int? count, TimeSpan? ttl = null)
+        {
+            var key = $"{typeof(TModel).Name.ToLower()}-count-{id}";
+            if (count == null)
+                await Remove<int>(key);
+            else
+                await Set(key, count.Value, ttl);
+        }
+
+        public async Task<Session?> GetSession(string id, string id2)
+        {
+            var session = await GetSession(id);
+            return session?.IdVerification == id2
+                ? session
+                : null;
+        }
+        
+        public Task<Session?> GetSession(string id)
+        {
+            return Get<Session>(id);
+        }
+
+        private async Task<int> NewConnectionId()
+        {
+            using var _ = await _lock.Acquire("new-connection-id");
+
+            var min = 100000;
+            var max = 1000000;
+            var tries = 0;
+
+            var number = _random.Next(min, max - 1);
+
+            while (await Exist<ShareToken>(number.ToString()))
+            {
+                if (tries > (max - min) / 2)
+                {
+                    tries = 0;
+
+                    min *= 10;
+                    max *= 10;
                 }
 
-                return _db;
+                tries++;
+                number = _random.Next(min, max - 1);
             }
+
+            return number;
         }
 
-        private void EnsureIndex()
+        public async Task MessagesInsert(Message msg)
         {
-            Connections.EnsureIndex(x => x.SessionId);
+            using var _ = await _lock.Acquire(msg.SessionId);
 
-            Messages.EnsureIndex(x => x.SessionMessageSequence);
-            Messages.EnsureIndex(x => x.SessionId);
-
-            Sessions.EnsureIndex(x => x.IdVerification);
-
-            ShareTokens.EnsureIndex(x => x.SessionId);
-        }
-
-        public ILiteCollection<Session> Sessions => Database.GetCollection<Session>();
-        public ILiteCollection<ShareToken> ShareTokens => Database.GetCollection<ShareToken>();
-        public ILiteCollection<Message> Messages => Database.GetCollection<Message>();
-        public ILiteCollection<ConnectionSession> Connections => Database.GetCollection<ConnectionSession>();
-        public ILiteCollection<Stats> Statistics => Database.GetCollection<Stats>();
-
-        public string NewGuid() => Guid.NewGuid().ToString("N");
-
-        public int NewConnectionId()
-        {
-            lock (this)
-            {
-                var min = 100000;
-                var max = 1000000;
-                var tries = 0;
-
-                var number = _random.Next(min, max - 1);
-
-                while (ShareTokens.Exists(x => x.Id == number))
-                {
-                    if (tries > (max - min) / 2)
-                    {
-                        tries = 0;
-
-                        min *= 10;
-                        max *= 10;
-                    }
-
-                    tries++;
-                    number = _random.Next(min, max - 1);
-                }
-
-                return number;
-            }
-        }
-
-        public void MessagesInsert(Message msg)
-        {
-            var count = Messages.Count(x => x.SessionId == msg.SessionId);
+            var count = await Count<Message>(msg.SessionId);
             msg.SessionMessageSequence = ++count;
 
-            Messages.Insert(msg);
+            await Set(msg.Id, msg, MessageTtl);
+            // messageId by sequence number
+            await Set($"{msg.SessionId}-{count}", msg.Id, MessageTtl);
+            await SetCount<Message>(msg.SessionId, msg.SessionMessageSequence, MessageTtl);
         }
 
-        public void TrackClient(string sessionId, string connectionId)
+        public async Task TrackClient(string sessionId, string connectionId)
         {
-            var session = Sessions.FindById(sessionId);
+            // ToDo: lock
+            var session = await Get<Session>(sessionId);
             if (session == null) return;
 
-            if (Connections.Exists(x => x.ConnectionId == connectionId))
+            if (session.ConnectionIds.Contains(connectionId))
                 return;
 
-            Connections.Insert(new ConnectionSession
-            {
-                ConnectionId = connectionId,
-                SessionId = sessionId
-            });
+            session.ConnectionIds.Add(connectionId);
+            await Set(sessionId, session);
+            await Set(connectionId, new SessionMetaByConnectionId(sessionId));
         }
 
-        public string UntrackClientReturnSessionId(string connectionId)
+        public async Task<string?> UntrackClientReturnSessionId(string connectionId)
         {
-            var item = Connections.FindById(connectionId);
-            if (item == null) return null;
+            var connectionIdSession = await Get<SessionMetaByConnectionId>(connectionId);
+            if (connectionIdSession == null) return null;
+            var session = await Get<Session>(connectionIdSession.SessionId);
+            if (session == null) return null;
+            
+            session.ConnectionIds.Remove(connectionId);
+            await Set(session.Id, session);
+            await Remove<SessionMetaByConnectionId>(connectionId);
 
-            Connections.Delete(connectionId);
-            return item.SessionId;
+            return connectionIdSession.SessionId;
         }
 
-        public IEnumerable<string> FindClient(string sessionId)
+        public async Task<IEnumerable<string>> FindClient(string sessionId)
         {
-            return Connections
-                .Find(x => x.SessionId == sessionId)
-                .Select(x => x.ConnectionId);
+            var session = await Get<Session>(sessionId);
+            if (session == null) return Enumerable.Empty<string>();
+
+            return session.ConnectionIds;
         }
 
-        public int CreateNewShareToken(string sessionId)
+        public async Task<int> CreateNewShareToken(string sessionId)
         {
             var shareToken = new ShareToken
             {
-                Id = NewConnectionId(),
+                Id = await NewConnectionId(),
                 SessionId = sessionId
             };
-            ShareTokens.Insert(shareToken);
+            await Set(shareToken.Id.ToString(), shareToken);
+            await Set(sessionId, new SessionShareToken(shareToken.Id));
             return shareToken.Id;
-        }
-
-        public void RecordMessageStats(Message msg)
-        {
-            RecordStats(s =>
-            {
-                s.Messages++;
-                s.MessagesSizeBytes += msg.Text?.Length ?? 0;
-
-                if (msg.HasFile)
-                {
-                    s.Files++;
-                    s.FilesSizeBytes += msg.FileSizeBytes;
-                }
-            });
-        }
-        public void RecordStats(Action<Stats> update)
-        {
-            lock (this)
-            {
-                var utcNow = DateTime.UtcNow;
-
-                // All time stats
-                var allTime = StatsFindByIdOrNew(null);
-                update(allTime);
-
-                // This year
-                var thisYear = StatsFindByIdOrNew(utcNow.Year);
-                update(thisYear);
-
-                // This month
-                var thisMonth = StatsFindByIdOrNew(utcNow.Year, utcNow.Month);
-                update(thisMonth);
-
-                // Today
-                var today = StatsFindByIdOrNew(utcNow.Year, utcNow.Month, utcNow.Day);
-                update(today);
-
-                Statistics.Upsert(new[]
-                {
-                    allTime,
-                    thisYear,
-                    thisMonth,
-                    today
-                });
-            }
-        }
-
-        private Stats StatsFindByIdOrNew(int? year, int? month = null, int? day = null)
-        {
-            var id = StatsGetIdFor(year, month, day);
-            var items = Statistics.FindById(id);
-            return items ?? new Stats { Id = id, DateCreatedUtc = DateTime.UtcNow };
-        }
-
-        private int StatsGetIdFor(int? year, int? month = null, int? day = null)
-        {
-            if (!year.HasValue)
-                return -1;
-
-            return Convert.ToInt32(year.Value.ToString().Substring(2) + (month ?? 0).ToString("00") + (day ?? 0).ToString("00"));
         }
     }
 }

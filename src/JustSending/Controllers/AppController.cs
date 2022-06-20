@@ -1,9 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using JustSending.Data;
+using JustSending.Data.Models;
 using JustSending.Models;
 using JustSending.Services;
 using JustSending.Services.Attributes;
@@ -21,6 +21,7 @@ namespace JustSending.Controllers
     public partial class AppController : Controller
     {
         private readonly AppDbContext _db;
+        private readonly StatsDbContext _statDb;
         private readonly ConversationHub _hub;
         private readonly IWebHostEnvironment _env;
         private readonly IConfiguration _config;
@@ -28,12 +29,14 @@ namespace JustSending.Controllers
 
         public AppController(
                 AppDbContext db,
+                StatsDbContext statDb,
                 ConversationHub hub,
                 IWebHostEnvironment env,
                 IConfiguration config,
                 ILogger<AppController> logger)
         {
             _db = db;
+            _statDb = statDb;
             _hub = hub;
             _env = env;
             _config = config;
@@ -42,16 +45,16 @@ namespace JustSending.Controllers
 
         [Route("")]
         [ResponseCache(Duration = 3600 * 24, Location = ResponseCacheLocation.Any)]
-        public IActionResult NewSession()
+        public Task<IActionResult> NewSession()
         {
             return Session("", "", verifySessionExistance: false);
         }
 
-        private IActionResult Session(string id, string id2, bool verifySessionExistance = true)
+        private async Task<IActionResult> Session(string id, string id2, bool verifySessionExistance = true)
         {
             if (verifySessionExistance)
             {
-                var session = _db.Sessions.FindById(id);
+                var session = await _db.Get<Session>(id);
                 if (session == null || session.IdVerification != id2)
                 {
                     return NotFound();
@@ -69,18 +72,18 @@ namespace JustSending.Controllers
 
         [Route("new")]
         [HttpPost]
-        public IActionResult CreateSessionAjax(string id, string id2)
+        public async Task<IActionResult> CreateSessionAjax(string id, string id2)
         {
-            if ((id is { Length: not 32 })
-                || (id2 is { Length: not 32 }))
+            if ((id is {Length: not 32})
+                || (id2 is {Length: not 32}))
                 return BadRequest();
 
-            if (_db.Sessions.FindById(id) != null)
+            if (await _db.Exist<Session>(id))
             {
                 return Ok();
             }
 
-            CreateSession(id, id2);
+            await CreateSession(id, id2);
             return Accepted();
         }
 
@@ -128,16 +131,17 @@ namespace JustSending.Controllers
         [RequestSizeLimit(2_147_483_648)]
         public async Task<IActionResult> PostFileFromCli([FromRoute] string sessionId, IFormFile? file)
         {
-            if (!_db.Sessions.Exists(s => s.Id == sessionId))
+            var session = await _db.Get<Session>(sessionId);
+            if (session == null)
             {
                 return StatusCode(400, new
                 {
                     error = "Invalid Session, follow this redirect_uri to start a session in the browser first.",
-                    redirect_uri = Url.Action("NewSession", "App", null, "https") + $"#{sessionId}{_db.NewGuid()}"
+                    redirect_uri = Url.Action("NewSession", "App", null, "https") + $"#{sessionId}{AppDbContext.NewGuid()}"
                 });
             }
 
-            if (!_db.Connections.Exists(s => s.SessionId == sessionId))
+            if (!session.ConnectionIds.Any())
             {
                 return StatusCode(400, new
                 {
@@ -279,10 +283,15 @@ namespace JustSending.Controllers
 
         private async Task<IActionResult> SaveMessageAndReturnResponse(Message message, bool lite = false)
         {
-            _db.MessagesInsert(message);
-            _db.RecordMessageStats(message);
+            // validate
+            var session = await _db.GetSession(message.SessionId);
+            if (session == null)
+                return BadRequest();
 
-            ScheduleOrExtendSessionCleanup(message.SessionId, lite);
+            await _db.MessagesInsert(message);
+            _statDb.RecordMessageStats(message);
+
+            await ScheduleOrExtendSessionCleanup(message.SessionId, lite);
 
             await _hub.RequestReloadMessage(message.SessionId);
 
@@ -297,7 +306,7 @@ namespace JustSending.Controllers
             var utcNow = DateTime.UtcNow;
             return new Message
             {
-                Id = _db.NewGuid(),
+                Id = AppDbContext.NewGuid(),
                 SessionId = model.SessionId,
                 SessionIdVerification = model.SessionVerification,
                 SocketConnectionId = model.SocketConnectionId,
@@ -311,9 +320,9 @@ namespace JustSending.Controllers
 
         [HttpGet]
         [Route("file/{id}/{sessionId}")]
-        public IActionResult DownloadFile(string id, string sessionId)
+        public async Task<IActionResult> DownloadFile(string id, string sessionId)
         {
-            var msg = _db.Messages.FindById(id);
+            var msg = await _db.Get<Message>(id);
             if (msg == null || msg.SessionId != sessionId)
             {
                 // Chances of link forgery? 0%!
@@ -325,12 +334,11 @@ namespace JustSending.Controllers
             if (!IOFile.Exists(path))
                 return NotFound();
 
-            _db.RecordStats(s => s.FilesSizeBytes += msg.FileSizeBytes);
             return PhysicalFile(path, "application/" + Path.GetExtension(path).Trim('.'), msg.Text);
         }
 
         [Route("messages"), HttpPost]
-        public IActionResult GetMessages(string id, string id2, int @from) => GetMessagesViewInternal(id, id2, @from);
+        public Task<IActionResult> GetMessages(string id, string id2, int from) => GetMessagesViewInternal(id, id2, from);
 
         [Route("connect")]
         public IActionResult Connect()
@@ -347,14 +355,14 @@ namespace JustSending.Controllers
                 return View(model);
             }
 
-            var shareToken = _db.ShareTokens.FindById(model.Token);
+            var shareToken = await _db.Get<ShareToken>(model.Token.ToString());
             if (shareToken == null)
             {
                 ModelState.AddModelError(nameof(model.Token), "Invalid PIN!");
                 return View(model);
             }
 
-            var session = _db.Sessions.FindById(shareToken.SessionId);
+            var session = await _db.Get<Session>(shareToken.SessionId);
             if (session == null)
             {
                 ModelState.AddModelError(nameof(model.Token), "The Session does not exist!");
@@ -363,7 +371,7 @@ namespace JustSending.Controllers
 
             // Ready to join,
             // Delete the Token
-            _db.ShareTokens.Delete(model.Token);
+            await _db.Remove<ShareToken>(model.Token.ToString());
 
             if (model.NoJs && !session.IsLiteSession)
             {
@@ -379,14 +387,14 @@ namespace JustSending.Controllers
 
             await _hub.HideSharePanel(session.Id);
 
-            return Session(session.Id, session.IdVerification);
+            return await Session(session.Id, session.IdVerification);
         }
 
         [HttpPost]
         [Route("message-raw")]
-        public IActionResult GetMessage(string messageId, string sessionId)
+        public async Task<IActionResult> GetMessage(string messageId, string sessionId)
         {
-            var msg = _db.Messages.FindById(messageId);
+            var msg = await _db.Get<Message>(messageId);
             if (msg == null || msg.SessionId != sessionId)
                 return NotFound();
 
@@ -400,7 +408,7 @@ namespace JustSending.Controllers
         [Route("lite/notify/unsupported-device")]
         public async Task<IActionResult> NotifyUnsupportedClientConnected(string id, string id2)
         {
-            if (!IsValidSession(id, id2)) return BadRequest();
+            if (!await IsValidSession(id, id2)) return BadRequest();
 
             await ConvertToLiteSession(id, id2);
 
@@ -409,17 +417,18 @@ namespace JustSending.Controllers
 
         private async Task ConvertToLiteSession(string id, string id2)
         {
-            var session = _db.Sessions.FindById(id);
+            var session = await _db.GetSession(id, id2);
+            if (session == null) return;
             session.IsLiteSession = true;
-            _db.Sessions.Upsert(session);
+            await _db.Set(id, session);
 
-            await _hub.RedirectTo(id, Url.Action(nameof(LiteSession), new { id1 = id, id2, r = "u" }))
+            await _hub.RedirectTo(id, Url.Action(nameof(LiteSession), new {id1 = id, id2, r = "u"})!)
                 .ConfigureAwait(false);
         }
 
-        private IActionResult GetMessagesViewInternal(string id, string id2, int @from)
+        private async Task<IActionResult> GetMessagesViewInternal(string id, string id2, int from)
         {
-            var messages = GetMessagesInternal(id, id2, @from).ToArray();
+            var messages = await GetMessagesInternal(id, id2, from);
             if (messages.Length == 0) return new EmptyResult();
 
             return View("GetMessages", messages);

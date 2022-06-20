@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using JustSending.Data;
+using JustSending.Data.Models;
 
 namespace JustSending.Models
 {
@@ -13,7 +13,7 @@ namespace JustSending.Models
     {
         public string MessageHtml { get; set; }
         public bool HasToken { get; set; }
-        public string Token { get; set; }
+        public string? Token { get; set; }
         public bool HasSession { get; set; }
     }
 

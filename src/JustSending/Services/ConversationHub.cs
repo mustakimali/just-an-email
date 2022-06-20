@@ -5,9 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using JustSending.Data;
+using JustSending.Data.Models;
 using JustSending.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace JustSending.Services
 {
@@ -16,14 +18,20 @@ namespace JustSending.Services
         public const string FILE_EXT = ".file";
 
         private readonly AppDbContext _db;
+        private readonly IServiceProvider _serviceProvider;
         private readonly IWebHostEnvironment _env;
         private readonly BackgroundJobScheduler _jobScheduler;
 
         private readonly string _uploadFolder;
 
-        public ConversationHub(AppDbContext db, IWebHostEnvironment env, BackgroundJobScheduler jobScheduler)
+        public ConversationHub(
+            AppDbContext db, 
+            IServiceProvider serviceProvider, 
+            IWebHostEnvironment env, 
+            BackgroundJobScheduler jobScheduler)
         {
             _db = db;
+            _serviceProvider = serviceProvider;
             _env = env;
             _jobScheduler = jobScheduler;
 
@@ -62,21 +70,28 @@ namespace JustSending.Services
             await SignalREvent(sessionId, "redirect", relativeUrl);
         }
 
-        internal async Task<int> SendNumberOfDevices(string sessionId)
+        private async Task<int> SendNumberOfDevices(string sessionId)
         {
-            var numConnectedDevices = _db.Connections.Count(x => x.SessionId == sessionId);
+            var numConnectedDevices = await GetNumberOfDevices(sessionId);
             await SendNumberOfDevices(sessionId, numConnectedDevices);
             return numConnectedDevices;
         }
 
-        private async Task SignalREvent(string sessionId, string message, object data = null)
+        private async Task<int> GetNumberOfDevices(string sessionId)
+        {
+            var session = await _db.Get<Session>(sessionId);
+            var numConnectedDevices = session?.ConnectionIds.Count ?? 0;
+            return numConnectedDevices;
+        }
+
+        private async Task SignalREvent(string sessionId, string message, object? data = null)
         {
             try
             {
                 if (data != null)
-                    await GetClientsBySessionId(sessionId).SendAsync(message, data);
+                    await (await GetClientsBySessionId(sessionId)).SendAsync(message, data);
                 else
-                    await GetClientsBySessionId(sessionId).SendAsync(message);
+                    await (await GetClientsBySessionId(sessionId)).SendAsync(message);
             }
             catch (Exception ex)
             {
@@ -84,7 +99,7 @@ namespace JustSending.Services
             }
         }
 
-        private async Task SignalREventToClients(string[] connectionIds, string message, object data = null)
+        private async Task SignalREventToClients(string[] connectionIds, string message, object? data = null)
         {
             try
             {
@@ -99,9 +114,9 @@ namespace JustSending.Services
             }
         }
 
-        private IClientProxy GetClientsBySessionId(string sessionId, string except = null)
+        private async Task<IClientProxy> GetClientsBySessionId(string sessionId, string except = null)
         {
-            var connectionIds = _db.FindClient(sessionId);
+            var connectionIds = await _db.FindClient(sessionId);
 
             if (!string.IsNullOrEmpty(except))
             {
@@ -115,28 +130,29 @@ namespace JustSending.Services
 
         public override Task OnConnectedAsync()
         {
-            _db.RecordStats(s => s.Devices++);
+            using var statsDb = _serviceProvider.GetRequiredService<StatsDbContext>();
+            statsDb.RecordStats(StatsDbContext.RecordType.Device);
             return Task.CompletedTask;
         }
 
         public override async Task OnDisconnectedAsync(Exception exception)
         {
-            var sessionId = _db.UntrackClientReturnSessionId(Context.ConnectionId);
+            var sessionId = await _db.UntrackClientReturnSessionId(Context.ConnectionId);
 
             if (string.IsNullOrEmpty(sessionId)) return;
 
             // Don't Erase session if this session had been converted
             // to a Lite Session in the mean time
             //
-            var session = _db.Sessions.FindById(sessionId);
-            if (session.IsLiteSession) return;
+            var session = await _db.Get<Session>(sessionId);
+            if (session?.IsLiteSession ?? true) return;
 
             if (!string.IsNullOrEmpty(sessionId))
             {
                 var numDevices = await SendNumberOfDevices(sessionId);
                 if (numDevices == 0)
                 {
-                    var cIds = _jobScheduler.EraseSessionReturnConnectionIds(sessionId);
+                    var cIds = await _jobScheduler.EraseSessionReturnConnectionIds(sessionId);
                     await NotifySessionDeleted(cIds);
                 }
                 else
@@ -150,15 +166,15 @@ namespace JustSending.Services
         {
             var msg = new Message
             {
-                Id = _db.NewGuid(),
+                Id = AppDbContext.NewGuid(),
                 SessionId = sessionId,
                 DateSent = DateTime.UtcNow,
                 Text = message,
-                SocketConnectionId = Context?.ConnectionId,
+                SocketConnectionId = Context.ConnectionId,
                 IsNotification = true
             };
 
-            _db.MessagesInsert(msg);
+            await _db.MessagesInsert(msg);
 
             if (!isLiteSession)
                 await RequestReloadMessage(sessionId);
@@ -166,13 +182,13 @@ namespace JustSending.Services
 
         public async Task<string> Connect(string sessionId)
         {
-            _db.TrackClient(sessionId, Context.ConnectionId);
+            await _db.TrackClient(sessionId, Context.ConnectionId);
 
             // Check if any active share token is open
             //
             await CheckIfShareTokenExists(sessionId);
 
-            var numDevices = _db.Connections.Count(x => x.SessionId == sessionId);
+            var numDevices = await GetNumberOfDevices(sessionId);
             await SendNumberOfDevices(sessionId, numDevices);
 
             if (numDevices > 1)
@@ -197,12 +213,10 @@ namespace JustSending.Services
         {
             // enable end to end encryption
             //
-            var newDevice = Context.ConnectionId;
-            var firstDeviceId =
-                _db
-                    .Connections
-                    .FindOne(x => x.SessionId == sessionId && x.ConnectionId != newDevice)
-                    .ConnectionId;
+            var newDeviceId = Context.ConnectionId;
+            var session = await _db.Get<Session>(sessionId);
+            var firstDeviceId = session?.ConnectionIds.FirstOrDefault(cId => cId != newDeviceId);
+            if (firstDeviceId == null) return;
 
             //
             // Send shared p & g to both parties then
@@ -214,12 +228,12 @@ namespace JustSending.Services
 
             var initFirstDevice = Clients
                 .Client(firstDeviceId)
-                .SendAsync("startKeyExchange", newDevice, p, g, pka, false);
+                .SendAsync("startKeyExchange", newDeviceId, p, g, pka, false);
 
             await initFirstDevice.ContinueWith(async x =>
             {
                 await Clients
-                    .Client(newDevice)
+                    .Client(newDeviceId)
                     .SendAsync("startKeyExchange", firstDeviceId, p, g, pka, true);
             });
 
@@ -227,18 +241,19 @@ namespace JustSending.Services
 
         public async Task CallPeer(string peerId, string method, string param)
         {
-            ValidateIntent(peerId);
+            await ValidateIntent(peerId);
 
             IClientProxy endpoint;
 
             if (peerId == "ALL")
             {
-                var sessionId = GetSessionId();
+                var sessionId = await GetSessionIdFromConnection();
+                if (sessionId == null) return;
 
-                endpoint = GetClientsBySessionId(sessionId, except: Context.ConnectionId);
+                endpoint = await GetClientsBySessionId(sessionId, except: Context.ConnectionId);
 
                 var msg = new StringBuilder("A new device connected.<br/><i class=\"fa fa-lock\"></i> Message is end to end encrypted.");
-                var numDevices = _db.Connections.Count(x => x.SessionId == sessionId);
+                var numDevices = await GetNumberOfDevices(sessionId);
                 if (numDevices == 2)
                 {
                     msg.Append("<hr/><div class='text-info'>Frequently share data between these devices?<br/><span class='small'>Bookmark this page on each devices to quickly connect your devices.</span></div>");
@@ -253,7 +268,7 @@ namespace JustSending.Services
             await endpoint.SendAsync("callback", method, param);
         }
 
-        private void ValidateIntent(string peerId)
+        private async Task ValidateIntent(string peerId)
         {
 
             if (peerId == "ALL")
@@ -264,10 +279,10 @@ namespace JustSending.Services
             //
 
             // Get session from connection
-            var connection = _db.Connections.FindById(Context.ConnectionId);
-            if (connection != null)
+            var sessionMeta = await _db.Get<SessionMetaByConnectionId>(Context.ConnectionId);
+            if (sessionMeta != null)
             {
-                var devices = _db.FindClient(connection.SessionId);
+                var devices = await _db.FindClient(sessionMeta.SessionId);
                 if (devices.Contains(peerId))
                 {
                     // OK
@@ -282,11 +297,11 @@ namespace JustSending.Services
 
         private async Task<bool> CheckIfShareTokenExists(string sessionId, bool notifyIfExist = true)
         {
-            var shareToken = _db.ShareTokens.FindOne(x => x.SessionId == sessionId);
-            if (shareToken != null)
+            var sessionShareToken = await _db.Get<SessionShareToken>(sessionId);
+            if (sessionShareToken != null)
             {
                 if (notifyIfExist)
-                    await ShowSharePanel(sessionId, shareToken.Id);
+                    await ShowSharePanel(sessionId, sessionShareToken.Token);
                 return true;
             }
             return false;
@@ -294,35 +309,41 @@ namespace JustSending.Services
 
         public async Task Share()
         {
-            var connection = _db.Connections.FindById(Context.ConnectionId);
-            if (connection == null) return;
+            var sessionId = await GetSessionIdFromConnection();
+            if (sessionId == null) return;
 
             // Check if any share exist
-            if (!await CheckIfShareTokenExists(connection.SessionId))
+            if (!await CheckIfShareTokenExists(sessionId))
             {
-                var token = _db.CreateNewShareToken(connection.SessionId);
-                await ShowSharePanel(connection.SessionId, token);
+                var token = await _db.CreateNewShareToken(sessionId);
+                await ShowSharePanel(sessionId, token);
             }
+        }
+
+        private async Task<string?> GetSessionIdFromConnection()
+        {
+            return (await _db.Get<SessionMetaByConnectionId>(Context.ConnectionId))?.SessionId;
         }
 
         public async Task CancelShare()
         {
-            var connection = _db.Connections.FindById(Context.ConnectionId);
-            if (connection == null) return;
+            var sessionId = await GetSessionIdFromConnection();
+            if (sessionId == null) return;
 
-            if (CancelShareSessionBySessionId(connection.SessionId))
+            if (await CancelShareSessionBySessionId(sessionId))
             {
-                await HideSharePanel(connection.SessionId);
+                await HideSharePanel(sessionId);
             }
         }
 
-        public bool CancelShareSessionBySessionId(string sessionId)
+        public async Task<bool> CancelShareSessionBySessionId(string sessionId)
         {
-            var shareToken = _db.ShareTokens.FindOne(x => x.SessionId == sessionId);
-
-            if (shareToken != null)
+            var sessionShareToken = await _db.Get<SessionShareToken>(sessionId);
+            if (sessionShareToken != null)
             {
-                _db.ShareTokens.Delete(shareToken.Id);
+                await _db.Remove<ShareToken>(sessionShareToken.Token.ToString());
+                await _db.Remove<SessionShareToken>(sessionId);
+
                 return true;
             }
 
@@ -331,22 +352,16 @@ namespace JustSending.Services
 
         public async Task EraseSession()
         {
-            var connection = _db.Connections.FindById(Context.ConnectionId);
-            if (connection == null) return;
+            var sessionId = await GetSessionIdFromConnection();
+            if (sessionId == null) return;
 
-            await EraseSessionInternal(connection.SessionId);
+            await EraseSessionInternal(sessionId);
         }
 
         private async Task EraseSessionInternal(string sessionId)
         {
-            var cIds = _jobScheduler.EraseSessionReturnConnectionIds(sessionId);
+            var cIds = await _jobScheduler.EraseSessionReturnConnectionIds(sessionId);
             await NotifySessionDeleted(cIds);
         }
-
-        private string GetSessionId() =>
-                            _db
-                                .Connections
-                                .FindOne(x => x.ConnectionId == Context.ConnectionId)
-                                .SessionId;
     }
 }

@@ -1,11 +1,10 @@
-using LiteDB;
-
-namespace JustSending.Data
+namespace JustSending.Data.Models
 {
     public class ShareToken
     {
-        [BsonId]
         public int Id { get; set; }
         public string SessionId { get; set; }
     }
+
+    public record SessionShareToken(int Token);
 }

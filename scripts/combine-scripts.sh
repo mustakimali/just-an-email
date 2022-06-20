@@ -1,8 +1,18 @@
 #!/bin/bash
-set -u
-
+# combined multiple js files (remote and local) and creates a single file.
+# optionally minified using terser (if already installed)
+# $ sudo npm install terser -g
+# usage:
+# ./combine-scripts.sh <.cshtml file to parser> <out folder> <name>
+# example:
 # ./combine-scripts.sh src/JustSending/Views/Shared/_Layout.cshtml src/JustSending/wwwroot/js combined-main
+# creates src/JustSending/wwwroot/js/combined-main.min.js (if minified)
+#      or src/JustSending/wwwroot/js/combined-main.js (if not minified)
+#
+# more example:
 # ./combine-scripts.sh src/JustSending/Views/Shared/_Layout.cshtml src/JustSending/wwwroot/js combined-session
+
+set -eu
 
 grey='\e[2m'
 red='\e[91m'
@@ -25,6 +35,7 @@ echo Getting list
 SESSION_EXTERNAL=($(cat $INPUT_FILE | grep "script src" | sed 's/@@/@/g' | awk -F "\"" '{print $2}' | grep https))
 SESSION_INTERNAL=($(cat $INPUT_FILE | grep "script src" | sed 's/@@/@/g' | awk -F "\"" '{print $2}' | grep '~/' | sed 's/\~/src\/JustSending\/wwwroot/g'))
 
+echo "Clearing any existing file @ $OUTPUT_FILENAME"
 rm $OUTPUT_FILENAME || true
 
 # download and cat external scripts
@@ -47,19 +58,22 @@ do
    cat $i >> $OUTPUT_FILENAME
 done
 
+# fix for this weird character being prepended in local file
+sed -i 's/﻿//g' $OUTPUT_FILENAME
+
 ls -lsah $OUTPUT_FILENAME
 
-if command -v uglifyjs &> /dev/null
+if command -v terser &> /dev/null
 then
     # minify
     echo "Minifing..."
-    uglifyjs $OUTPUT_FILENAME > $OUTPUT_FILENAME_MIN
+    terser $OUTPUT_FILENAME > $OUTPUT_FILENAME_MIN
     rm $OUTPUT_FILENAME
     ls -lsah $OUTPUT_FILENAME_MIN
 else
     echo -e "${red}Could not minify the output."
-    echo -e "Install uglifyjs and try again.$reset"
-    echo "$ npm install uglify-js -g"
+    echo -e "Install terser and try again.$reset"
+    echo "$ sudo npm install terser -g"
 fi
 
 function show_hash()

@@ -6,6 +6,7 @@ using System;
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Hosting;
 using JustSending.Data;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace JustSending.Services
 {
@@ -14,24 +15,27 @@ namespace JustSending.Services
         private readonly ConcurrentDictionary<string, string> _connectionIdSessionMap = new();
         private readonly ConcurrentDictionary<string, HashSet<string>> _sessionIdConnectionIds = new();
         private readonly IWebHostEnvironment _env;
-        private readonly AppDbContext _db;
-        private readonly object _lock = new();
+        private readonly IServiceProvider _serviceProvider;
+        private readonly ILock _lock;
 
-        public SecureLineHub(IWebHostEnvironment env, AppDbContext db)
+        public SecureLineHub(
+            IWebHostEnvironment env, 
+            IServiceProvider serviceProvider,
+            ILock @lock)
         {
             _env = env;
-            _db = db;
+            _serviceProvider = serviceProvider;
+            _lock = @lock;
         }
 
         public async Task Init(string id)
         {
+            using var lck = await _lock.Acquire(id);
+
             var connectionId = Context.ConnectionId;
-            lock (_lock)
+            if (!_connectionIdSessionMap.ContainsKey(connectionId))
             {
-                if (!_connectionIdSessionMap.ContainsKey(connectionId))
-                {
-                    _ = _connectionIdSessionMap.TryAdd(connectionId, id);
-                }
+                _ = _connectionIdSessionMap.TryAdd(connectionId, id);
             }
 
             if (_sessionIdConnectionIds.TryGetValue(id, out var entry))
@@ -45,11 +49,9 @@ namespace JustSending.Services
 
                 if (entry.Count > 1)
                 {
-                    _db.RecordStats(s =>
-                    {
-                        s.Messages++;
-                        s.Sessions++;
-                    });
+                    using var db = _serviceProvider.GetRequiredService<StatsDbContext>();
+                    db.RecordStats(StatsDbContext.RecordType.Message);
+                    db.RecordStats(StatsDbContext.RecordType.Device);
 
                     await Broadcast("Start", null, true)
                         .ContinueWith(_ => InitKeyExchange(entry.First(), entry.Last()));
@@ -76,13 +78,10 @@ namespace JustSending.Services
                 return clients.Where(c => c != Context.ConnectionId);
         }
 
-        public async Task Broadcast(string @event, string data, bool all = false)
+        public async Task Broadcast(string @event, string? data, bool all = false)
         {
-            _db.RecordStats(s =>
-            {
-                s.Messages++;
-                s.MessagesSizeBytes += @event.Length + (data ?? "").Length;
-            });
+            using var db = _serviceProvider.GetRequiredService<StatsDbContext>();
+            db.RecordMessageStats(@event.Length + (data ?? "").Length);
 
             await Clients
                 .Clients(GetClients(all).ToArray())
@@ -106,12 +105,14 @@ namespace JustSending.Services
                     .SendAsync("startKeyExchange", firstDeviceId, p, g, pka, true);
             });
 
-            _db.RecordStats(s => s.Messages += 2);
+            using var db = _serviceProvider.GetRequiredService<StatsDbContext>();
+            db.RecordStats(StatsDbContext.RecordType.Message, 2);
         }
 
         public async Task CallPeer(string peerId, string method, string param)
         {
-            _db.RecordStats(s => s.Messages++);
+            using var db = _serviceProvider.GetRequiredService<StatsDbContext>();
+            db.RecordStats(StatsDbContext.RecordType.Message);
             await Clients
                 .Clients(GetClients(false).ToArray())
                 .SendAsync("callback", method, param);
@@ -137,7 +138,8 @@ namespace JustSending.Services
 
         public override Task OnConnectedAsync()
         {
-            _db.RecordStats(s => s.Devices++);
+            using var db = _serviceProvider.GetRequiredService<StatsDbContext>();
+            db.RecordStats(StatsDbContext.RecordType.Device);
             return base.OnConnectedAsync();
         }
     }

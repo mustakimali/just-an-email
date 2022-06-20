@@ -28,5 +28,10 @@ docker-log:
 .PHONY: combine-all-scripts
 combine-all-scripts: SHELL:=/bin/bash
 combine-all-scripts:
-	./combine-scripts.sh src/JustSending/Views/Shared/_Layout.cshtml src/JustSending/wwwroot/js combined-main
-	./combine-scripts.sh src/JustSending/Views/App/Session.cshtml src/JustSending/wwwroot/js combined-session
+	./scripts/combine-scripts.sh src/JustSending/Views/Shared/_Layout.cshtml src/JustSending/wwwroot/js combined-main
+	./scripts/combine-scripts.sh src/JustSending/Views/App/Session.cshtml src/JustSending/wwwroot/js combined-session
+	
+.PHONY: combine-all-css
+combine-all-css: SHELL:=/bin/bash
+combine-all-css:
+	./scripts/combine-css.sh src/JustSending/Views/Shared/_CommonHead.cshtml src/JustSending/wwwroot/css combined-main

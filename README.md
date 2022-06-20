@@ -22,6 +22,20 @@ Should be running in http://localhost:5050
 * Run `make docker-run`
 * Access the app using `localhost:5050`
 
+### Dependencies
+
+* LiteDb file storage for statistics data.
+
+#### When running locally
+* InProc storage for session data
+* InProc storage for background jobs
+* InProc SignalR (websocket) session information
+
+#### In Production
+When configured in `appsettions.json`
+* Redis for session data
+* Redis storage for background jobs 
+* Azure SignalR service as backplane
 ## Building the code
 * Make sure you have latest preview of [.NET Core SDK 6](https://www.microsoft.com/net/download/core) installed (you can use [this script](https://gist.github.com/mustakimali/1dd2a1f4ea22907760eb112a7cdd9c68) to install latest nightly build and use `dotnet-pre` instead of `dotnet` below)
 * Clone
