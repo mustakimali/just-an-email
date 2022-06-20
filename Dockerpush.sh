@@ -15,7 +15,7 @@ echo "Building image version:$dock_version"
 docker build . -t justaml
 
 docker tag justaml mustakimali/justaml:latest
-#docker push mustakimali/justaml:latest
+docker push mustakimali/justaml:latest
 
 tag="mustakimali/justaml:$dock_version"
 docker tag justaml $tag
