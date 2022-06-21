@@ -13,7 +13,7 @@ namespace JustSending
         {
             Log.Logger = new LoggerConfiguration()
                 .Enrich.FromLogContext()
-                .WriteTo.Console()
+                .WriteTo.Console(outputTemplate:"[{SourceContext} {Timestamp:HH:mm:ss} {Level:u3} {}] {Message:lj}{NewLine}{Exception}")
                 .WriteTo.Sentry(o =>
                 {
                     o.MinimumBreadcrumbLevel = LogEventLevel.Debug;
@@ -34,7 +34,8 @@ namespace JustSending
             try
             {
                 Log.Information("Starting web host");
-                await BuildWebHost(args).Build().RunAsync();
+                using var host = BuildWebHost(args).Build();
+                await host.RunAsync();
             }
             catch (Exception ex)
             {

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using Hangfire;
 using JustSending.Data;
 using JustSending.Services;
@@ -12,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using RedLockNet.SERedis;
 using RedLockNet.SERedis.Configuration;
+using Serilog;
 using StackExchange.Redis;
 
 namespace JustSending
@@ -43,24 +45,20 @@ namespace JustSending
             var signalrBuilder = services
                 .AddSignalR()
                 .AddJsonProtocol();
-
             var redisConfig = Configuration["RedisCache"];
-            var hasRedisCache = redisConfig is {Length: >0}; 
+            var hasRedisCache = redisConfig is { Length: > 0 };
             if (hasRedisCache)
             {
-                // Redis backplane is too slow and Azure is expensive :(
-
-                // signalrBuilder
-                //     .AddStackExchangeRedis(redisConfig);
-
+                signalrBuilder.AddStackExchangeRedis(redisConfig);
+                
                 // use redis for storage
                 services
                     .AddStackExchangeRedisCache(o => o.Configuration = redisConfig)
                     .AddTransient<IDataStore, DataStoreRedis>();
-                
+
                 // redis for hangfire jobs
                 services.AddHangfire(x => x.UseRedisStorage(redisConfig));
-                
+
                 // redis lock
                 services
                     .AddSingleton<RedLockFactory>(sp => RedLockFactory.Create(new List<RedLockMultiplexer>
@@ -73,10 +71,10 @@ namespace JustSending
             {
                 // use in memory storage
                 services.AddTransient<IDataStore, DataStoreInMemory>();
-                
+
                 // in memory hangfire storage
                 services.AddHangfire(x => x.UseInMemoryStorage());
-                
+
                 // no-op lock
                 services.AddTransient<ILock, NoOpLock>();
             }
@@ -127,7 +125,7 @@ namespace JustSending
             {
                 DisplayStorageConnectionString = false,
                 DashboardTitle = "Just An Email",
-                Authorization = new []{new InsecureAuthFilter()}
+                Authorization = new[] { new InsecureAuthFilter() }
             });
 
             app.UseRouting();

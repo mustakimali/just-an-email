@@ -77,7 +77,7 @@ spec:
             path: /storage/justaml/uploads
       containers:
         - name: app
-          image: mustakimali/justaml:220619_1727
+          image: mustakimali/justaml:220621_2050
           ports:
             - containerPort: 3000
           volumeMounts:
@@ -100,7 +100,7 @@ spec:
                   name: "justaml-secret"
                   key: "sentry_dsn"
 
-            # use redis for data+bg jobs storage & signalr backplane
+            # use redis for data+bg jobs storage
             - name: "RedisCache"
               value: "redis-service:6379,defaultDatabase=0"
 

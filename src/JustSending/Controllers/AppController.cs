@@ -184,7 +184,7 @@ namespace JustSending.Controllers
                     message_id = message.Id,
                     file_name = message.Text,
                     file_size = file.Length,
-                    downlod_url = Url.Action("DownloadFile", "App", new { id = message.Id, sessionId = sessionId },
+                    download_url = Url.Action("DownloadFile", "App", new { id = message.Id, sessionId = sessionId },
                         "https")
                 });
             }
