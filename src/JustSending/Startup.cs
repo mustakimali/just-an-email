@@ -50,7 +50,7 @@ namespace JustSending
             if (hasRedisCache)
             {
                 signalrBuilder.AddStackExchangeRedis(redisConfig);
-                
+
                 // use redis for storage
                 services
                     .AddStackExchangeRedisCache(o => o.Configuration = redisConfig)
@@ -79,6 +79,7 @@ namespace JustSending
                 services.AddTransient<ILock, NoOpLock>();
             }
 
+            services.AddHangfireServer();
             services.AddHttpContextAccessor();
 
             services
@@ -96,6 +97,7 @@ namespace JustSending
                 .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(Directory.GetCurrentDirectory(), "App_Data")));
         }
 
+
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
@@ -109,6 +111,7 @@ namespace JustSending
 
             app.UseHealthChecks("/api/test");
 
+
             app.UseCors(c =>
             {
                 c
@@ -119,8 +122,6 @@ namespace JustSending
             });
 
             app.UseStaticFiles();
-
-            app.UseHangfireServer();
             app.UseHangfireDashboard("/jobs", new DashboardOptions
             {
                 DisplayStorageConnectionString = false,
