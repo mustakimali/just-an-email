@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 using JustSending.Models;
 using Microsoft.AspNetCore.Hosting;
@@ -19,7 +20,7 @@ namespace JustSending.Controllers
         {
             return View();
         }
-        
+
         [Route("/password")]
         public IActionResult Password()
         {
@@ -39,10 +40,17 @@ namespace JustSending.Controllers
                 }
                 else
                 {
-                    await store.Set(date.ToString(), stat, TimeSpan.FromHours(1));
+                    var ttl = stat.Messages
+                    switch
+                    { <
+                        5 => TimeSpan.FromMinutes(1),
+                        _ => TimeSpan.FromHours(1)
+                    };
+                    await store.Set(date.ToString(), stat, ttl);
                 }
             }
 
+            ViewData["LastBuild"] = new DirectoryInfo(Directory.GetCurrentDirectory()).LastWriteTimeUtc.ToString("s");
             return View(stat);
         }
 

@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace JustSending.Controllers
 {
     [Route("stats/raw")]
-    public class StatsRawHandler : BaseEndpointAsync
+    public class StatsRawHandler : ControllerBase
     {
         private readonly StatsDbContext _dbContext;
         private readonly IDataStore _dataStore;

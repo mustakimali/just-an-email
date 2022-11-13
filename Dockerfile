@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build-env
+FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build-env
 # install chrome for testing
 RUN \
    apt-get update && \
@@ -24,19 +24,15 @@ WORKDIR /app/test/JustSending.Test
 RUN rm Drivers/chromedriver
 RUN cp Drivers/Linux/chromedriver Drivers/
 
-
 #RUN dotnet test
 
 WORKDIR /app/src/JustSending
 RUN cd /app/src/JustSending
-RUN dotnet publish -c Release \
-                                -r linux-x64 -o out \
-                                 -p:PublishSingleFile=true \
-                                 -p:PublishReadyToRun=true
+RUN dotnet publish -c Release --no-restore --self-contained -o out/ /p:PublishSingleFile=true
 RUN ls -lsah out/
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/runtime-deps:6.0
+FROM mcr.microsoft.com/dotnet/runtime-deps:7.0
 WORKDIR /app
 COPY --from=build-env /app/src/JustSending/out .
 
