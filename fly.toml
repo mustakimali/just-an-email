@@ -1,4 +1,4 @@
-# fly.toml file generated for justaml on 2022-11-13T16:52:00Z
+# fly.toml file generated for justaml on 2022-11-17T04:49:00Z
 
 app = "justaml"
 kill_signal = "SIGINT"
@@ -11,10 +11,15 @@ processes = []
 [experimental]
   allowed_public_ports = []
   auto_rollback = true
+  cmd = []
+  entrypoint = []
+  exec = []
 
-[mounts]
-source="justaml_data"
-destination="/app/App_Data"
+[[mounts]]
+  destination = "/app/App_Data"
+  encrypted = false
+  processes = []
+  source = "justaml_data"
 
 [[services]]
   internal_port = 8080
@@ -25,6 +30,16 @@ destination="/app/App_Data"
     hard_limit = 25
     soft_limit = 20
     type = "connections"
+
+  [[services.http_checks]]
+    grace_period = "5s"
+    interval = "10s"
+    method = "get"
+    path = "/api/test"
+    protocol = "http"
+    restart_limit = 0
+    timeout = "2s"
+    tls_skip_verify = false
 
   [[services.ports]]
     force_https = true
@@ -40,13 +55,3 @@ destination="/app/App_Data"
     interval = "15s"
     restart_limit = 0
     timeout = "2s"
-
-  [[services.http_checks]]
-    interval = 10000
-    grace_period = "5s"
-    method = "get"
-    path = "/api/test"
-    protocol = "http"
-    restart_limit = 0
-    timeout = 2000
-    tls_skip_verify = false
