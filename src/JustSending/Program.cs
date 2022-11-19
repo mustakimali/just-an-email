@@ -13,7 +13,8 @@ namespace JustSending
         {
             Log.Logger = new LoggerConfiguration()
                 .Enrich.FromLogContext()
-                .WriteTo.Console(outputTemplate:"[{SourceContext} {Timestamp:HH:mm:ss} {Level:u3} {}] {Message:lj}{NewLine}{Exception}")
+                .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+                .WriteTo.Console(new Serilog.Formatting.Compact.CompactJsonFormatter())
                 .WriteTo.Sentry(o =>
                 {
                     o.MinimumBreadcrumbLevel = LogEventLevel.Debug;

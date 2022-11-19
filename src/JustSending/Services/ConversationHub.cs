@@ -10,6 +10,7 @@ using JustSending.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace JustSending.Services
 {
@@ -21,22 +22,24 @@ namespace JustSending.Services
         private readonly IServiceProvider _serviceProvider;
         private readonly IWebHostEnvironment _env;
         private readonly BackgroundJobScheduler _jobScheduler;
-
+        private readonly ILogger<ConversationHub> _logger;
         private readonly string _uploadFolder;
 
         public ConversationHub(
             AppDbContext db, 
             IServiceProvider serviceProvider, 
             IWebHostEnvironment env, 
-            BackgroundJobScheduler jobScheduler)
+            BackgroundJobScheduler jobScheduler,
+            ILogger<ConversationHub> logger)
         {
             _db = db;
             _serviceProvider = serviceProvider;
             _env = env;
             _jobScheduler = jobScheduler;
-
+            _logger = logger;
             _uploadFolder = Helper.GetUploadFolder(string.Empty, _env.WebRootPath);
 
+            _logger.LogInformation("Initializing with upload folder: {uploadFolder}", _uploadFolder);
             if (!Directory.Exists(_uploadFolder)) Directory.CreateDirectory(_uploadFolder);
         }
 
@@ -95,12 +98,13 @@ namespace JustSending.Services
             }
             catch (Exception ex)
             {
-                Trace.TraceError($"[SignalR/SignalREvent:{message}] {ex.GetBaseException().Message}");
+                _logger.LogError(ex, "[SignalR/SignalREvent:{message}] {errorMessage}", message, ex.GetBaseException().Message);
             }
         }
 
         private async Task SignalREventToClients(string[] connectionIds, string message, object? data = null)
         {
+            _logger.LogInformation("[SignaR Event] {message} to {@connectionIds} ({@data})", message, connectionIds, data);
             try
             {
                 if (data != null)
@@ -110,11 +114,11 @@ namespace JustSending.Services
             }
             catch (Exception ex)
             {
-                Trace.TraceError($"[SignalR/SignalREventToClients:{message}] {ex.GetBaseException().Message}");
+                _logger.LogError(ex, "[SignalR/SignalREventToClients:{message}] {errorMessage}", message, ex.GetBaseException().Message);
             }
         }
 
-        private async Task<IClientProxy> GetClientsBySessionId(string sessionId, string except = null)
+        private async Task<IClientProxy> GetClientsBySessionId(string sessionId, string? except = null)
         {
             var connectionIds = await _db.FindClient(sessionId);
 
@@ -130,13 +134,16 @@ namespace JustSending.Services
 
         public override Task OnConnectedAsync()
         {
+            _logger.LogInformation("[CONNECTED]: {connectionId}", Context.ConnectionId);
+
             using var statsDb = _serviceProvider.GetRequiredService<StatsDbContext>();
             statsDb.RecordStats(StatsDbContext.RecordType.Device);
             return Task.CompletedTask;
         }
 
-        public override async Task OnDisconnectedAsync(Exception exception)
+        public override async Task OnDisconnectedAsync(Exception? exception)
         {
+            _logger.LogWarning(exception, "[DISCONNECTED]: {connectionId}", Context.ConnectionId);
             var sessionId = await _db.UntrackClientReturnSessionId(Context.ConnectionId);
 
             if (string.IsNullOrEmpty(sessionId)) return;
@@ -164,6 +171,7 @@ namespace JustSending.Services
 
         public async Task AddSessionNotification(string sessionId, string message, bool isLiteSession = false)
         {
+            _logger.LogInformation("AddSessionNotification: {sessionId}, ConnectionId: {connectionId}", sessionId, Context.ConnectionId);
             var msg = new Message
             {
                 Id = AppDbContext.NewGuid(),

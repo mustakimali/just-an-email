@@ -31,7 +31,14 @@ namespace JustSending.Controllers
             {
                 token = await CreateSession(id1, id2, liteSession: true);
 
-                await _hub.AddSessionNotification(id1, "Session Created", true);
+                try
+                {
+                    await _hub.AddSessionNotification(id1, "Session Created", true);
+                }
+                catch (System.NullReferenceException)
+                {
+                    return RedirectToAction("NewSession", "App");
+                }
             }
 
             var vm = new LiteSessionModel

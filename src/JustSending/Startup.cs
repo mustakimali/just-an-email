@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net;
 using Hangfire;
+using Hangfire.Storage.SQLite;
 using JustSending.Data;
 using JustSending.Services;
 using Microsoft.AspNetCore.Builder;
@@ -49,31 +50,37 @@ namespace JustSending
             var hasRedisCache = redisConfig is { Length: > 0 };
             if (hasRedisCache)
             {
-                signalrBuilder.AddStackExchangeRedis(redisConfig);
+                signalrBuilder.AddStackExchangeRedis(redisConfig!);
 
                 // use redis for storage
                 services
                     .AddStackExchangeRedisCache(o => o.Configuration = redisConfig)
                     .AddTransient<IDataStore, DataStoreRedis>();
 
-                // redis for hangfire jobs
-                services.AddHangfire(x => x.UseRedisStorage(redisConfig));
+                // Upstash Redis has some issues with
+                //services.AddHangfire(x => x.UseRedisStorage(redisConfig));
+
+                // Uses Sqlite for Hangfire storage
+                services.AddHangfire(x => x
+                    .UseSerilogLogProvider()
+                    .UseRecommendedSerializerSettings()
+                    .UseSQLiteStorage("Data Source=App_Data\\Hangfire.sqlite;Cache=Shared"));
 
                 // redis lock
                 services
                     .AddSingleton<RedLockFactory>(sp => RedLockFactory.Create(new List<RedLockMultiplexer>
                     {
-                        new(ConnectionMultiplexer.Connect(redisConfig))
+                        new(ConnectionMultiplexer.Connect(redisConfig!))
                     }))
                     .AddTransient<ILock, RedisLock>();
             }
             else
             {
-                // use in memory storage
-                services.AddTransient<IDataStore, DataStoreInMemory>();
-
                 // in memory hangfire storage
                 services.AddHangfire(x => x.UseInMemoryStorage());
+                
+                // use in memory storage
+                services.AddTransient<IDataStore, DataStoreInMemory>();
 
                 // no-op lock
                 services.AddTransient<ILock, NoOpLock>();
@@ -92,21 +99,21 @@ namespace JustSending
 
             services.AddTransient<BackgroundJobScheduler>();
 
-            services.AddHealthChecks();
             services.AddDataProtection()
                 .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(Directory.GetCurrentDirectory(), "App_Data")));
         }
 
-
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            app.UseSerilogRequestLogging();
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
             else
             {
-                app.UseExceptionHandler("/Home/Error");
+                app.UseExceptionHandler("/error");
             }
 
             app.UseHealthChecks("/api/test");
