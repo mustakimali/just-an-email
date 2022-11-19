@@ -46,6 +46,12 @@ namespace JustSending
             var signalrBuilder = services
                 .AddSignalR()
                 .AddJsonProtocol();
+            var signlrBackplane = Configuration["SignalRBackplane"];
+            if (!string.IsNullOrEmpty(signlrBackplane))
+            {
+                signalrBuilder.AddAzureSignalR(signlrBackplane);
+            }
+
             var redisConfig = Configuration["RedisCache"];
             var hasRedisCache = redisConfig is { Length: > 0 };
             if (hasRedisCache)

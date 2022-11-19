@@ -54,7 +54,7 @@ namespace JustSending
                 .ConfigureWebHostDefaults(builder =>
                 {
                     builder
-                        .UseSentry()
+                        .UseSentry(c => c.AutoSessionTracking = true)
                         .UseStartup<Startup>();
                 })
                 .UseSerilog();
