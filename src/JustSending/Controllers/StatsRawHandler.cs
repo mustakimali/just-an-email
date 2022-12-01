@@ -12,7 +12,7 @@ namespace JustSending.Controllers
     [Route("stats/raw")]
     public class StatsRawHandler : ControllerBase
     {
-        private readonly StatsDbContext _dbContext;
+        private readonly StatsDbContext _statContext;
         private readonly IDataStore _dataStore;
 
         public record StatMonth(string Month, Stats[] Days);
@@ -22,7 +22,7 @@ namespace JustSending.Controllers
 
         public StatsRawHandler(StatsDbContext dbContext, IDataStore dataStore)
         {
-            _dbContext = dbContext;
+            _statContext = dbContext;
             _dataStore = dataStore;
         }
 
@@ -31,14 +31,7 @@ namespace JustSending.Controllers
             var data = await _dataStore.Get<StatYear[]>("stats");
             if (data == null)
             {
-                data = _dbContext
-                    .Statistics
-                    .Find(x => x.Id > 1)
-                    .GroupBy(x => x.Id.ToString()[..2])
-                    .Select(x => new StatYear(x.Key, x
-                        .GroupBy(y => y.Id.ToString().Substring(2, 2))
-                        .Select(dayData => new StatMonth(dayData.Key, dayData.ToArray()))))
-                    .ToArray();
+                data = _statContext.GetAll().ToArray();
 
                 await _dataStore.Set("stats", data, TimeSpan.FromHours(1));
             }

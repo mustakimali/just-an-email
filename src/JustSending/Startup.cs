@@ -46,11 +46,6 @@ namespace JustSending
             var signalrBuilder = services
                 .AddSignalR()
                 .AddJsonProtocol();
-            var signlrBackplane = Configuration["SignalRBackplane"];
-            if (!string.IsNullOrEmpty(signlrBackplane))
-            {
-                signalrBuilder.AddAzureSignalR(signlrBackplane);
-            }
 
             var redisConfig = Configuration["RedisCache"];
             var hasRedisCache = redisConfig is { Length: > 0 };
@@ -59,18 +54,14 @@ namespace JustSending
                 signalrBuilder.AddStackExchangeRedis(redisConfig!);
 
                 // use redis for storage
+
                 services
-                    .AddStackExchangeRedisCache(o => o.Configuration = redisConfig)
+                    //.AddStackExchangeRedisCache(o => o.Configuration = redisConfig)
+                    .AddStackExchangeRedisCache(c => c.Configuration = redisConfig)
                     .AddTransient<IDataStore, DataStoreRedis>();
 
                 // Upstash Redis has some issues with
                 //services.AddHangfire(x => x.UseRedisStorage(redisConfig));
-
-                // Uses Sqlite for Hangfire storage
-                services.AddHangfire(x => x
-                    .UseSerilogLogProvider()
-                    .UseRecommendedSerializerSettings()
-                    .UseSQLiteStorage("Data Source=App_Data\\Hangfire.sqlite;Cache=Shared"));
 
                 // redis lock
                 services
@@ -82,8 +73,7 @@ namespace JustSending
             }
             else
             {
-                // in memory hangfire storage
-                services.AddHangfire(x => x.UseInMemoryStorage());
+                // hangfire?
                 
                 // use in memory storage
                 services.AddTransient<IDataStore, DataStoreInMemory>();
@@ -91,6 +81,12 @@ namespace JustSending
                 // no-op lock
                 services.AddTransient<ILock, NoOpLock>();
             }
+
+            // Uses Sqlite for Hangfire storage
+            services.AddHangfire(x => x
+                .UseSerilogLogProvider()
+                .UseRecommendedSerializerSettings()
+                .UseSQLiteStorage("App_Data/Hangfire.db"));
 
             services.AddHangfireServer();
             services.AddHttpContextAccessor();
@@ -105,7 +101,8 @@ namespace JustSending
 
             services.AddTransient<BackgroundJobScheduler>();
 
-            services.AddDataProtection()
+            services
+                .AddDataProtection()
                 .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(Directory.GetCurrentDirectory(), "App_Data")));
         }
 

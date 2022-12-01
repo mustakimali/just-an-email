@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Hangfire;
 using JustSending.Data.Models;
@@ -6,6 +8,7 @@ using JustSending.Data.Models.Bson;
 using JustSending.Services;
 using LiteDB;
 using Microsoft.AspNetCore.Hosting;
+using static JustSending.Controllers.StatsRawHandler;
 
 namespace JustSending.Data
 {
@@ -25,7 +28,17 @@ namespace JustSending.Data
             => _db ??= new LiteDatabase(Helper.BuildDbConnectionString("AppDb", _env));
 
         public ILiteCollection<Stats> Statistics => Database.GetCollection<Stats>();
-        
+
+        public IEnumerable<StatYear> GetAll()
+        {
+            return Statistics
+                    .Find(x => x.Id > 1)
+                    .GroupBy(x => x.Id.ToString()[..2])
+                    .Select(x => new StatYear(x.Key, x
+                        .GroupBy(y => y.Id.ToString().Substring(2, 2))
+                        .Select(dayData => new StatMonth(dayData.Key, dayData.ToArray()))));
+        }
+
         public void RecordStats(RecordType type, int inc = 1)
         {
             BackgroundJob.Enqueue(() => RecordBg(DateTime.UtcNow, type, inc));

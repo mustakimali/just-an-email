@@ -89,6 +89,8 @@ namespace JustSending.Services
 
         private async Task SignalREvent(string sessionId, string message, object? data = null)
         {
+            _logger.LogInformation("[SignaR Event] {message} ({@data})", message, data);
+
             try
             {
                 if (data != null)

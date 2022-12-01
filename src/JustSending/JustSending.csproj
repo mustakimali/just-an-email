@@ -8,14 +8,11 @@
   <ItemGroup>
     <PackageReference Include="Ardalis.ApiEndpoints" Version="4.0.1" />
     <PackageReference Include="HangFire" Version="1.7.31" />
-    <PackageReference Include="Hangfire.InMemory" Version="0.3.4" />
     <PackageReference Include="Hangfire.Redis.StackExchange" Version="1.8.6" />
     <PackageReference Include="Hangfire.Storage.SQLite" Version="0.3.2" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="7.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.WebSockets" Version="2.2.1" />
     <PackageReference Include="LiteDB" Version="5.0.12" />
-    <PackageReference Include="Microsoft.Azure.SignalR" Version="1.19.0" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="7.0.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="7.0.0" />
     <PackageReference Include="RedLock.net" Version="2.3.2" />
     <PackageReference Include="Sentry" Version="3.23.1" />

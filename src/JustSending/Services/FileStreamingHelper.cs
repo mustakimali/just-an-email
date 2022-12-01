@@ -19,7 +19,7 @@ namespace JustSending.Services
 
         public static async Task<FormValueProvider> StreamFile(this HttpRequest request, FileStream fileStream, ILogger logger, CancellationToken ct)
         {
-            if (!MultipartRequestHelper.IsMultipartContentType(request.ContentType))
+            if (!MultipartRequestHelper.IsMultipartContentType(request.ContentType ?? ""))
             {
                 throw new Exception($"Expected a multipart request, but got {request.ContentType}");
             }
