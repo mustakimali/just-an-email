@@ -94,6 +94,13 @@ namespace JustSending.Data
             };
         }
 
+        public void RecordAlltimeStats(Action<Stats> update, DateTime? date = null)
+        {
+            var allTime = StatsFindByIdOrNew(null);
+            update(allTime);
+            Statistics.Upsert(allTime);
+        }
+
         private async Task RecordStats(Action<Stats> update, DateTime? date = null)
         {
             var utcNow = date ?? DateTime.UtcNow;

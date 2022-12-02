@@ -21,7 +21,7 @@ namespace JustSending.Services
         {
             try
             {
-                var _ = _dbContext.Statistics.Count();
+                UpdateMetrics();
                 return Task.FromResult(HealthCheckResult.Healthy());
             }
             catch (Exception e)
@@ -29,6 +29,19 @@ namespace JustSending.Services
                 _logger.LogWarning(e, "Healthcheck failed.");
                 return Task.FromResult(HealthCheckResult.Unhealthy());
             }
+        }
+
+        private void UpdateMetrics()
+        {
+            var m = _dbContext.Statistics.FindById(-1);
+            if (m == null) return;
+
+            Metrics.TotalSessions.Set(m.Sessions);
+            Metrics.TotalFiles.Set(m.Files);
+            Metrics.TotalFilesSizeBytes.Set(m.FilesSizeBytes);
+            Metrics.TotalDevices.Set(m.Devices);
+            Metrics.TotalMessages.Set(m.Messages);
+            Metrics.TotalMessageBytes.Set(m.MessagesSizeBytes);
         }
     }
 }

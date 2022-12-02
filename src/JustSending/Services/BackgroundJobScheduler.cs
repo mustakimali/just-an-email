@@ -13,12 +13,14 @@ namespace JustSending.Services
     public class BackgroundJobScheduler
     {
         private readonly AppDbContext _db;
+        private readonly StatsDbContext _dbStats;
         private readonly IWebHostEnvironment _env;
         private readonly ILogger<BackgroundJobScheduler> _logger;
 
-        public BackgroundJobScheduler(AppDbContext db, IWebHostEnvironment env, ILogger<BackgroundJobScheduler> logger)
+        public BackgroundJobScheduler(AppDbContext db, StatsDbContext dbStats, IWebHostEnvironment env, ILogger<BackgroundJobScheduler> logger)
         {
             _db = db;
+            _dbStats = dbStats;
             _env = env;
             _logger = logger;
         }
@@ -86,6 +88,56 @@ namespace JustSending.Services
             else
             {
                 _logger.LogInformation("Folder does not exist: {path}", folder);
+            }
+        }
+
+        public void ImportStats(Controllers.StatsRawHandler.StatYear[] data)
+        {
+            foreach (var year in data)
+            {
+                foreach (var month in year.Months)
+                {
+                    _logger.LogInformation("Importing: Month {month}/{year}", month.Month, year.Year);
+
+                    foreach (var day in month.Days)
+                    {
+                        _dbStats.Statistics.Upsert(day);
+                    }
+                }
+            }
+
+            BackgroundJob.Enqueue(() => RecalculateStat());
+        }
+
+        public void RecalculateStat()
+        {
+            var stat = new Data.Models.Bson.Stats
+            {
+                Id = -1
+            };
+
+            _dbStats.Statistics.Upsert(new Data.Models.Bson.Stats
+            {
+                Id = -1,
+                Messages = 0,
+                MessagesSizeBytes = 0,
+                Files = 0,
+                FilesSizeBytes = 0,
+                Devices = 0,
+                Sessions = 0
+            });
+
+            foreach (var day in _dbStats.GetAll().SelectMany(y => y.Months).SelectMany(m => m.Days))
+            {
+                _dbStats.RecordAlltimeStats(a =>
+                {
+                    a.Messages += day.Messages;
+                    a.MessagesSizeBytes += day.MessagesSizeBytes;
+                    a.Files += day.Files;
+                    a.FilesSizeBytes += day.FilesSizeBytes;
+                    a.Devices += day.Devices;
+                    a.Sessions += day.Sessions;
+                });
             }
         }
     }

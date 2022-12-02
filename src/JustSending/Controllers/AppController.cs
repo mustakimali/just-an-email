@@ -1,4 +1,5 @@
-﻿using System;
+﻿using System.ComponentModel;
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -48,6 +49,16 @@ namespace JustSending.Controllers
         public Task<IActionResult> NewSession()
         {
             return Session("", "", verifySessionExistance: false);
+        }
+
+        [Route("api/import")]
+        public IActionResult ImportStats([FromBody] StatsRawHandler.StatYear[] data)
+        {
+            var jobId = Hangfire.BackgroundJob.Enqueue<BackgroundJobScheduler>(s => s.ImportStats(data));
+            return Json(new
+            {
+                jobId = jobId
+            });
         }
 
         private async Task<IActionResult> Session(string id, string id2, bool verifySessionExistance = true)
