@@ -19,177 +19,221 @@ using RedLockNet.SERedis.Configuration;
 using StackExchange.Redis;
 using Serilog.Core;
 using Prometheus;
+using OpenTelemetry.Trace;
+using System.Threading.Tasks;
+using System.Linq;
 
-Log.Logger = CreateLogger();
-
-var builder = WebApplication.CreateBuilder(args);
-builder.Host.UseSerilog();
-builder.WebHost.UseSentry(c => c.AutoSessionTracking = true);
-ConfigureServices(builder.Services, builder.Configuration);
-
-var app = builder.Build();
-
-ConfigureMiddleware(app);
-
-try
+public class Program
 {
-    Log.Information("Starting web host");
-    app.Run();
-}
-catch (Exception ex)
-{
-    Log.Fatal(ex, "Host terminated unexpectedly");
-    throw;
-}
-finally
-{
-    Log.CloseAndFlush();
-}
-static Logger CreateLogger()
-    => new LoggerConfiguration()
-        .Enrich.FromLogContext()
-        .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-        .WriteTo.Console(new Serilog.Formatting.Compact.CompactJsonFormatter())
-        .WriteTo.Sentry(o =>
-        {
-            o.MinimumBreadcrumbLevel = LogEventLevel.Debug;
-            o.MinimumEventLevel = LogEventLevel.Warning;
-        })
-        .Filter.ByExcluding(logEvent =>
-        {
-            if (logEvent.Properties.TryGetValue("RequestPath", out var p))
-            {
-                var path = p.ToString();
-                return path.Contains("/api/test");
-            }
-
-            return false;
-        })
-        .CreateLogger();
-
-void ConfigureServices(IServiceCollection services, IConfigurationRoot config)
-{
-    services.AddSingleton(config);
-
-    services.Configure<FormOptions>(x =>
+    private static async Task Main(string[] args)
     {
-        x.ValueLengthLimit = int.MaxValue;
-        x.MultipartBodyLengthLimit = int.MaxValue;
-        x.MultipartHeadersLengthLimit = int.MaxValue;
-    });
+        Log.Logger = CreateLogger();
 
-    services.AddMvc();
-    services.AddHealthChecks().AddCheck<DefaultHealthCheck>("database");
-    services.AddMemoryCache();
+        var app = InitializeApp(args);
 
-    var signalrBuilder = services
-        .AddSignalR()
-        .AddJsonProtocol();
+        try
+        {
+            Log.Information("Starting web host");
+            await app.RunAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Host terminated unexpectedly");
+            throw;
+        }
+        finally
+        {
+            Log.CloseAndFlush();
+        }
+    }
 
-    var redisConfig = config["RedisCache"];
-    var hasRedisCache = redisConfig is { Length: > 0 };
-    if (hasRedisCache)
+    public static WebApplication InitializeApp(string[] args)
     {
-        signalrBuilder.AddStackExchangeRedis(redisConfig!);
+        var builder = WebApplication.CreateBuilder(args);
+        builder.Host.UseSerilog();
+        builder.WebHost.UseSentry(c => c.AutoSessionTracking = true);
+        ConfigureServices(builder.Services, builder.Configuration);
 
-        // use redis for storage
+        var app = builder.Build();
 
-        services
-            //.AddStackExchangeRedisCache(o => o.Configuration = redisConfig)
-            .AddStackExchangeRedisCache(c => c.Configuration = redisConfig)
-            .AddTransient<IDataStore, DataStoreRedis>();
+        ConfigureMiddleware(app);
+        return app;
+    }
 
-        // Upstash Redis has some issues with
-        //services.AddHangfire(x => x.UseRedisStorage(redisConfig));
-
-        // redis lock
-        services
-            .AddSingleton<RedLockFactory>(sp => RedLockFactory.Create(new List<RedLockMultiplexer>
+    static Logger CreateLogger()
+        => new LoggerConfiguration()
+            .Enrich.FromLogContext()
+            .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+            .WriteTo.Console(new Serilog.Formatting.Compact.CompactJsonFormatter())
+            .WriteTo.Sentry(o =>
             {
+                o.MinimumBreadcrumbLevel = LogEventLevel.Debug;
+                o.MinimumEventLevel = LogEventLevel.Warning;
+            })
+            .Filter.ByExcluding(logEvent =>
+            {
+                if (logEvent.Properties.TryGetValue("RequestPath", out var p))
+                {
+                    var path = p.ToString();
+                    return path.Contains("/api/test");
+                }
+
+                return false;
+            })
+            .CreateLogger();
+
+    static void ConfigureServices(IServiceCollection services, IConfigurationRoot config)
+    {
+        services.AddSingleton(config);
+
+        var honeycombOptions = config.GetHoneycombOptions();
+        services
+            .AddOpenTelemetryTracing(builder => builder
+                .AddHoneycomb(honeycombOptions)
+                .AddAspNetCoreInstrumentation(c =>
+                {
+                    c.Filter = (ctx) => (!ctx.Request.Path.Value?.StartsWith("/api/test") ?? true) && (!ctx.Request.Path.Value?.StartsWith("/metrics") ?? true);
+                    c.EnableGrpcAspNetCoreSupport = true;
+                    c.RecordException = true;
+                    c.EnrichWithBaggage();
+                })
+                .AddAutoInstrumentations()
+                .AddHttpClientInstrumentation())
+            .AddSingleton(TracerProvider.Default.GetTracer(honeycombOptions.ServiceName));
+
+        services.Configure<FormOptions>(x =>
+        {
+            x.ValueLengthLimit = int.MaxValue;
+            x.MultipartBodyLengthLimit = int.MaxValue;
+            x.MultipartHeadersLengthLimit = int.MaxValue;
+        });
+
+        services.AddMvc();
+        services.AddHealthChecks().AddCheck<DefaultHealthCheck>("database");
+        services.AddMemoryCache();
+
+        var signalrBuilder = services
+            .AddSignalR()
+            .AddJsonProtocol();
+
+        var redisConfig = config["RedisCache"];
+        var hasRedisCache = redisConfig is { Length: > 0 };
+        if (hasRedisCache)
+        {
+            signalrBuilder.AddStackExchangeRedis(redisConfig!);
+
+            // use redis for storage
+
+            services
+                .AddStackExchangeRedisCache(c => c.Configuration = redisConfig)
+                .AddTransient<IDataStore, DataStoreRedis>();
+
+            // Upstash Redis has some issues with
+            services.AddHangfire(x => x
+                .UseSerilogLogProvider()
+                .UseRecommendedSerializerSettings()
+                .UseRedisStorage(redisConfig));
+
+            // redis lock
+            services
+                .AddSingleton(sp => RedLockFactory.Create(new List<RedLockMultiplexer>
+                {
                 new(ConnectionMultiplexer.Connect(redisConfig!))
-            }))
-            .AddTransient<ILock, RedisLock>();
-    }
-    else
-    {
-        // hangfire?
+                }))
+                .AddTransient<ILock, RedisLock>();
+        }
+        else
+        {
+            // hangfire?
+            // Uses Sqlite for Hangfire storage
+            services.AddHangfire(x => x
+                .UseSerilogLogProvider()
+                .UseRecommendedSerializerSettings()
+                .UseSQLiteStorage("App_Data/Hangfire.db"));
 
-        // use in memory storage
-        services.AddTransient<IDataStore, DataStoreInMemory>();
+            // use in memory storage
+            services.AddTransient<IDataStore, DataStoreInMemory>();
 
-        // no-op lock
-        services.AddTransient<ILock, NoOpLock>();
-    }
+            // no-op lock
+            services.AddTransient<ILock, NoOpLock>();
+        }
 
-    // Uses Sqlite for Hangfire storage
-    services.AddHangfire(x => x
-        .UseSerilogLogProvider()
-        .UseRecommendedSerializerSettings()
-        .UseSQLiteStorage("App_Data/Hangfire.db"));
+        services.AddHangfireServer();
+        services.AddHttpContextAccessor();
 
-    services.AddHangfireServer();
-    services.AddHttpContextAccessor();
+        services
+            .AddTransient<AppDbContext>()
+            .AddTransient<StatsDbContext>();
 
-    services
-        .AddTransient<AppDbContext>()
-        .AddTransient<StatsDbContext>();
+        services
+            .AddSingleton<ConversationHub>()
+            .AddSingleton<SecureLineHub>();
 
-    services
-        .AddSingleton<ConversationHub>()
-        .AddSingleton<SecureLineHub>();
+        services.AddTransient<BackgroundJobScheduler>();
 
-    services.AddTransient<BackgroundJobScheduler>();
+        services
+            .AddDataProtection()
+            .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(Directory.GetCurrentDirectory(), "App_Data")));
 
-    services
-        .AddDataProtection()
-        .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(Directory.GetCurrentDirectory(), "App_Data")));
-
-    services
-        .AddMetricServer(c => c.Port = 9091);
-}
-
-void ConfigureMiddleware(WebApplication app)
-{
-    app
-        .UseHttpMetrics()
-        .UseSerilogRequestLogging();
-
-    if (app.Environment.IsDevelopment())
-    {
-        app.UseDeveloperExceptionPage();
-    }
-    else
-    {
-        app.UseExceptionHandler("/error");
+        services
+            .AddMetricServer(c => c.Port = 9091);
     }
 
-    app.UseHealthChecks("/api/test");
-
-
-    app.UseCors(c =>
+    static void ConfigureMiddleware(WebApplication app)
     {
-        c
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowAnyOrigin()
-            .Build();
-    });
+        app.Use(async (ctx, next) =>
+        {
+            foreach (var header in ctx.Request.Headers)
+            {
+                var value = string.Join(",", header.Value.Where(v => v != null).Select(v => v!.ToString()));
+                Tracer.CurrentSpan.SetAttribute($"http.header.{header.Key.ToLower()}", value);
+            }
+            ctx.Response.Headers.Add("trace-id", Tracer.CurrentSpan.Context.TraceId.ToHexString());
 
-    app.UseStaticFiles();
-    app.UseHangfireDashboard("/jobs", new DashboardOptions
-    {
-        DisplayStorageConnectionString = false,
-        DashboardTitle = "Just An Email",
-        Authorization = new[] { new InsecureAuthFilter() }
-    });
+            await next(ctx);
+        });
 
-    app.UseRouting();
+        app
+            .UseHttpMetrics()
+            .UseSerilogRequestLogging();
 
-    app.UseEndpoints(endpoints =>
-    {
-        endpoints.MapHub<ConversationHub>("/signalr/hubs");
-        endpoints.MapHub<SecureLineHub>("/signalr/secure-line");
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseDeveloperExceptionPage();
+        }
+        else
+        {
+            app.UseExceptionHandler("/error");
+        }
 
-        endpoints.MapControllers();
-    });
+        app.UseHealthChecks("/api/test");
+
+
+        app.UseCors(c =>
+        {
+            c
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowAnyOrigin()
+                .Build();
+        });
+
+        app.UseStaticFiles();
+        app.UseHangfireDashboard("/jobs", new DashboardOptions
+        {
+            DisplayStorageConnectionString = false,
+            DashboardTitle = "Just An Email",
+            Authorization = new[] { new InsecureAuthFilter() }
+        });
+
+        app.UseRouting();
+
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapHub<ConversationHub>("/signalr/hubs");
+            endpoints.MapHub<SecureLineHub>("/signalr/secure-line");
+
+            endpoints.MapControllers();
+        });
+    }
 }

@@ -47,8 +47,7 @@ namespace JustSending.Test
                 "..", "..", "..", "..", "..", "src", "JustSending"));
 
             _appHostName = new Uri($"http://localhost:{port}");
-            _host = Program.BuildWebHost(new string[] { })
-                .Build();
+            _host = Program.InitializeApp(new string[] { });
             _host.RunAsync();
             return Task.CompletedTask;
         }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using JustSending.Data.Models;
+using OpenTelemetry.Trace;
 
 namespace JustSending.Data
 {
@@ -13,9 +14,11 @@ namespace JustSending.Data
         private readonly IDataStore _dataStore;
         private readonly ILock _lock;
         private readonly Random _random;
+        private readonly Tracer _tracer;
 
-        public AppDbContext(IDataStore dataStore, ILock @lock)
+        public AppDbContext(IDataStore dataStore, ILock @lock, Tracer tracer)
         {
+            _tracer = tracer;
             _dataStore = dataStore;
             _lock = @lock;
             _random = new Random(DateTime.UtcNow.Millisecond);
@@ -23,15 +26,35 @@ namespace JustSending.Data
 
         #region Core Methods
 
-        public Task<T?> Get<T>(string id) => _dataStore.Get<T>(id);
+        public async Task<T?> Get<T>(string id)
+        {
+            using var span = _tracer.StartActiveSpan("get");
+            span.SetAttribute("key", id);
 
-        public Task Set<T>(string id, T model, TimeSpan? ttl = null) =>
-            _dataStore.Set(id, model, ttl ?? TimeSpan.FromHours(6));
+            return await _dataStore.Get<T>(id);
+        }
 
-        public Task Remove<T>(string id) => _dataStore.Remove<T>(id);
+        public Task<T?> GetInternal<T>(string id) => _dataStore.Get<T>(id);
+
+        public async Task Set<T>(string id, T model, TimeSpan? ttl = null)
+        {
+            using var span = _tracer.StartActiveSpan("set");
+            span.SetAttribute("key", id);
+
+            await _dataStore.Set(id, model, ttl ?? TimeSpan.FromHours(6));
+        }
+
+
+        public async Task Remove<T>(string id)
+        {
+            using var span = _tracer.StartActiveSpan("remove");
+            span.SetAttribute("key", id);
+
+            await _dataStore.Remove<T>(id);
+        }
 
         #endregion
-        
+
         public static string NewGuid() => Guid.NewGuid().ToString("N");
 
         public async Task<bool> Exist<TModel>(string id)
@@ -39,13 +62,13 @@ namespace JustSending.Data
             var data = await _dataStore.Get<TModel>(id);
             return data != null;
         }
-        
+
         public async Task<int> Count<TModel>(string id)
         {
             var key = $"{typeof(TModel).Name.ToLower()}-count-{id}";
             return await Get<int>(key);
         }
-        
+
         public async Task SetCount<TModel>(string id, int? count, TimeSpan? ttl = null)
         {
             var key = $"{typeof(TModel).Name.ToLower()}-count-{id}";
@@ -62,7 +85,7 @@ namespace JustSending.Data
                 ? session
                 : null;
         }
-        
+
         public Task<Session?> GetSession(string id)
         {
             return Get<Session>(id);
@@ -70,6 +93,8 @@ namespace JustSending.Data
 
         private async Task<int> NewConnectionId()
         {
+            using var span = _tracer.StartActiveSpan("new-connection-id");
+
             using var _ = await _lock.Acquire("new-connection-id");
 
             var min = 100000;
@@ -97,6 +122,10 @@ namespace JustSending.Data
 
         public async Task MessagesInsert(Message msg)
         {
+            using var span = _tracer.StartActiveSpan("insert-message");
+            span.SetAttribute("session-id", msg.SessionId);
+            span.SetAttribute("session-id-2", msg.SessionIdVerification);
+
             using var _ = await _lock.Acquire(msg.SessionId);
 
             var count = await Count<Message>(msg.SessionId);
@@ -110,6 +139,10 @@ namespace JustSending.Data
 
         public async Task TrackClient(string sessionId, string connectionId)
         {
+            using var span = _tracer.StartActiveSpan("track-client");
+            span.SetAttribute("session-id", sessionId);
+            span.SetAttribute("connection-id", connectionId);
+
             // ToDo: lock
             var session = await Get<Session>(sessionId);
             if (session == null) return;
@@ -124,11 +157,15 @@ namespace JustSending.Data
 
         public async Task<string?> UntrackClientReturnSessionId(string connectionId)
         {
+            using var span = _tracer.StartActiveSpan("untrack-client");
+            span.SetAttribute("connection-id", connectionId);
+
             var connectionIdSession = await Get<SessionMetaByConnectionId>(connectionId);
             if (connectionIdSession == null) return null;
             var session = await Get<Session>(connectionIdSession.SessionId);
             if (session == null) return null;
-            
+            span.SetAttribute("session-id", session.Id);
+
             session.ConnectionIds.Remove(connectionId);
             await Set(session.Id, session);
             await Remove<SessionMetaByConnectionId>(connectionId);
@@ -138,6 +175,9 @@ namespace JustSending.Data
 
         public async Task<IEnumerable<string>> FindClient(string sessionId)
         {
+            using var span = _tracer.StartActiveSpan("find-client");
+            span.SetAttribute("session-id", sessionId);
+
             var session = await Get<Session>(sessionId);
             if (session == null) return Enumerable.Empty<string>();
 
@@ -146,6 +186,9 @@ namespace JustSending.Data
 
         public async Task<int> CreateNewShareToken(string sessionId)
         {
+            using var span = _tracer.StartActiveSpan("new-share-token");
+            span.SetAttribute("session-id", sessionId);
+
             var shareToken = new ShareToken
             {
                 Id = await NewConnectionId(),

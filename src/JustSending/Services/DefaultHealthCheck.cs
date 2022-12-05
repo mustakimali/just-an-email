@@ -11,30 +11,33 @@ namespace JustSending.Services
     {
         private readonly StatsDbContext _dbContext;
         private readonly ILogger<DefaultHealthCheck> _logger;
+        private readonly AppDbContext _appDb;
 
-        public DefaultHealthCheck(StatsDbContext dbContext, ILogger<DefaultHealthCheck> logger)
+        public DefaultHealthCheck(StatsDbContext dbContext, AppDbContext appDb, ILogger<DefaultHealthCheck> logger)
         {
+            _appDb = appDb;
             _dbContext = dbContext;
             _logger = logger;
         }
-        public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = new())
+        public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = new())
         {
             try
             {
                 UpdateMetrics();
-                return Task.FromResult(HealthCheckResult.Healthy());
+                await _appDb.GetInternal<int>("does-not-exist");
+                return HealthCheckResult.Healthy();
             }
             catch (Exception e)
             {
                 _logger.LogWarning(e, "Healthcheck failed.");
-                return Task.FromResult(HealthCheckResult.Unhealthy());
+                return HealthCheckResult.Unhealthy();
             }
         }
 
         private void UpdateMetrics()
         {
             var m = _dbContext.Statistics.FindById(-1);
-            if (m == null) return;
+            if (m == null)return;
 
             Metrics.TotalSessions.Set(m.Sessions);
             Metrics.TotalFiles.Set(m.Files);

@@ -15,6 +15,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Logging;
 using IOFile = System.IO.File;
+using OpenTelemetry.Trace;
 
 namespace JustSending.Controllers
 {
@@ -26,6 +27,7 @@ namespace JustSending.Controllers
         private readonly ConversationHub _hub;
         private readonly IWebHostEnvironment _env;
         private readonly IConfiguration _config;
+        private readonly Tracer _tracer;
         private readonly ILogger<AppController> _logger;
 
         public AppController(
@@ -34,6 +36,7 @@ namespace JustSending.Controllers
                 ConversationHub hub,
                 IWebHostEnvironment env,
                 IConfiguration config,
+                Tracer tracer,
                 ILogger<AppController> logger)
         {
             _db = db;
@@ -41,6 +44,7 @@ namespace JustSending.Controllers
             _hub = hub;
             _env = env;
             _config = config;
+            _tracer = tracer;
             _logger = logger;
         }
 
@@ -215,6 +219,9 @@ namespace JustSending.Controllers
 
         private Message SavePostedFile(string postedFilePath, SessionModel model)
         {
+            using var span = _tracer.StartActiveSpan("save-posted-file");
+            span.SetAttribute("path", postedFilePath);
+
             var fileInfo = new FileInfo(postedFilePath);
             if (fileInfo.Length > Convert.ToInt64(_config["MaxUploadSizeBytes"]))
             {

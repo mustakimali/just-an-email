@@ -8,6 +8,7 @@ using JustSending.Data.Models.Bson;
 using JustSending.Services;
 using LiteDB;
 using Microsoft.AspNetCore.Hosting;
+using OpenTelemetry.Trace;
 using static JustSending.Controllers.StatsRawHandler;
 
 namespace JustSending.Data
@@ -17,13 +18,15 @@ namespace JustSending.Data
         private readonly IWebHostEnvironment _env;
         private readonly ILock _lock;
         private LiteDatabase? _db;
+        private readonly Tracer _tracer;
 
-        public StatsDbContext(IWebHostEnvironment env, ILock @lock)
+        public StatsDbContext(IWebHostEnvironment env, ILock @lock, Tracer tracer)
         {
+            _tracer = tracer;
             _env = env;
             _lock = @lock;
         }
-        
+
         private LiteDatabase Database
             => _db ??= new LiteDatabase(Helper.BuildDbConnectionString("AppDb", _env));
 
@@ -31,6 +34,8 @@ namespace JustSending.Data
 
         public IEnumerable<StatYear> GetAll()
         {
+            using var span = _tracer.StartActiveSpan("get-all-stats");
+
             return Statistics
                     .Find(x => x.Id > 1)
                     .GroupBy(x => x.Id.ToString()[..2])
@@ -43,7 +48,7 @@ namespace JustSending.Data
         {
             BackgroundJob.Enqueue(() => RecordBg(DateTime.UtcNow, type, inc));
         }
-        
+
         public void RecordMessageStats(Message msg)
         {
             long? fileSize = msg.HasFile
@@ -52,13 +57,13 @@ namespace JustSending.Data
 
             BackgroundJob.Enqueue(() => RecordMsgBg(DateTime.UtcNow, msg.Text.Length, fileSize));
         }
-        
+
         public void RecordMessageStats(int msgSize)
         {
             BackgroundJob.Enqueue(() => RecordMsgBg(DateTime.UtcNow, msgSize, null));
         }
-        
-        
+
+
         // Job
         public Task RecordMsgBg(DateTime date, int msgSizeBytes, long? fileSizeBytes)
         {
@@ -74,7 +79,7 @@ namespace JustSending.Data
                 }
             }, date);
         }
-        
+
         // job
 
         public enum RecordType

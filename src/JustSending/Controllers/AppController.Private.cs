@@ -40,6 +40,10 @@ namespace JustSending.Controllers
 
         private async Task<Message[]> GetMessagesInternal(string id, string id2, int from)
         {
+            using var span = _tracer.StartActiveSpan("get-message-internal");
+            span.SetAttribute("id", id);
+            span.SetAttribute("id2", id2);
+
             if (!await IsValidSession(id, id2))
             {
                 return Array.Empty<Message>();
