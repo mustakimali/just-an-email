@@ -87,7 +87,8 @@
             history.replaceState(null, '', '/app');
             window.location.hash = id + id2;
         }
-        this.initQrCode();
+
+        setTimeout(function () { JustSendingApp.initQrCode(); }, 1);
 
         // Request to create session
         //
