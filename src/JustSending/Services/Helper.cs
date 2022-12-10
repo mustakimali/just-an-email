@@ -68,12 +68,12 @@ namespace JustSending.Services
 
         public static string GetUploadFolder(string sessionId, string root)
         {
-            return Path.Combine(root, "upload", sessionId);
+            return Path.Combine(root, "..", "App_Data", "upload", sessionId);
         }
         
         public static string ToSha1(this string input, int? take = null)
         {
-            using SHA1Managed sha1 = new();
+            using var sha1 = SHA1.Create();
             var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(input));
             var sb = new StringBuilder(hash.Length * 2);
 
