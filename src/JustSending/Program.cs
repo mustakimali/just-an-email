@@ -146,6 +146,9 @@ public class Program
         {
             // hangfire?
             // Uses Sqlite for Hangfire storage
+            if (!Directory.Exists("App_Data"))
+                Directory.CreateDirectory("App_Data");
+
             services.AddHangfire(x => x
                 .UseSerilogLogProvider()
                 .UseRecommendedSerializerSettings()
