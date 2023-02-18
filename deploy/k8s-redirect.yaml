@@ -1,0 +1,16 @@
+# redirect from justa.ml to tnxfr.com
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: justaml-ingress-redirect
+  namespace: justaml
+  annotations:
+    nginx.ingress.kubernetes.io/server-snippet: |
+      server_name justa.ml;
+      return 301 $scheme://tnxfr.com$request_uri;
+spec:
+  tls:
+    - hosts:
+        - justa.ml
+  rules:
+    - host: justa.ml
