@@ -1,27 +1,28 @@
 ﻿using System;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
-using Serilog;
-using Serilog.Events;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using Hangfire;
+using Hangfire.Redis.StackExchange;
 using Hangfire.Storage.SQLite;
 using JustSending.Data;
 using JustSending.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using OpenTelemetry.Trace;
+using Prometheus;
 using RedLockNet.SERedis;
 using RedLockNet.SERedis.Configuration;
-using StackExchange.Redis;
+using Serilog;
 using Serilog.Core;
-using Prometheus;
-using OpenTelemetry.Trace;
-using System.Threading.Tasks;
-using System.Linq;
+using Serilog.Events;
+using StackExchange.Redis;
 
 public class Program
 {
@@ -60,46 +61,47 @@ public class Program
         return app;
     }
 
-    static Logger CreateLogger()
-        => new LoggerConfiguration()
-            .Enrich.FromLogContext()
-            .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-            .WriteTo.Console(new Serilog.Formatting.Compact.CompactJsonFormatter())
-            .WriteTo.Sentry(o =>
+    static Logger CreateLogger() => new LoggerConfiguration()
+        .Enrich.FromLogContext()
+        .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+        .WriteTo.Console(new Serilog.Formatting.Compact.CompactJsonFormatter())
+        .WriteTo.Sentry(o =>
+        {
+            o.Dsn = ""; // ToDO: read from config
+            o.MinimumBreadcrumbLevel = LogEventLevel.Debug;
+            o.MinimumEventLevel = LogEventLevel.Warning;
+        })
+        .Filter.ByExcluding(logEvent =>
+        {
+            if (logEvent.Properties.TryGetValue("RequestPath", out var p))
             {
-                o.MinimumBreadcrumbLevel = LogEventLevel.Debug;
-                o.MinimumEventLevel = LogEventLevel.Warning;
-            })
-            .Filter.ByExcluding(logEvent =>
-            {
-                if (logEvent.Properties.TryGetValue("RequestPath", out var p))
-                {
-                    var path = p.ToString();
-                    return path.Contains("/api/test");
-                }
+                var path = p.ToString();
+                return path.Contains("/api/test");
+            }
 
-                return false;
-            })
-            .CreateLogger();
+            return false;
+        })
+        .CreateLogger();
 
     static void ConfigureServices(IServiceCollection services, IConfigurationRoot config)
     {
         services.AddSingleton(config);
 
         var honeycombOptions = config.GetHoneycombOptions();
-        services
-            .AddOpenTelemetryTracing(builder => builder
-                .AddHoneycomb(honeycombOptions)
-                .AddAspNetCoreInstrumentation(c =>
-                {
-                    c.Filter = (ctx) => (!ctx.Request.Path.Value?.StartsWith("/api/test") ?? true) && (!ctx.Request.Path.Value?.StartsWith("/metrics") ?? true);
-                    c.EnableGrpcAspNetCoreSupport = true;
-                    c.RecordException = true;
-                    c.EnrichWithBaggage();
-                })
-                .AddAutoInstrumentations()
-                .AddHttpClientInstrumentation())
-            .AddSingleton(TracerProvider.Default.GetTracer(honeycombOptions.ServiceName));
+        // services
+        //     .AddOpenTelemetry()
+        //     .WithTracing(builder => builder
+        //         .AddHoneycomb(honeycombOptions)
+        //         .AddAspNetCoreInstrumentation(c =>
+        //         {
+        //             c.Filter = (ctx) => (!ctx.Request.Path.Value?.StartsWith("/api/test") ?? true) && (!ctx.Request.Path.Value?.StartsWith("/metrics") ?? true);
+        //             c.EnableGrpcAspNetCoreSupport = true;
+        //             c.RecordException = true;
+        //             c.EnrichWithBaggage();
+        //         })
+        //         .AddAutoInstrumentations()
+        //         .AddHttpClientInstrumentation());
+        services.AddSingleton(TracerProvider.Default.GetTracer(honeycombOptions.ServiceName));
 
         services.Configure<FormOptions>(x =>
         {
@@ -138,7 +140,7 @@ public class Program
             services
                 .AddSingleton(sp => RedLockFactory.Create(new List<RedLockMultiplexer>
                 {
-                new(ConnectionMultiplexer.Connect(redisConfig!))
+                    new(ConnectionMultiplexer.Connect(redisConfig!))
                 }))
                 .AddTransient<ILock, RedisLock>();
         }
@@ -210,7 +212,6 @@ public class Program
         }
 
         app.UseHealthChecks("/api/test");
-
 
         app.UseCors(c =>
         {
