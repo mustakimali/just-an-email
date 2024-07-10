@@ -6,64 +6,64 @@ kill_timeout = 5
 processes = []
 
 [env]
-  ASPNETCORE_URLS = "http://*:8080"
+ASPNETCORE_URLS = "http://*:8080"
 
 [metrics]
-  port = 9091
-  path = "/metrics"
+port = 9091
+path = "/metrics"
 
 [experimental]
-  allowed_public_ports = []
-  auto_rollback = true
-  cmd = []
-  entrypoint = []
-  exec = []
+allowed_public_ports = []
+auto_rollback = true
+cmd = []
+entrypoint = []
+exec = []
 
 [[mounts]]
-  destination = "/app/App_Data"
-  encrypted = false
-  processes = []
-  source = "justaml_data"
+destination = "/app/App_Data"
+encrypted = false
+processes = []
+source = "justaml_data"
 
 [[services]]
-  internal_port = 8080
-  processes = ["app"]
-  protocol = "tcp"
-  script_checks = []
-  [services.concurrency]
-    hard_limit = 25
-    soft_limit = 20
-    type = "connections"
+internal_port = 8080
+processes = ["app"]
+protocol = "tcp"
+script_checks = []
+[services.concurrency]
+hard_limit = 25
+soft_limit = 20
+type = "connections"
 
-  [[services.http_checks]]
-    grace_period = "5s"
-    interval = "10s"
-    method = "get"
-    path = "/api/test"
-    protocol = "http"
-    restart_limit = 0
-    timeout = "2s"
-    tls_skip_verify = false
+[[services.http_checks]]
+grace_period = "5s"
+interval = "10s"
+method = "get"
+path = "/api/test"
+protocol = "http"
+restart_limit = 0
+timeout = "2s"
+tls_skip_verify = false
 
-  [[services.ports]]
-    force_https = true
-    handlers = ["http"]
-    port = 80
+[[services.ports]]
+force_https = true
+handlers = ["http"]
+port = 80
 
-  [[services.ports]]
-    handlers = ["tls", "http"]
-    port = 443
+[[services.ports]]
+handlers = ["tls", "http"]
+port = 443
 
-  [[services.tcp_checks]]
-    grace_period = "1s"
-    interval = "15s"
-    restart_limit = 0
-    timeout = "2s"
-
-[[statics]]
-  guest_path = "/app/wwwroot/js"
-  url_prefix = "/js/"
+[[services.tcp_checks]]
+grace_period = "1s"
+interval = "15s"
+restart_limit = 0
+timeout = "2s"
 
 [[statics]]
-  guest_path = "/app/wwwroot/css"
-  url_prefix = "/css/"
+guest_path = "/app/wwwroot/js"
+url_prefix = "/js/"
+
+[[statics]]
+guest_path = "/app/wwwroot/css"
+url_prefix = "/css/"

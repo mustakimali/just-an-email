@@ -13,7 +13,7 @@ namespace JustSending.Data
         public DataStoreInMemory(IMemoryCache memoryCache, ILogger<DataStoreInMemory> logger)
         {
             _memoryCache = memoryCache;
-            logger.LogWarning("In Memory data store in use, in production server configure `RedisCache` to use redis");
+            logger.LogInformation("In Memory data store in use, in production server configure `RedisCache` to use redis");
         }
 
         Task<byte[]?> IDataStore.GetAsync(string id) => Task.FromResult(_memoryCache.Get<byte[]?>(id));

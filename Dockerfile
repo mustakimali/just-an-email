@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build-env
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-env
 # install chrome for testing
 RUN \
    apt-get update && \
@@ -32,7 +32,7 @@ RUN dotnet publish -c Release --no-restore --self-contained -o out/ /p:PublishSi
 RUN ls -lsah out/
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/runtime-deps:7.0
+FROM mcr.microsoft.com/dotnet/runtime-deps:8.0
 WORKDIR /app
 COPY --from=build-env /app/src/JustSending/out .
 
