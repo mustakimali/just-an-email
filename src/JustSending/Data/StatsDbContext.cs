@@ -21,7 +21,6 @@ namespace JustSending.Data
     {
         private readonly IWebHostEnvironment _env;
         private readonly ILock _lock;
-        private LiteDatabase? _db;
         private readonly Tracer _tracer;
         private readonly SqliteConnection _connection;
 
@@ -163,7 +162,7 @@ namespace JustSending.Data
 
         public void Dispose()
         {
-            _db?.Dispose();
+            _connection.Dispose();
         }
     }
 }

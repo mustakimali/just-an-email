@@ -23,7 +23,7 @@ namespace JustSending.Services
         {
             try
             {
-                UpdateMetrics();
+                await UpdateMetrics();
                 await _appDb.GetInternal<int>("does-not-exist");
                 return HealthCheckResult.Healthy();
             }
