@@ -100,6 +100,16 @@ namespace JustSending.Data
             return [.. messages];
         }
 
+        public async Task<Message?> GetLatestMessage(string sessionId)
+        {
+            var msg = await _connection.QueryFirstOrDefaultAsync<Message>(
+                "SELECT * FROM Messages WHERE SessionId = @SessionId ORDER BY DateSent DESC LIMIT 1",
+                new { SessionId = sessionId });
+            if (msg == null) return null;
+
+            return msg;
+        }
+
         public async Task<Session?> GetSession(string id, string id2)
         {
             var session = await GetSessionById(id);

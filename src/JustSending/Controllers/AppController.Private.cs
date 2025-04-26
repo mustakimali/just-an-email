@@ -25,7 +25,7 @@ namespace JustSending.Controllers
             };
             await _db.AddOrUpdateSession(session);
 
-            await ScheduleOrExtendSessionCleanup(sessionId, liteSession);
+            await ScheduleSessionCleanup(session);
 
             // New ShareToken
             return await CreateShareToken(sessionId);

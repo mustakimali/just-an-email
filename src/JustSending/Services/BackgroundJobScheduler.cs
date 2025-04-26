@@ -40,7 +40,7 @@ namespace JustSending.Services
             }
 
             var session = await _db.GetSessionById(sessionId);
-            if (session == null) return Array.Empty<string>();
+            if (session == null) return [];
 
             // remove all messages
             //todo

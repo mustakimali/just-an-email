@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Logging;
 using IOFile = System.IO.File;
 using OpenTelemetry.Trace;
+using Hangfire;
 
 namespace JustSending.Controllers
 {
@@ -298,8 +299,7 @@ namespace JustSending.Controllers
 
             await _db.MessagesInsert(message);
             _statDb.RecordMessageStats(message);
-
-            await ScheduleOrExtendSessionCleanup(message.SessionId, lite);
+            BackgroundJob.Enqueue(() => ScheduleSessionCleanupById(message.SessionId));
 
             await _hub.RequestReloadMessage(message.SessionId);
 
