@@ -205,7 +205,7 @@ public class Program
                 var value = string.Join(",", header.Value.Where(v => v != null).Select(v => v!.ToString()));
                 Tracer.CurrentSpan.SetAttribute($"http.header.{header.Key.ToLower()}", value);
             }
-            ctx.Response.Headers.Add("trace-id", Tracer.CurrentSpan.Context.TraceId.ToHexString());
+            ctx.Response.Headers["trace-id"] = Tracer.CurrentSpan.Context.TraceId.ToHexString();
 
             await next(ctx);
         });
@@ -245,12 +245,8 @@ public class Program
 
         app.UseRouting();
 
-        app.UseEndpoints(endpoints =>
-        {
-            endpoints.MapHub<ConversationHub>("/signalr/hubs");
-            endpoints.MapHub<SecureLineHub>("/signalr/secure-line");
-
-            endpoints.MapControllers();
-        });
+        app.MapHub<ConversationHub>("/signalr/hubs");
+        app.MapHub<SecureLineHub>("/signalr/secure-line");
+        app.MapControllers();
     }
 }
