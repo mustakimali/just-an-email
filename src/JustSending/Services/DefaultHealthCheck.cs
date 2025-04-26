@@ -24,7 +24,7 @@ namespace JustSending.Services
             try
             {
                 await UpdateMetrics();
-                await _appDb.GetInternal<int>("does-not-exist");
+                await _appDb.GetKvInternal<int>("does-not-exist");
                 return HealthCheckResult.Healthy();
             }
             catch (Exception e)

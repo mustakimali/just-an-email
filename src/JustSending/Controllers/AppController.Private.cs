@@ -23,7 +23,7 @@ namespace JustSending.Controllers
                 IdVerification = idVerification,
                 IsLiteSession = liteSession
             };
-            await _db.Set(sessionId, session);
+            await _db.AddOrUpdateSession(session);
 
             await ScheduleOrExtendSessionCleanup(sessionId, liteSession);
 
@@ -49,24 +49,24 @@ namespace JustSending.Controllers
                 return Array.Empty<Message>();
             }
 
-            var expiredMessage = new Message {IsNotification = true, Text = "Message Expired"};
+            var expiredMessage = new Message { IsNotification = true, Text = "Message Expired" };
             var result = new List<Message>();
             var count = await _db.Count<Message>(id);
             for (int i = from + 1; i <= count; i++)
             {
-                var messageId = await _db.Get<string>($"{id}-{i}");
+                var messageId = await _db.GetKv<string>($"{id}-{i}");
                 if (messageId == null)
                 {
                     result.Add(expiredMessage);
                     continue;
                 }
 
-                var message = await _db.Get<Message>(messageId);
+                var message = await _db.GetKv<Message>(messageId);
                 result.Add(message ?? expiredMessage);
             }
 
             result.Reverse();
-            
+
             return result.ToArray();
         }
 
@@ -77,7 +77,7 @@ namespace JustSending.Controllers
             if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(id2))
                 return false;
 
-            var session = await _db.Get<Session>(id);
+            var session = await _db.GetSessionById(id);
             if (session == null || session.IdVerification != id2)
             {
                 return false;

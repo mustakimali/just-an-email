@@ -20,12 +20,12 @@ namespace JustSending.Controllers
         public async Task<IActionResult> LiteSession(string id1, string id2)
         {
             int? token = null;
-            var session = await _db.Get<Session>(id1);
+            var session = await _db.GetSessionById(id1);
             if (session != null && session.IdVerification == id2)
             {
                 // Connected
                 _statDb.RecordStats(StatsDbContext.RecordType.Device);
-                token = (await _db.Get<SessionShareToken>(id1))?.Token;
+                token = (await _db.GetKv<SessionShareToken>(id1))?.Token;
             }
             else
             {
@@ -146,7 +146,7 @@ namespace JustSending.Controllers
         {
             var data = new LiteSessionStatus();
 
-            var token = (await _db.Get<SessionShareToken>(id))?.Token;
+            var token = (await _db.GetKv<SessionShareToken>(id))?.Token;
             var messages = await GetMessagesInternal(id, id2, from);
 
             data.HasToken = token != null;
@@ -166,7 +166,7 @@ namespace JustSending.Controllers
         private async Task ScheduleOrExtendSessionCleanup(string sessionId, bool isLiteSession)
         {
             // ToDo: lock
-            var session = await _db.Get<Session>(sessionId);
+            var session = await _db.GetSessionById(sessionId);
             if (session == null) return;
 
             // cleanup after 1 hour
@@ -176,7 +176,7 @@ namespace JustSending.Controllers
                 BackgroundJob.Delete(session.CleanupJobId);
             var id = BackgroundJob.Schedule<BackgroundJobScheduler>(b => b.Erase(sessionId), triggerAfter);
             session.CleanupJobId = id;
-            await _db.Set(sessionId, session);
+            await _db.AddOrUpdateSession(session);
         }
     }
 }

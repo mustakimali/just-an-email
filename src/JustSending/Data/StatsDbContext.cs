@@ -134,11 +134,8 @@ namespace JustSending.Data
 
         private async Task Upsert(Stats stats)
         {
-            // await _connection.ExecuteAsync(@"INSERT OR REPLACE INTO Stats
-            // (Id, Messages, MessagesSizeBytes, Files, FilesSizeBytes, Devices, Sessions, DateCreatedUtc)
-            // VALUES (@Id, @Messages, @MessagesSizeBytes, @Files, @FilesSizeBytes, @Devices, @Sessions, @DateCreatedUtc, @Version)", stats);
             stats.Version++;
-            await _connection.ExecuteAsync(@"
+            var rows = await _connection.ExecuteAsync(@"
                 INSERT INTO Stats (Id, Messages, MessagesSizeBytes, Files, FilesSizeBytes, Devices, Sessions, DateCreatedUtc, Version)
                 VALUES (@Id, @Messages, @MessagesSizeBytes, @Files, @FilesSizeBytes, @Devices, @Sessions, @DateCreatedUtc, @Version)
                 ON CONFLICT(Id) DO UPDATE SET
@@ -150,6 +147,8 @@ namespace JustSending.Data
                     Sessions = @Sessions,
                     Version = @Version
                 WHERE Version = @Version - 1", stats);
+
+            if (rows == 0) throw new Exception("Optimistic concurrency error");
         }
 
         public async Task<Stats> StatsFindByDateOrNew(int? year, int? month = null, int? day = null)

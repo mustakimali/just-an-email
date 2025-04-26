@@ -39,14 +39,14 @@ namespace JustSending.Services
                 BackgroundJob.Schedule(() => DeleteUploadedFiles(sessionId), TimeSpan.FromMinutes(5));
             }
 
-            var session = await _db.Get<Session>(sessionId);
+            var session = await _db.GetSessionById(sessionId);
             if (session == null) return Array.Empty<string>();
 
             var messageCount = await _db.Count<Message>(sessionId);
             for (var i = 0; i <= messageCount; i++)
             {
                 var id = $"{session.Id}-{i}";
-                var messageId = await _db.Get<string>(id);
+                var messageId = await _db.GetKv<string>(id);
                 if (messageId != null)
                     await _db.Remove<Message>(messageId);
                 await _db.Remove<string>(id);
@@ -59,7 +59,7 @@ namespace JustSending.Services
                 await _db.Remove<SessionMetaByConnectionId>(connectionId);
 
             // remove share token
-            var sessionShareToken = await _db.Get<SessionShareToken>(sessionId);
+            var sessionShareToken = await _db.GetKv<SessionShareToken>(sessionId);
             if (sessionShareToken != null)
             {
                 await _db.Remove<ShareToken>(sessionShareToken.Token.ToString());

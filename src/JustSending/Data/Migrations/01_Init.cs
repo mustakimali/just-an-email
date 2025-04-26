@@ -1,4 +1,5 @@
 using FluentMigrator;
+using Microsoft.AspNetCore.Mvc.Abstractions;
 
 [Migration(202504260001)]
 public class CreateStatsTable : Migration
@@ -35,5 +36,42 @@ public class AddVersionToStats : Migration
     public override void Down()
     {
         Delete.Column("Version").FromTable("Stats");
+    }
+}
+
+[Migration(202504260003)]
+public class AddKv : Migration
+{
+    public override void Up()
+    {
+        Create.Table("Kv")
+            .WithColumn("Id").AsString().PrimaryKey()
+            .WithColumn("DataJson").AsString().NotNullable()
+            .WithColumn("DateCreated").AsDateTime().WithDefault(SystemMethods.CurrentDateTime);
+    }
+
+    public override void Down()
+    {
+        Delete.Table("Sessions");
+    }
+}
+
+[Migration(202504260004)]
+public class SessionTable : Migration
+{
+    public override void Up()
+    {
+        Create.Table("Sessions")
+            .WithColumn("Id").AsString().PrimaryKey()
+            .WithColumn("IdVerification").AsString().NotNullable()
+            .WithColumn("DateCreated").AsDateTime().WithDefault(SystemMethods.CurrentDateTime)
+            .WithColumn("IsLiteSession").AsBoolean().WithDefaultValue(false)
+            .WithColumn("CleanupJobId").AsString().Nullable()
+            .WithColumn("ConnectionIdsJson").AsString().Nullable();
+    }
+
+    public override void Down()
+    {
+        Delete.Table("Sessions");
     }
 }
