@@ -1,11 +1,9 @@
 using System;
-using LiteDB;
 
 namespace JustSending.Data.Models.Bson
 {
     public class Stats
     {
-        [BsonId]
         public int Id { get; set; }
         public int Messages { get; set; }
         public int MessagesSizeBytes { get; set; }

@@ -22,7 +22,7 @@ namespace JustSending.Services
             var totalLines = Convert.ToInt16(fileLines.FirstOrDefault());
             var randomLine = Random.Next(0, totalLines) + 1;
 
-            return fileLines.Skip(randomLine).FirstOrDefault();
+            return fileLines.Skip(randomLine).First();
         }
 
         public static int ToEpoch(this DateTime date) => (int)date.Subtract(BeginningOfUnixTime).TotalSeconds;
@@ -70,7 +70,7 @@ namespace JustSending.Services
         {
             return Path.Combine(root, "..", "App_Data", "upload", sessionId);
         }
-        
+
         public static string ToSha1(this string input, int? take = null)
         {
             using var sha1 = SHA1.Create();

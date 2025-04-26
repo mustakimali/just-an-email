@@ -7,7 +7,7 @@ swap_size_mb = 1024
 processes = []
 
 [env]
-ASPNETCORE_URLS = "http://*:8080"
+ASPNETCORE_URLS = "http://0.0.0.0:8080"
 
 [metrics]
 port = 9091
@@ -31,20 +31,27 @@ internal_port = 8080
 processes = ["app"]
 protocol = "tcp"
 script_checks = []
+
 [services.concurrency]
 hard_limit = 25
 soft_limit = 20
 type = "connections"
 
-[[services.http_checks]]
-grace_period = "5s"
-interval = "10s"
-method = "get"
-path = "/api/test"
-protocol = "http"
+# [[services.http_checks]]
+# grace_period = "5s"
+# interval = "10s"
+# method = "get"
+# path = "/api/test"
+# protocol = "http"
+# restart_limit = 0
+# timeout = "2s"
+# tls_skip_verify = false
+
+[[services.tcp_checks]]
+grace_period = "1s"
+interval = "15s"
 restart_limit = 0
 timeout = "2s"
-tls_skip_verify = false
 
 [[services.ports]]
 force_https = true
@@ -54,12 +61,6 @@ port = 80
 [[services.ports]]
 handlers = ["tls", "http"]
 port = 443
-
-[[services.tcp_checks]]
-grace_period = "1s"
-interval = "15s"
-restart_limit = 0
-timeout = "2s"
 
 [[statics]]
 guest_path = "/app/wwwroot/js"
