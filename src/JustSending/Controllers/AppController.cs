@@ -55,16 +55,6 @@ namespace JustSending.Controllers
             return Session("", "", verifySessionExistance: false);
         }
 
-        [Route("api/import")]
-        public IActionResult ImportStats([FromBody] StatsRawHandler.StatYear[] data)
-        {
-            var jobId = Hangfire.BackgroundJob.Enqueue<BackgroundJobScheduler>(s => s.ImportStats(data));
-            return Json(new
-            {
-                jobId = jobId
-            });
-        }
-
         private async Task<IActionResult> Session(string id, string id2, bool verifySessionExistance = true)
         {
             if (verifySessionExistance)
@@ -89,8 +79,8 @@ namespace JustSending.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateSessionAjax(string id, string id2)
         {
-            if ((id is {Length: not 32})
-                || (id2 is {Length: not 32}))
+            if ((id is { Length: not 32 })
+                || (id2 is { Length: not 32 }))
                 return BadRequest();
 
             if (await _db.Exist<Session>(id))
@@ -440,7 +430,7 @@ namespace JustSending.Controllers
             session.IsLiteSession = true;
             await _db.Set(id, session);
 
-            await _hub.RedirectTo(id, Url.Action(nameof(LiteSession), new {id1 = id, id2, r = "u"})!)
+            await _hub.RedirectTo(id, Url.Action(nameof(LiteSession), new { id1 = id, id2, r = "u" })!)
                 .ConfigureAwait(false);
         }
 

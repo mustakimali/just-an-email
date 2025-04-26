@@ -33,7 +33,7 @@ namespace JustSending.Controllers
             var stat = await store.Get<Stats>(date.ToString());
             if (stat == null)
             {
-                stat = db.Statistics.FindById(date);
+                stat = await db.StatsFindByDateOrNew(date);
                 if (stat == null)
                 {
                     stat = new Stats();
@@ -42,7 +42,8 @@ namespace JustSending.Controllers
                 {
                     var ttl = stat.Messages
                     switch
-                    { <
+                    {
+                        <
                         5 => TimeSpan.FromMinutes(1),
                         _ => TimeSpan.FromHours(1)
                     };

@@ -34,10 +34,10 @@ namespace JustSending.Services
             }
         }
 
-        private void UpdateMetrics()
+        private async Task UpdateMetrics()
         {
-            var m = _dbContext.Statistics.FindById(-1);
-            if (m == null)return;
+            var m = await _dbContext.StatsFindByDateOrNew(null);
+            if (m == null) return;
 
             Metrics.TotalSessions.Set(m.Sessions);
             Metrics.TotalFiles.Set(m.Files);

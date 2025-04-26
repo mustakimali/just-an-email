@@ -8,9 +8,13 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Ardalis.ApiEndpoints" Version="4.0.1" />
+    <PackageReference Include="Dapper" Version="2.1.66" />
+    <PackageReference Include="FluentMigrator" Version="7.1.0" />
+    <PackageReference Include="FluentMigrator.Runner" Version="7.1.0" />
     <PackageReference Include="HangFire" Version="1.8" />
     <PackageReference Include="Hangfire.Redis.StackExchange" Version="1.8.6" />
     <PackageReference Include="Hangfire.Storage.SQLite" Version="0.3.2" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.4" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.0.0-rc9.9" />
     <PackageReference Include="Honeycomb.OpenTelemetry" Version="1.2.1" />
     <PackageReference Include="Honeycomb.OpenTelemetry.Instrumentation.AspNetCore" Version="0.26.1-beta" />

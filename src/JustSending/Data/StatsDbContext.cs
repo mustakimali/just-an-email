@@ -9,7 +9,11 @@ using JustSending.Services;
 using LiteDB;
 using Microsoft.AspNetCore.Hosting;
 using OpenTelemetry.Trace;
+using Microsoft.Data.Sqlite;
 using static JustSending.Controllers.StatsRawHandler;
+using Dapper;
+using System.Configuration;
+using Microsoft.Extensions.Configuration;
 
 namespace JustSending.Data
 {
@@ -19,25 +23,24 @@ namespace JustSending.Data
         private readonly ILock _lock;
         private LiteDatabase? _db;
         private readonly Tracer _tracer;
+        private readonly SqliteConnection _connection;
 
-        public StatsDbContext(IWebHostEnvironment env, ILock @lock, Tracer tracer)
+        public StatsDbContext(IWebHostEnvironment env, ILock @lock, Tracer tracer, IConfiguration config)
         {
             _tracer = tracer;
             _env = env;
             _lock = @lock;
+
+            _connection = new SqliteConnection(config.GetConnectionString("StatsCs"));
+
         }
-
-        private LiteDatabase Database
-            => _db ??= new LiteDatabase(Helper.BuildDbConnectionString("AppDb", _env));
-
-        public ILiteCollection<Stats> Statistics => Database.GetCollection<Stats>();
 
         public IEnumerable<StatYear> GetAll()
         {
             using var span = _tracer.StartActiveSpan("get-all-stats");
 
-            return Statistics
-                    .Find(x => x.Id > 1)
+            return _connection.Query<Stats>("SELECT * FROM Stats WHERE Id > 1")
+                    .ToArray()
                     .GroupBy(x => x.Id.ToString()[..2])
                     .Select(x => new StatYear(x.Key, x
                         .GroupBy(y => y.Id.ToString().Substring(2, 2))
@@ -99,11 +102,11 @@ namespace JustSending.Data
             };
         }
 
-        public void RecordAlltimeStats(Action<Stats> update, DateTime? date = null)
+        public async Task RecordAlltimeStats(Action<Stats> update_fn, DateTime? date = null)
         {
-            var allTime = StatsFindByIdOrNew(null);
-            update(allTime);
-            Statistics.Upsert(allTime);
+            var allTime = await StatsFindByDateOrNew(null);
+            update_fn(allTime);
+            await Upsert(allTime);
         }
 
         private async Task RecordStats(Action<Stats> update, DateTime? date = null)
@@ -112,34 +115,41 @@ namespace JustSending.Data
             using var _ = await _lock.Acquire($"stat-{utcNow:d}");
 
             // All time stats
-            var allTime = StatsFindByIdOrNew(null);
+            var allTime = await StatsFindByDateOrNew(null);
             update(allTime);
 
             // This year
-            var thisYear = StatsFindByIdOrNew(utcNow.Year);
+            var thisYear = await StatsFindByDateOrNew(utcNow.Year);
             update(thisYear);
 
             // This month
-            var thisMonth = StatsFindByIdOrNew(utcNow.Year, utcNow.Month);
+            var thisMonth = await StatsFindByDateOrNew(utcNow.Year, utcNow.Month);
             update(thisMonth);
 
             // Today
-            var today = StatsFindByIdOrNew(utcNow.Year, utcNow.Month, utcNow.Day);
+            var today = await StatsFindByDateOrNew(utcNow.Year, utcNow.Month, utcNow.Day);
             update(today);
 
-            Statistics.Upsert(new[]
-            {
-                allTime,
-                thisYear,
-                thisMonth,
-                today
-            });
+            await Upsert(allTime);
+            await Upsert(thisYear);
+            await Upsert(thisMonth);
+            await Upsert(today);
         }
 
-        private Stats StatsFindByIdOrNew(int? year, int? month = null, int? day = null)
+        private async Task Upsert(Stats stats)
+        {
+            await _connection.ExecuteAsync("INSERT OR REPLACE INTO Stats (Id, Messages, MessagesSizeBytes, Files, FilesSizeBytes, Devices, Sessions, DateCreatedUtc) VALUES (@Id, @Messages, @MessagesSizeBytes, @Files, @FilesSizeBytes, @Devices, @Sessions, @DateCreatedUtc)", stats);
+        }
+
+        public async Task<Stats> StatsFindByDateOrNew(int? year, int? month = null, int? day = null)
         {
             var id = StatsGetIdFor(year, month, day);
-            var items = Statistics.FindById(id);
+            return await StatsFindByIdOrNew(id);
+        }
+
+        public async Task<Stats> StatsFindByIdOrNew(int id)
+        {
+            var items = (await _connection.QueryAsync<Stats>("SELECT * FROM Stats WHERE Id = @Id", new { Id = id })).FirstOrDefault();
             return items ?? new Stats { Id = id, DateCreatedUtc = DateTime.UtcNow };
         }
 

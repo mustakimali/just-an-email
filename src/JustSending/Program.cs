@@ -22,6 +22,7 @@ using Prometheus;
 using OpenTelemetry.Trace;
 using System.Threading.Tasks;
 using System.Linq;
+using FluentMigrator.Runner;
 
 public class Program
 {
@@ -64,7 +65,7 @@ public class Program
         => new LoggerConfiguration()
             .Enrich.FromLogContext()
             .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-            .WriteTo.Console(new Serilog.Formatting.Compact.CompactJsonFormatter())
+            .WriteTo.Console()
             .WriteTo.Sentry(o =>
             {
                 o.MinimumBreadcrumbLevel = LogEventLevel.Debug;
@@ -180,10 +181,23 @@ public class Program
 
         services
             .AddMetricServer(c => c.Port = 9091);
+
+        services
+            .AddFluentMigratorCore()
+            .ConfigureRunner(c => c
+                .AddSQLite()
+                .WithGlobalConnectionString("StatsCs")
+                .ScanIn(typeof(Program).Assembly).For.Migrations());
     }
 
     static void ConfigureMiddleware(WebApplication app)
     {
+        using (var scope = app.Services.CreateScope())
+        {
+            var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
+            runner.MigrateUp();
+        }
+
         app.Use(async (ctx, next) =>
         {
             foreach (var header in ctx.Request.Headers)
