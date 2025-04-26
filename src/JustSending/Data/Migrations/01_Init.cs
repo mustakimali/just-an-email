@@ -75,3 +75,30 @@ public class SessionTable : Migration
         Delete.Table("Sessions");
     }
 }
+
+
+[Migration(202504260005)]
+public class MessagesTable : Migration
+{
+    public override void Up()
+    {
+        Create.Table("Messages")
+            .WithColumn("Id").AsString().PrimaryKey()
+            .WithColumn("SessionId").AsString().NotNullable().ForeignKey("Sessions", "Id").Indexed()
+            .WithColumn("SessionMessageSequence").AsInt16().NotNullable().Indexed()
+            .WithColumn("SessionIdVerification").AsString().Nullable()
+            .WithColumn("SocketConnectionId").AsString().Nullable()
+            .WithColumn("EncryptionPublicKeyAlias").AsString().Nullable()
+            .WithColumn("Text").AsString().NotNullable()
+            .WithColumn("DateSent").AsDateTime().NotNullable().Indexed()
+            .WithColumn("HasFile").AsBoolean().NotNullable()
+            .WithColumn("FileSizeBytes").AsInt64().Nullable()
+            .WithColumn("IsNotification").AsBoolean().NotNullable()
+            .WithColumn("DateSentEpoch").AsInt32().NotNullable();
+    }
+
+    public override void Down()
+    {
+        Delete.Table("Messages");
+    }
+}

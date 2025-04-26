@@ -27,8 +27,8 @@ namespace JustSending.Services
 
         public static int ToEpoch(this DateTime date) => (int)date.Subtract(BeginningOfUnixTime).TotalSeconds;
 
-        public static string ToFileSize(this int len) => ((long)len).ToFileSize();
-
+        public static string ToFileSize(this int lens) => ToFileSize((long)lens);
+        public static string ToFileSize(this long? lens) => ToFileSize(lens ?? 0);
         public static string ToFileSize(this long lens)
         {
             var len = (double)lens;

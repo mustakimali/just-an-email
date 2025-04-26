@@ -83,7 +83,7 @@ namespace JustSending.Controllers
                 || (id2 is { Length: not 32 }))
                 return BadRequest();
 
-            if (await _db.Exist<Session>(id))
+            if (await _db.GetSessionById(id) != null)
             {
                 return Ok();
             }
@@ -330,7 +330,7 @@ namespace JustSending.Controllers
         [Route("file/{id}/{sessionId}")]
         public async Task<IActionResult> DownloadFile(string id, string sessionId)
         {
-            var msg = await _db.GetKv<Message>(id);
+            var msg = await _db.KvGet<Message>(id);
             if (msg == null || msg.SessionId != sessionId)
             {
                 // Chances of link forgery? 0%!
@@ -363,7 +363,7 @@ namespace JustSending.Controllers
                 return View(model);
             }
 
-            var shareToken = await _db.GetKv<ShareToken>(model.Token.ToString());
+            var shareToken = await _db.KvGet<ShareToken>(model.Token.ToString());
             if (shareToken == null)
             {
                 ModelState.AddModelError(nameof(model.Token), "Invalid PIN!");
@@ -379,7 +379,7 @@ namespace JustSending.Controllers
 
             // Ready to join,
             // Delete the Token
-            await _db.Remove<ShareToken>(model.Token.ToString());
+            await _db.KvRemove<ShareToken>(model.Token.ToString());
 
             if (model.NoJs && !session.IsLiteSession)
             {
@@ -402,7 +402,7 @@ namespace JustSending.Controllers
         [Route("message-raw")]
         public async Task<IActionResult> GetMessage(string messageId, string sessionId)
         {
-            var msg = await _db.GetKv<Message>(messageId);
+            var msg = await _db.KvGet<Message>(messageId);
             if (msg == null || msg.SessionId != sessionId)
                 return NotFound();
 

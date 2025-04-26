@@ -289,7 +289,7 @@ namespace JustSending.Services
             //
 
             // Get session from connection
-            var sessionMeta = await _db.GetKv<SessionMetaByConnectionId>(Context.ConnectionId);
+            var sessionMeta = await _db.KvGet<SessionMetaByConnectionId>(Context.ConnectionId);
             if (sessionMeta != null)
             {
                 var devices = await _db.FindClient(sessionMeta.SessionId);
@@ -307,7 +307,7 @@ namespace JustSending.Services
 
         private async Task<bool> CheckIfShareTokenExists(string sessionId, bool notifyIfExist = true)
         {
-            var sessionShareToken = await _db.GetKv<SessionShareToken>(sessionId);
+            var sessionShareToken = await _db.KvGet<SessionShareToken>(sessionId);
             if (sessionShareToken != null)
             {
                 if (notifyIfExist)
@@ -332,7 +332,7 @@ namespace JustSending.Services
 
         private async Task<string?> GetSessionIdFromConnection()
         {
-            return (await _db.GetKv<SessionMetaByConnectionId>(Context.ConnectionId))?.SessionId;
+            return (await _db.KvGet<SessionMetaByConnectionId>(Context.ConnectionId))?.SessionId;
         }
 
         public async Task CancelShare()
@@ -348,11 +348,11 @@ namespace JustSending.Services
 
         public async Task<bool> CancelShareSessionBySessionId(string sessionId)
         {
-            var sessionShareToken = await _db.GetKv<SessionShareToken>(sessionId);
+            var sessionShareToken = await _db.KvGet<SessionShareToken>(sessionId);
             if (sessionShareToken != null)
             {
-                await _db.Remove<ShareToken>(sessionShareToken.Token.ToString());
-                await _db.Remove<SessionShareToken>(sessionId);
+                await _db.KvRemove<ShareToken>(sessionShareToken.Token.ToString());
+                await _db.KvRemove<SessionShareToken>(sessionId);
 
                 return true;
             }

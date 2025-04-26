@@ -25,7 +25,7 @@ namespace JustSending.Controllers
             {
                 // Connected
                 _statDb.RecordStats(StatsDbContext.RecordType.Device);
-                token = (await _db.GetKv<SessionShareToken>(id1))?.Token;
+                token = (await _db.KvGet<SessionShareToken>(id1))?.Token;
             }
             else
             {
@@ -146,7 +146,7 @@ namespace JustSending.Controllers
         {
             var data = new LiteSessionStatus();
 
-            var token = (await _db.GetKv<SessionShareToken>(id))?.Token;
+            var token = (await _db.KvGet<SessionShareToken>(id))?.Token;
             var messages = await GetMessagesInternal(id, id2, from);
 
             data.HasToken = token != null;

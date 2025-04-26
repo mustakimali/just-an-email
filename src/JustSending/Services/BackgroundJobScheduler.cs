@@ -42,28 +42,19 @@ namespace JustSending.Services
             var session = await _db.GetSessionById(sessionId);
             if (session == null) return Array.Empty<string>();
 
-            var messageCount = await _db.Count<Message>(sessionId);
-            for (var i = 0; i <= messageCount; i++)
-            {
-                var id = $"{session.Id}-{i}";
-                var messageId = await _db.GetKv<string>(id);
-                if (messageId != null)
-                    await _db.Remove<Message>(messageId);
-                await _db.Remove<string>(id);
-            }
-
-            await _db.SetCount<Message>(sessionId, null);
+            // remove all messages
+            //todo
 
             // remove all connections
             foreach (var connectionId in session.ConnectionIds)
-                await _db.Remove<SessionMetaByConnectionId>(connectionId);
+                await _db.KvRemove<SessionMetaByConnectionId>(connectionId);
 
             // remove share token
-            var sessionShareToken = await _db.GetKv<SessionShareToken>(sessionId);
+            var sessionShareToken = await _db.KvGet<SessionShareToken>(sessionId);
             if (sessionShareToken != null)
             {
-                await _db.Remove<ShareToken>(sessionShareToken.Token.ToString());
-                await _db.Remove<SessionShareToken>(sessionId);
+                await _db.KvRemove<ShareToken>(sessionShareToken.Token.ToString());
+                await _db.KvRemove<SessionShareToken>(sessionId);
             }
 
             var connectionIds = session.ConnectionIds;
@@ -71,7 +62,7 @@ namespace JustSending.Services
             if (!string.IsNullOrEmpty(session.CleanupJobId))
                 BackgroundJob.Delete(session.CleanupJobId);
 
-            await _db.Remove<Session>(sessionId);
+            await _db.KvRemove<Session>(sessionId);
 
             return connectionIds.ToArray();
         }

@@ -38,7 +38,7 @@ namespace JustSending.Controllers
             return token;
         }
 
-        private async Task<Message[]> GetMessagesInternal(string id, string id2, int from)
+        private async Task<Message[]> GetMessagesInternal(string id, string id2, int fromSequence)
         {
             using var span = _tracer.StartActiveSpan("get-message-internal");
             span.SetAttribute("id", id);
@@ -46,28 +46,13 @@ namespace JustSending.Controllers
 
             if (!await IsValidSession(id, id2))
             {
-                return Array.Empty<Message>();
+                return [];
             }
 
             var expiredMessage = new Message { IsNotification = true, Text = "Message Expired" };
             var result = new List<Message>();
-            var count = await _db.Count<Message>(id);
-            for (int i = from + 1; i <= count; i++)
-            {
-                var messageId = await _db.GetKv<string>($"{id}-{i}");
-                if (messageId == null)
-                {
-                    result.Add(expiredMessage);
-                    continue;
-                }
-
-                var message = await _db.GetKv<Message>(messageId);
-                result.Add(message ?? expiredMessage);
-            }
-
-            result.Reverse();
-
-            return result.ToArray();
+            var messages = await _db.GetMessagesBySession(id, fromSequence);
+            return messages ?? [];
         }
 
         private Task<bool> IsValidRequest(SessionModel model) => IsValidSession(model.SessionId, model.SessionVerification);
