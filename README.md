@@ -24,7 +24,7 @@ Should be running in http://localhost:5050
 
 ### Dependencies
 
-* LiteDb file storage for statistics data.
+* Sqlite file storage for statistics data.
 
 #### When running locally
 * InProc storage for session data

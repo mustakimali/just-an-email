@@ -5,14 +5,11 @@ using System.Threading.Tasks;
 using Hangfire;
 using JustSending.Data.Models;
 using JustSending.Data.Models.Bson;
-using JustSending.Services;
-using LiteDB;
 using Microsoft.AspNetCore.Hosting;
 using OpenTelemetry.Trace;
 using Microsoft.Data.Sqlite;
 using static JustSending.Controllers.StatsRawHandler;
 using Dapper;
-using System.Configuration;
 using Microsoft.Extensions.Configuration;
 
 namespace JustSending.Data
