@@ -12,24 +12,14 @@ using OpenTelemetry.Trace;
 
 namespace JustSending.Data
 {
-    public class AppDbContext
+    public class AppDbContext(ILock @lock, Tracer tracer, IConfiguration config)
     {
         private static readonly TimeSpan MessageTtl = TimeSpan.FromMinutes(15);
 
-        private readonly IDataStore _dataStore;
-        private readonly ILock _lock;
-        private readonly Random _random;
-        private readonly Tracer _tracer;
-        private readonly SqliteConnection _connection;
-
-        public AppDbContext(IDataStore dataStore, ILock @lock, Tracer tracer, IConfiguration config)
-        {
-            _tracer = tracer;
-            _dataStore = dataStore;
-            _lock = @lock;
-            _random = new Random(DateTime.UtcNow.Millisecond);
-            _connection = new SqliteConnection(config.GetConnectionString("StatsCs"));
-        }
+        private readonly ILock _lock = @lock;
+        private readonly Random _random = new Random(DateTime.UtcNow.Millisecond);
+        private readonly Tracer _tracer = tracer;
+        private readonly SqliteConnection _connection = new SqliteConnection(config.GetConnectionString("StatsCs"));
 
         #region KeyValue Store
 

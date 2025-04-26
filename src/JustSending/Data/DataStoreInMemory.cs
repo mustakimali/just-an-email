@@ -5,27 +5,29 @@ using Microsoft.Extensions.Logging;
 
 namespace JustSending.Data
 {
-    public class DataStoreInMemory : IDataStore
+    public class DataStoreSqlite : IDataStore
     {
-        private readonly IMemoryCache _memoryCache;
+        private readonly AppDbContext _db;
 
         // ReSharper disable once SuggestBaseTypeForParameter
-        public DataStoreInMemory(IMemoryCache memoryCache, ILogger<DataStoreInMemory> logger)
+        public DataStoreSqlite(AppDbContext db, ILogger<DataStoreSqlite> logger)
         {
-            _memoryCache = memoryCache;
-            logger.LogInformation("In Memory data store in use, in production server configure `RedisCache` to use redis");
+            _db = db;
         }
 
-        Task<byte[]?> IDataStore.GetAsync(string id) => Task.FromResult(_memoryCache.Get<byte[]?>(id));
-
-        Task IDataStore.SetAsync(string id, byte[] data, TimeSpan ttl) => Task.FromResult(_memoryCache.Set(id, data,
-            new MemoryCacheEntryOptions()
-                .SetSlidingExpiration(ttl)));
-
-        Task IDataStore.RemoveAsync(string id)
+        async Task IDataStore.RemoveAsync<T>(string id)
         {
-            _memoryCache.Remove(id);
-            return Task.CompletedTask;
+            await _db.KvRemove<T>(id);
+        }
+
+        public Task<T?> GetAsync<T>(string id)
+        {
+            return _db.KvGet<T?>(id);
+        }
+
+        public Task SetAsync<T>(string id, T data, TimeSpan ttl) // todo: use ttl
+        {
+            return _db.KvSet(id, data);
         }
     }
 }

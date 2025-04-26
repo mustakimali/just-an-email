@@ -117,50 +117,21 @@ public class Program
             .AddSignalR()
             .AddJsonProtocol();
 
-        var redisConfig = config["RedisCache"];
-        var hasRedisCache = redisConfig is { Length: > 0 };
-        if (hasRedisCache)
-        {
-            signalrBuilder.AddStackExchangeRedis(redisConfig!);
+        // hangfire?
+        // Uses Sqlite for Hangfire storage
+        if (!Directory.Exists("App_Data"))
+            Directory.CreateDirectory("App_Data");
 
-            // use redis for storage
+        services.AddHangfire(x => x
+            .UseSerilogLogProvider()
+            .UseRecommendedSerializerSettings()
+            .UseSQLiteStorage("App_Data/Hangfire.db"));
 
-            services
-                .AddStackExchangeRedisCache(c => c.Configuration = redisConfig)
-                .AddTransient<IDataStore, DataStoreRedis>();
+        // use in memory storage
+        services.AddTransient<IDataStore, DataStoreSqlite>(); //todo: impl
 
-            // Upstash Redis has some issues with
-            services.AddHangfire(x => x
-                .UseSerilogLogProvider()
-                .UseRecommendedSerializerSettings()
-                .UseRedisStorage(redisConfig));
-
-            // redis lock
-            services
-                .AddSingleton(sp => RedLockFactory.Create(new List<RedLockMultiplexer>
-                {
-                new(ConnectionMultiplexer.Connect(redisConfig!))
-                }))
-                .AddTransient<ILock, RedisLock>();
-        }
-        else
-        {
-            // hangfire?
-            // Uses Sqlite for Hangfire storage
-            if (!Directory.Exists("App_Data"))
-                Directory.CreateDirectory("App_Data");
-
-            services.AddHangfire(x => x
-                .UseSerilogLogProvider()
-                .UseRecommendedSerializerSettings()
-                .UseSQLiteStorage("App_Data/Hangfire.db"));
-
-            // use in memory storage
-            services.AddTransient<IDataStore, DataStoreInMemory>();
-
-            // no-op lock
-            services.AddTransient<ILock, NoOpLock>();
-        }
+        // no-op lock
+        services.AddTransient<ILock, NoOpLock>();
 
         services.AddHangfireServer();
         services.AddHttpContextAccessor();
