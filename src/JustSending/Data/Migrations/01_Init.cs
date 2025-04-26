@@ -22,3 +22,18 @@ public class CreateStatsTable : Migration
         Delete.Table("Stats");
     }
 }
+
+[Migration(202504260002)]
+public class AddVersionToStats : Migration
+{
+    public override void Up()
+    {
+        Alter.Table("Stats")
+            .AddColumn("Version").AsInt32().WithDefaultValue(0);
+    }
+
+    public override void Down()
+    {
+        Delete.Column("Version").FromTable("Stats");
+    }
+}
