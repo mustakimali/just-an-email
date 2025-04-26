@@ -85,7 +85,6 @@ public class MessagesTable : Migration
         Create.Table("Messages")
             .WithColumn("Id").AsString().PrimaryKey()
             .WithColumn("SessionId").AsString().NotNullable().ForeignKey("Sessions", "Id").Indexed()
-            .WithColumn("SessionMessageSequence").AsInt16().NotNullable().Indexed()
             .WithColumn("SessionIdVerification").AsString().Nullable()
             .WithColumn("SocketConnectionId").AsString().Nullable()
             .WithColumn("EncryptionPublicKeyAlias").AsString().Nullable()
@@ -94,7 +93,7 @@ public class MessagesTable : Migration
             .WithColumn("HasFile").AsBoolean().NotNullable()
             .WithColumn("FileSizeBytes").AsInt64().Nullable()
             .WithColumn("IsNotification").AsBoolean().NotNullable()
-            .WithColumn("DateSentEpoch").AsInt32().NotNullable();
+            .WithColumn("DateSentEpoch").AsInt32().NotNullable().Indexed();
     }
 
     public override void Down()

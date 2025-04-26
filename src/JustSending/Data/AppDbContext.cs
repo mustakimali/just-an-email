@@ -87,19 +87,11 @@ namespace JustSending.Data
 
         public static string NewGuid() => Guid.NewGuid().ToString("N");
 
-        private async Task<int> GetMessageCount(string sessionId)
-        {
-            var count = await _connection.QueryFirstOrDefaultAsync<int>(
-                "SELECT COUNT(*) FROM Messages WHERE SessionId = @SessionId",
-                new { SessionId = sessionId });
-            return count;
-        }
-
-        public async Task<Message[]?> GetMessagesBySession(string sessionId, int from = -1)
+        public async Task<Message[]?> GetMessagesBySession(string sessionId, int fromEpoch = -1)
         {
             var result = await _connection.QueryMultipleAsync(
-                "SELECT * FROM Messages WHERE SessionId = @SessionId AND SessionMessageSequence > @Seq ORDER BY DateSent DESC",
-                new { SessionId = sessionId, Seq = from });
+                "SELECT * FROM Messages WHERE SessionId = @SessionId AND DateSentEpoch > @Seq ORDER BY DateSent DESC",
+                new { SessionId = sessionId, Seq = fromEpoch });
             if (result == null) return null;
 
             var messages = await result.ReadAsync<Message>();
@@ -164,13 +156,11 @@ namespace JustSending.Data
             span.SetAttribute("session-id", msg.SessionId);
             span.SetAttribute("session-id-2", msg.SessionIdVerification);
 
-            var seq = await GetMessageCount(msg.SessionId);
             var parameters = new
             {
                 msg.Id,
                 msg.SessionId,
                 msg.SessionIdVerification,
-                SessionMessageSequence = seq + 1,
                 msg.SocketConnectionId,
                 msg.EncryptionPublicKeyAlias,
                 msg.Text,
@@ -183,9 +173,9 @@ namespace JustSending.Data
 
             await _connection.ExecuteAsync(
                 @"INSERT INTO Messages
-                    (Id, SessionId, SessionIdVerification, SessionMessageSequence,
+                    (Id, SessionId, SessionIdVerification,
                         SocketConnectionId, EncryptionPublicKeyAlias, Text, DateSent, HasFile, FileSizeBytes, IsNotification, DateSentEpoch)
-                VALUES ( @Id, @SessionId, @SessionIdVerification, @SessionMessageSequence,
+                VALUES ( @Id, @SessionId, @SessionIdVerification,
                         @SocketConnectionId, @EncryptionPublicKeyAlias, @Text, @DateSent, @HasFile, @FileSizeBytes, @IsNotification, @DateSentEpoch)",
                 parameters);
         }

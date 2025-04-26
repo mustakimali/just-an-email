@@ -12,33 +12,40 @@
 
 @foreach (var message in Model)
 {
-    <div class="msg-c" data-seq="@message.SessionMessageSequence" style="border: 1px solid #ddd;">
-        @if(message.IsNotification) {
+    <div class="msg-c" data-seq="@message.DateSentEpoch" style="border: 1px solid #ddd;">
+        @if (message.IsNotification)
+        {
             <div class="alert alert-dismissible alert-warning notif" role="alert">
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span
+                        aria-hidden="true">&times;</span></button>
                 <i class="fa fa-info-circle"></i> @Html.Raw(message.Text)
             </div>
-        } else {
+        }
+        else
+        {
             <div class="msg" data-key="@message.EncryptionPublicKeyAlias">
                 <div class="time" title="@message.DateSent.ToString("R")" data-val="@message.DateSent.ToString("u")">
-                    <i class="fa fa-clock-o"></i> <span class="val h-nojs">@message.DateSent.ToString()</span><noscript><span class="val">@(new DateTime(message.DateSent.Ticks).ToShortTimeString())</span></noscript>
-                    @if(!message.HasFile && !liteMode) {
-                        <span data-id="@message.Id" class="source btn btn-info" title="View Original Text"><i class="fa fa-code"></i> Copy</span>
+                    <i class="fa fa-clock-o"></i> <span class="val h-nojs">@message.DateSent.ToString()</span><noscript><span
+                            class="val">@(new DateTime(message.DateSent.Ticks).ToShortTimeString())</span></noscript>
+                    @if (!message.HasFile && !liteMode)
+                    {
+                        <span data-id="@message.Id" class="source btn btn-info" title="View Original Text"><i
+                                class="fa fa-code"></i> Copy</span>
                     }
                 </div>
                 <div class="content">
-                    @if(message.HasFile){
+                    @if (message.HasFile)
+                    {
                         <div class="file">
                             <i class="fa fa-2x fa-paperclip"></i> @message.Text
-                            <br/>
-                            <a class="btn btn-success download" 
-                               asp-controller="App" 
-                               asp-action="DownloadFile" 
-                               asp-route-sessionId="@message.SessionId" 
-                               asp-route-id="@message.Id"
-                               target="_blank"><i class="fa fa-download"></i> Download (@Helper.ToFileSize(message.FileSizeBytes))</a>
+                            <br />
+                            <a class="btn btn-success download" asp-controller="App" asp-action="DownloadFile"
+                                asp-route-sessionId="@message.SessionId" asp-route-id="@message.Id" target="_blank"><i
+                                    class="fa fa-download"></i> Download (@Helper.ToFileSize(message.FileSizeBytes))</a>
                         </div>
-                    } else {
+                    }
+                    else
+                    {
                         <div class="text">
                             @if (string.IsNullOrEmpty(message.EncryptionPublicKeyAlias))
                             {
@@ -49,8 +56,8 @@
                                 else
                                 {
                                     <code>
-                                        @message.Text
-                                    </code>
+                                                                                                                        @message.Text
+                                                                                                                    </code>
                                 }
                             }
                             else
