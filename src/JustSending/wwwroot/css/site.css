@@ -1,5 +1,4 @@
-﻿
-body {
+﻿body {
     padding-top: 50px;
     padding-bottom: 20px;
 }
@@ -29,6 +28,7 @@ body {
 
 /* Hide/rearrange for smaller screens */
 @media screen and (max-width: 767px) {
+
     /* Hide captions */
     .carousel-caption {
         display: none;
@@ -41,15 +41,16 @@ body {
     border-color: transparent;
 }
 
-    .navbar-inverse .navbar-brand {
-        color: #fff;
-    }
+.navbar-inverse .navbar-brand {
+    color: #fff;
+}
 
-    .navbar-inverse .navbar-nav > li > a {
-        color: #fff;
-    }
+.navbar-inverse .navbar-nav>li>a {
+    color: #fff;
+}
 
-.jumbotron .h1, .jumbotron h1 {
+.jumbotron .h1,
+.jumbotron h1 {
     color: #fff;
 }
 
@@ -82,18 +83,18 @@ body {
 }
 
 
-    .msg .text-d:first-line,
-    .msg .file:first-line {
-        font-size: 150%;
-    }
+.msg .text-d:first-line,
+.msg .file:first-line {
+    font-size: 150%;
+}
 
-    .msg .time {
-        font-size: 10pt;
-        display: block;
-        color: #555;
-        background-color: #eee;
-        padding: 5px 10px;
-    }
+.msg .time {
+    font-size: 10pt;
+    display: block;
+    color: #555;
+    background-color: #eee;
+    padding: 5px 10px;
+}
 
 #conversation {
     margin-bottom: 30px;
@@ -109,9 +110,9 @@ footer {
     margin-bottom: 20px;
 }
 
-    footer a {
-        color: #555;
-    }
+footer a {
+    color: #555;
+}
 
 .ejs-instagram iframe {
     width: inherit;
@@ -126,14 +127,17 @@ footer {
 .msg:hover .content {
     border-color: rgba(96, 125, 139, 0.36);
 }
+
 .msg:hover .time {
     background-color: rgba(96, 125, 139, 0.36);
     color: white;
 }
+
 span.field-validation-error {
     text-transform: uppercase;
     color: white;
 }
+
 .sticky-footer {
     position: fixed;
     bottom: 0;
@@ -142,17 +146,20 @@ span.field-validation-error {
     z-index: 100;
     padding: 0;
 }
+
 .instruction {
     text-align: left;
     color: #ddd;
     padding: 10px;
     float: right;
 }
+
 .instruction a {
     text-decoration: none;
     color: #eee;
     text-decoration: underline;
 }
+
 .instruction h2 {
     font-size: 10pt;
     padding: 0;
@@ -160,77 +167,96 @@ span.field-validation-error {
     text-transform: uppercase;
     color: #fff;
 }
+
 .instruction li {
     list-style: none;
 }
+
 .instruction ul {
     padding: 0;
 }
+
 .share-actions,
 .connect-instruction-panel {
     display: none;
 }
+
 .navbar {
     border-top: 3px solid #4caf50;
 }
+
 .alert {
     border-radius: 0;
 }
+
 .alert h2 {
     margin-top: 0;
     text-transform: uppercase;
 }
+
 strong {
     text-transform: uppercase;
 }
+
 .sweet-alert button {
     border-radius: 0;
 }
+
 .sweet-alert {
     border-radius: 0;
 }
+
 .navbar-toggle {
     display: none;
 }
+
 #connectedDevices {
     display: none;
     border-color: #f0ad4e;
 }
+
 #connectedDevices span {
     background-color: black;
     color: #fff;
 }
+
 .btn {
-    color: rgba(255,255,255,0.7);
-    border-color: rgba(255,255,255,0.2);
+    color: rgba(255, 255, 255, 0.7);
+    border-color: rgba(255, 255, 255, 0.2);
     border-style: solid;
     border-width: 1px;
     transition: color 0.2s, background-color 0.2s, border-color 0.2s;
 }
-.btn:hover, 
+
+.btn:hover,
 .btn:active,
 .btn:focus {
-    color: rgba(255,255,255,0.8);
+    color: rgba(255, 255, 255, 0.8);
     text-decoration: none;
-    border-color: rgba(255,255,255,0.3) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
 }
+
 .btn.btn-primary {
-    background-color: rgba(255,255,255,0.08);
+    background-color: rgba(255, 255, 255, 0.08);
 }
+
 .btn.btn-primary:hover {
-    background-color: rgba(255,255,255,0.2);
+    background-color: rgba(255, 255, 255, 0.2);
 }
+
 #ComposerText {
     height: 42px;
 }
+
 .panel {
     border-radius: 0;
 }
+
 #forkongithub a {
     background: #4caf50;
     color: #fff;
     text-decoration: none;
-    font-family: arial,sans-serif;
+    font-family: arial, sans-serif;
     text-align: center;
     font-weight: bold;
     padding: 5px 40px;
@@ -240,26 +266,27 @@ strong {
     transition: 0.5s;
 }
 
-    #forkongithub a:hover {
-        background: #6d6a95;
-        color: #fff;
-    }
+#forkongithub a:hover {
+    background: #6d6a95;
+    color: #fff;
+}
 
-    #forkongithub a::before, #forkongithub a::after {
-        content: "";
-        width: 100%;
-        display: block;
-        position: absolute;
-        top: 1px;
-        left: 0;
-        height: 1px;
-        background: #fff;
-    }
+#forkongithub a::before,
+#forkongithub a::after {
+    content: "";
+    width: 100%;
+    display: block;
+    position: absolute;
+    top: 1px;
+    left: 0;
+    height: 1px;
+    background: #fff;
+}
 
-    #forkongithub a::after {
-        bottom: 1px;
-        top: auto;
-    }
+#forkongithub a::after {
+    bottom: 1px;
+    top: auto;
+}
 
 #forkongithub {
     position: absolute;
@@ -272,21 +299,23 @@ strong {
     z-index: 9999;
 }
 
-    #forkongithub a {
-        width: 200px;
-        position: absolute;
-        top: 42px;
-        right: -45px;
-        transform: rotate(45deg);
-        -webkit-transform: rotate(45deg);
-        -ms-transform: rotate(45deg);
-        -moz-transform: rotate(45deg);
-        -o-transform: rotate(45deg);
-        box-shadow: 4px 4px 10px rgba(0,0,0,0.8);
-    }
+#forkongithub a {
+    width: 200px;
+    position: absolute;
+    top: 42px;
+    right: -45px;
+    transform: rotate(45deg);
+    -webkit-transform: rotate(45deg);
+    -ms-transform: rotate(45deg);
+    -moz-transform: rotate(45deg);
+    -o-transform: rotate(45deg);
+    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.8);
+}
+
 .input-group-btn {
     vertical-align: bottom;
 }
+
 pre {
     background-color: white;
 }
@@ -297,7 +326,11 @@ pre {
     margin-right: -5px;
     margin-top: -2px;
 }
-.input-group .fa-2x { font-size: 1.5ex; }
+
+.input-group .fa-2x {
+    font-size: 1.5ex;
+}
+
 .msg .content {
     word-wrap: break-word;
 }
@@ -306,24 +339,29 @@ pre {
     .input-group {
         display: block;
     }
-    .input-group-lg > .form-control {
+
+    .input-group-lg>.form-control {
         font-size: 14px;
         border-radius: 0;
         padding: 5px 8px;
     }
+
     h2 {
         font-size: 20px;
     }
 }
+
 @media screen and (min-width: 770px) {
     .input-group {
         display: table;
     }
-    .input-group-lg > .form-control {
+
+    .input-group-lg>.form-control {
         font-size: 18px;
         border-radius: 6px;
         padding: 10px 16px;
     }
+
     h2 {
         font-size: 30px;
     }
@@ -333,25 +371,32 @@ pre {
     padding: 5px 0px;
     float: right;
 }
+
 .bg button {
     font-size: initial;
 }
+
 .bg:after {
     clear: both;
 }
+
 .btn {
-    background-image: linear-gradient(120deg, rgba(0,0,0,0), rgba(0,0,0,0.15));
+    background-image: linear-gradient(120deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.15));
 }
+
 .download {
     margin-top: 4px;
 }
+
 .notif {
     margin: 10px 0;
 }
+
 #overlay {
     opacity: 0;
     transition: all 0.25s ease-in-out;
 }
+
 body.busy #overlay {
     position: absolute;
     left: 0;
@@ -396,7 +441,9 @@ body.busy #overlay {
         font-size: 23px;
     }
 
-    p, p.small, li {
+    p,
+    p.small,
+    li {
         font-size: 12px;
     }
 
@@ -411,9 +458,13 @@ body.busy #overlay {
         margin: 5px 0;
     }
 
-    ul { padding-left: 20px; }
+    ul {
+        padding-left: 20px;
+    }
 
-    #forkongithub { display: none; }
+    #forkongithub {
+        display: none;
+    }
 
     .jumbotron {
         padding: 5px 0;
@@ -429,9 +480,11 @@ body.busy #overlay {
         margin: 0 0 5px 0;
         font-size: 16pt;
     }
+
     #conversation {
         margin-top: 15px;
     }
+
     a#deleteBtn {
         width: 30px;
         margin-right: -10px;
@@ -449,4 +502,13 @@ body.busy #overlay {
 
 #feedbackModal {
     z-index: 10000;
+}
+
+#drop-zone {
+    padding: 20px;
+    border: 2px dashed #ccc;
+    border-radius: 5px;
+    margin-top: 10px;
+    opacity: 0.5;
+    color: #fff;
 }

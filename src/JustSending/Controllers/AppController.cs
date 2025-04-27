@@ -276,6 +276,45 @@ namespace JustSending.Controllers
             return await SaveMessageAndReturnResponse(message);
         }
 
+        [Route("post/quick-upload")]
+        [HttpPost]
+        public async Task<IActionResult> QuickUpload()
+        {
+            if (!Request.Form.Files.Any()) return BadRequest();
+            var file = Request.Form.Files[0];
+
+            var id = Guid.NewGuid().ToString("N");
+            var id2 = Guid.NewGuid().ToString("N");
+            await CreateSession(id, id2, false);
+            _logger.LogInformation("Session created: {id} {id2}", id, id2);
+
+            var tempFile = Path.GetTempFileName();
+            await using (var f = IOFile.OpenWrite(tempFile))
+            {
+                await file.CopyToAsync(f);
+            }
+            _logger.LogInformation("Temp file created: {file}", tempFile);
+
+            var message = SavePostedFile(tempFile, new SessionModel
+            {
+                SessionId = id,
+                SessionVerification = id2,
+                SocketConnectionId = id,
+                ComposerText = file.FileName
+            });
+            await SaveMessageAndReturnResponse(message, false);
+            _logger.LogInformation("Message saved: {message}", message.Id);
+
+            return Json(new
+            {
+                session_id = id,
+                session_idv = id2,
+                message_id = message.Id,
+                file_name = message.Text,
+                file_size = message.FileSizeBytes,
+            });
+        }
+
         private static void DeleteIfExists(string path)
         {
             if (IOFile.Exists(path))
