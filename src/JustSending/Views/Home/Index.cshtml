@@ -19,8 +19,10 @@
                 <a id="connect" asp-action="Connect" asp-controller="App" style="opacity: 0.7"
                     class="btn btn-lg btn-primary btn-block">Connect</a>
                 <a asp-action="Password" style="opacity: 0.7" class="btn btn-block">Quickly share a password</a>
-                <div id="drop-zone" class="text-center">
-                    Drop a file here to share
+
+                <div id="drop-zone" class="text-center" onclick="document.getElementById('file-input').click()">
+                    Drop a file here or tap to select
+                    <input type="file" id="file-input" style="display: none;" onchange="handleFileSelect(this)">
                 </div>
             </div>
             <noscript>
@@ -155,36 +157,48 @@
                     dropZone.style.borderColor = '#ccc';
 
                     const file = e.dataTransfer.files[0];
-                    const maxSize = 80 * 1024 * 1024; // 80MB in bytes
-
-                    if (file.size > maxSize) {
-                        alert('File is too large. Maximum size allowed is 80MB.');
-                        return;
-                    }
-
-                    const formData = new FormData();
-                    formData.append('file', file);
-
-                    try {
-                        dropZone.innerHTML = 'Uploading...';
-                        dropZone.style.borderColor = '#ccc';
-                        const response = await fetch('/app/post/quick-upload', {
-                            method: 'POST',
-                            body: formData
-                        });
-
-                        if (!response.ok) {
-                            throw new Error('Upload failed');
-                        }
-
-                        const json = await response.json();
-                        const path = `/app#${json.session_id}${json.session_idv}`;
-                        location.href = path;
-                    } catch (error) {
-                        console.error('Upload error:', error);
-                    }
+                    await uploadFile(file);
                 });
             }
         })(window.jQuery);
+
+        async function handleFileSelect(input) {
+            const file = input.files[0];
+            if (file) {
+                await uploadFile(file);
+            }
+        }
+
+        async function uploadFile(file) {
+            const maxSize = 80 * 1024 * 1024; // 80MB in bytes
+            const dropZone = document.getElementById('drop-zone');
+
+            if (file.size > maxSize) {
+                alert('File is too large. Maximum size allowed is 80MB.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                dropZone.innerHTML = 'Uploading...';
+                dropZone.style.borderColor = '#ccc';
+                const response = await fetch('/app/post/quick-upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('Upload failed');
+                }
+
+                const json = await response.json();
+                const path = `/app#${json.session_id}${json.session_idv}`;
+                location.href = path;
+            } catch (error) {
+                console.error('Upload error:', error);
+            }
+        }
     </script>
 }
