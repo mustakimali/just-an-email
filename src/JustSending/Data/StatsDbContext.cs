@@ -87,6 +87,7 @@ namespace JustSending.Data
             Device,
             Message
         }
+
         public Task RecordBg(DateTime date, RecordType type, int inc)
         {
             return type switch

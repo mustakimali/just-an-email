@@ -299,7 +299,6 @@ namespace JustSending.Controllers
 
             await _db.MessagesInsert(message);
             _statDb.RecordMessageStats(message);
-            BackgroundJob.Enqueue(() => ScheduleSessionCleanupById(message.SessionId));
 
             await _hub.RequestReloadMessage(message.SessionId);
 
@@ -330,7 +329,7 @@ namespace JustSending.Controllers
         [Route("file/{id}/{sessionId}")]
         public async Task<IActionResult> DownloadFile(string id, string sessionId)
         {
-            var msg = await _db.KvGet<Message>(id);
+            var msg = await _db.GetMessagesById(id);
             if (msg == null || msg.SessionId != sessionId)
             {
                 // Chances of link forgery? 0%!

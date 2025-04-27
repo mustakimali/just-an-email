@@ -25,8 +25,9 @@ namespace JustSending.Data
             return _db.KvGet<T?>(id);
         }
 
-        public Task SetAsync<T>(string id, T data, TimeSpan ttl) // todo: use ttl
+        public Task SetAsync<T>(string id, T data, TimeSpan ttl)
         {
+            // todo: store and respect ttl
             return _db.KvSet(id, data);
         }
     }

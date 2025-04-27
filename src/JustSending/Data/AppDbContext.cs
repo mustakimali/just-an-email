@@ -77,6 +77,19 @@ namespace JustSending.Data
 
         public static string NewGuid() => Guid.NewGuid().ToString("N");
 
+        public async Task<Message?> GetMessagesById(string id)
+        {
+            using var span = _tracer.StartActiveSpan("get-message-by-id");
+            span.SetAttribute("id", id);
+
+            var result = await _connection.QueryFirstOrDefaultAsync<Message>(
+                "SELECT * FROM Messages WHERE Id = @Id",
+                new { Id = id });
+            if (result == null) return null;
+
+            return result;
+        }
+
         public async Task<Message[]?> GetMessagesBySession(string sessionId, int fromEpoch = -1)
         {
             var result = await _connection.QueryMultipleAsync(
@@ -90,14 +103,11 @@ namespace JustSending.Data
             return [.. messages];
         }
 
-        public async Task<Message?> GetLatestMessage(string sessionId)
+        public async Task<int> DeleteAllMessagesBySession(string sessionId)
         {
-            var msg = await _connection.QueryFirstOrDefaultAsync<Message>(
-                "SELECT * FROM Messages WHERE SessionId = @SessionId ORDER BY DateSent DESC LIMIT 1",
+            return await _connection.ExecuteAsync(
+                "DELETE FROM Messages WHERE SessionId = @SessionId",
                 new { SessionId = sessionId });
-            if (msg == null) return null;
-
-            return msg;
         }
 
         public async Task<Session?> GetSession(string id, string id2)
@@ -108,6 +118,16 @@ namespace JustSending.Data
             return session?.IdVerification == id2
                 ? session
                 : null;
+        }
+
+        public async Task DeleteSession(string id)
+        {
+            using var span = _tracer.StartActiveSpan("delete-session");
+            span.SetAttribute("session-id", id);
+
+            await _connection.ExecuteAsync(
+                "DELETE FROM Sessions WHERE Id = @Id",
+                new { Id = id });
         }
 
         public async Task<Session?> GetSessionById(string id)
@@ -186,7 +206,6 @@ namespace JustSending.Data
             span.SetAttribute("session-id", sessionId);
             span.SetAttribute("connection-id", connectionId);
 
-            // ToDo: lock
             if (!await AddConnectionId(sessionId, connectionId)) return;
             await KvSet(connectionId, new SessionMetaByConnectionId(sessionId));
         }

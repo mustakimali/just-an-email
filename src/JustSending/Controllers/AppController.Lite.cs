@@ -164,17 +164,6 @@ namespace JustSending.Controllers
         private IActionResult RedirectToLiteSession(SessionModel model) => RedirectToAction(nameof(LiteSession), new { id1 = model.SessionId, id2 = model.SessionVerification });
 
         [NonAction]
-        public async Task ScheduleSessionCleanupById(string sessionId)
-        {
-            // ToDo: lock
-            var session = await _db.GetSessionById(sessionId);
-            if (session == null) return;
-
-            // cleanup after 24 hours
-            await ScheduleSessionCleanup(session);
-        }
-
-        [NonAction]
         public async Task ScheduleSessionCleanup(Session session)
         {
             var triggerAfter = TimeSpan.FromHours(24);

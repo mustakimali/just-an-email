@@ -10,20 +10,11 @@ using Microsoft.Extensions.Logging;
 
 namespace JustSending.Services
 {
-    public class BackgroundJobScheduler
+    public class BackgroundJobScheduler(AppDbContext db, IWebHostEnvironment env, ILogger<BackgroundJobScheduler> logger)
     {
-        private readonly AppDbContext _db;
-        private readonly StatsDbContext _dbStats;
-        private readonly IWebHostEnvironment _env;
-        private readonly ILogger<BackgroundJobScheduler> _logger;
-
-        public BackgroundJobScheduler(AppDbContext db, StatsDbContext dbStats, IWebHostEnvironment env, ILogger<BackgroundJobScheduler> logger)
-        {
-            _db = db;
-            _dbStats = dbStats;
-            _env = env;
-            _logger = logger;
-        }
+        private readonly AppDbContext _db = db;
+        private readonly IWebHostEnvironment _env = env;
+        private readonly ILogger<BackgroundJobScheduler> _logger = logger;
 
         public async Task Erase(string sessionId) => await EraseSessionReturnConnectionIds(sessionId);
 
@@ -43,7 +34,8 @@ namespace JustSending.Services
             if (session == null) return [];
 
             // remove all messages
-            //todo
+            var count = await _db.DeleteAllMessagesBySession(sessionId);
+            _logger.LogInformation("Deleted {count} messages for session {sessionId}", count, sessionId);
 
             // remove all connections
             foreach (var connectionId in session.ConnectionIds)
@@ -62,9 +54,9 @@ namespace JustSending.Services
             if (!string.IsNullOrEmpty(session.CleanupJobId))
                 BackgroundJob.Delete(session.CleanupJobId);
 
-            await _db.KvRemove<Session>(sessionId);
+            await _db.DeleteSession(sessionId);
 
-            return connectionIds.ToArray();
+            return [.. connectionIds];
         }
 
         public void DeleteUploadedFiles(string sessionId)
