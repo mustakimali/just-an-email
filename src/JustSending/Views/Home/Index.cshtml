@@ -3,18 +3,25 @@
     ViewData["Title"] = "Quickly send files, URL or any texts across your devices!";
 }
 @section AboveBody
-    {
+{
     <div class="jumbotron">
         <div class="container">
-            <h1 class="text-lowercase">Pass files or <span title="Long URL, unfinished facebook status, code blocks!" style="border-bottom: 1px dotted #fff;cursor: help;">any texts</span> between your devices</h1>
+            <h1 class="text-lowercase">Pass files or <span title="Long URL, unfinished facebook status, code blocks!"
+                    style="border-bottom: 1px dotted #fff;cursor: help;">any texts</span> between your devices</h1>
 
             <div id="connect-panel">
-                <a id="new-session" asp-controller="App" asp-action="NewSession" class="btn btn-lg btn-primary btn-block" style="margin-bottom: 5px; display: none;">Start</a>
+                <a id="new-session" asp-controller="App" asp-action="NewSession" class="btn btn-lg btn-primary btn-block"
+                    style="margin-bottom: 5px; display: none;">Start</a>
                 <noscript>
-                    <a asp-controller="App" asp-action="LiteSessionNew" class="btn btn-lg btn-primary btn-block" style="margin-bottom: 5px">Start*</a>
+                    <a asp-controller="App" asp-action="LiteSessionNew" class="btn btn-lg btn-primary btn-block"
+                        style="margin-bottom: 5px">Start*</a>
                 </noscript>
-                <a id="connect" asp-action="Connect" asp-controller="App" style="opacity: 0.7" class="btn btn-lg btn-primary btn-block">Connect</a>
+                <a id="connect" asp-action="Connect" asp-controller="App" style="opacity: 0.7"
+                    class="btn btn-lg btn-primary btn-block">Connect</a>
                 <a asp-action="Password" style="opacity: 0.7" class="btn btn-block">Quickly share a password</a>
+                <div id="drop-zone" class="text-center">
+                    Drop a file here to share
+                </div>
             </div>
             <noscript>
                 <p class="small">
@@ -33,7 +40,8 @@
 <div class="text-center" style="color: #888;">
     <h2 class="text-lowercase">Quickly send files, URL or any texts across your devices!</h2>
     <p>
-        Imagine sending a long URL to your PS4 browser! or sending an important file to your friends computer without having to install an app or logging into a site just for that!
+        Imagine sending a long URL to your PS4 browser! or sending an important file to your friends computer without
+        having to install an app or logging into a site just for that!
     </p>
     <div class="row">
 
@@ -46,7 +54,8 @@
                     <ul>
                         <li>No login/registration required.</li>
                         <li>All you need is a browser.</li>
-                        <li>Share Files <strong>upto @config["MaxUploadSizeDisplay"]</strong>, URL or arbitrary text.</li>
+                        <li>Share Files <strong>upto @config["MaxUploadSizeDisplay"]</strong>, URL or arbitrary text.
+                        </li>
                         <li>Files can also be shared from your <i class="fa fa-terminal"></i> terminal</li>
                         <li>
                             Very old browser? use <a asp-controller="App" asp-action="LiteSessionNew">Lite version</a>
@@ -74,7 +83,8 @@
 
     </div>
 </div>
-<span id="forkongithub"><a href="https://mustakimali.github.io/just-an-email" target="_blank">Fork me on GitHub</a></span>
+<span id="forkongithub"><a href="https://mustakimali.github.io/just-an-email" target="_blank">Fork me on
+        GitHub</a></span>
 <div id="feedbackModal" class="modal fade" role="dialog">
     <div class="modal-dialog">
 
@@ -86,14 +96,14 @@
             </div>
             <div class="modal-body" style="text-align: center;">
                 <p>
-                    <h3><i class="fa fa-thumbs-o-up"></i> Please help spread the world!</h3>
+                <h3><i class="fa fa-thumbs-o-up"></i> Please help spread the world!</h3>
 
-                    <div id="feedbackSharePanel"></div>
+                <div id="feedbackSharePanel"></div>
                 </p>
 
                 <p>
-                    <h3><i class="fa fa-thumbs-o-down"></i> Any issues?</h3>
-                    Please <a href="https://github.com/mustakimali/just-an-email/issues/new">report a bug</a>
+                <h3><i class="fa fa-thumbs-o-down"></i> Any issues?</h3>
+                Please <a href="https://github.com/mustakimali/just-an-email/issues/new">report a bug</a>
                 </p>
             </div>
         </div>
@@ -102,29 +112,79 @@
 </div>
 @section Scripts
 {
-<script type="text/javascript">
-    (function ($) {
-        if (window.innerWidth <= 340) {
-            showNoscripts($);
-        }
-
-        $("*[title]").tooltip();
-        $("#new-session").css("display", "block");
-
-        setTimeout(askForFeedback, 500);
-
-        function askForFeedback() {
-            if (location.search.indexOf("?ref=app") == 0) {
-                $("#feedbackSharePanel").html($("#connect-instruction-panel").html());
-                $("#feedbackModal")
-                    .modal("show")
-                    .on("hidden.bs.modal", function () {
-                        try {
-                            history.replaceState(null, "", "/")
-                        } catch (e) { }
-                    });;
+    <script type="text/javascript">
+        (function ($) {
+            if (window.innerWidth <= 340) {
+                showNoscripts($);
             }
-        }
-    })(window.jQuery);
-</script>
+
+            $("*[title]").tooltip();
+            $("#new-session").css("display", "block");
+
+            setTimeout(askForFeedback, 500);
+            initQuickUpload();
+
+            function askForFeedback() {
+                if (location.search.indexOf("?ref=app") == 0) {
+                    $("#feedbackSharePanel").html($("#connect-instruction-panel").html());
+                    $("#feedbackModal")
+                        .modal("show")
+                        .on("hidden.bs.modal", function () {
+                            try {
+                                history.replaceState(null, "", "/")
+                            } catch (e) { }
+                        });;
+                }
+            }
+
+            function initQuickUpload() {
+                const dropZone = document.getElementById('drop-zone');
+
+                dropZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    dropZone.style.borderColor = '#007bff';
+                });
+
+                dropZone.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    dropZone.style.borderColor = '#ccc';
+                });
+
+                dropZone.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    dropZone.style.borderColor = '#ccc';
+
+                    const file = e.dataTransfer.files[0];
+                    const maxSize = 80 * 1024 * 1024; // 80MB in bytes
+
+                    if (file.size > maxSize) {
+                        alert('File is too large. Maximum size allowed is 80MB.');
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    try {
+                        dropZone.innerHTML = 'Uploading...';
+                        dropZone.style.borderColor = '#ccc';
+                        const response = await fetch('/app/post/quick-upload', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Upload failed');
+                        }
+
+                        const json = await response.json();
+                        const path = `/app#${json.session_id}${json.session_idv}`;
+                        location.href = path;
+                    } catch (error) {
+                        console.error('Upload error:', error);
+                    }
+                });
+            }
+        })(window.jQuery);
+    </script>
 }
