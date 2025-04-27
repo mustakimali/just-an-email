@@ -166,6 +166,8 @@
                     formData.append('file', file);
 
                     try {
+                        dropZone.innerHTML = 'Uploading...';
+                        dropZone.style.borderColor = '#ccc';
                         const response = await fetch('/app/post/quick-upload', {
                             method: 'POST',
                             body: formData
