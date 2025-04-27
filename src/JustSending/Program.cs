@@ -23,6 +23,9 @@ using OpenTelemetry.Trace;
 using System.Threading.Tasks;
 using System.Linq;
 using FluentMigrator.Runner;
+using Hangfire.States;
+using Hangfire.Common;
+using Microsoft.Extensions.Logging;
 
 public class Program
 {
@@ -117,50 +120,20 @@ public class Program
             .AddSignalR()
             .AddJsonProtocol();
 
-        var redisConfig = config["RedisCache"];
-        var hasRedisCache = redisConfig is { Length: > 0 };
-        if (hasRedisCache)
-        {
-            signalrBuilder.AddStackExchangeRedis(redisConfig!);
+        // hangfire?
+        // Uses Sqlite for Hangfire storage
+        if (!Directory.Exists("App_Data"))
+            Directory.CreateDirectory("App_Data");
 
-            // use redis for storage
+        services.AddHangfire(x => x
+            .UseSerilogLogProvider()
+            .UseRecommendedSerializerSettings()
+            .UseSQLiteStorage("App_Data/Hangfire.db"));
 
-            services
-                .AddStackExchangeRedisCache(c => c.Configuration = redisConfig)
-                .AddTransient<IDataStore, DataStoreRedis>();
+        services.AddTransient<IDataStore, DataStoreSqlite>();
 
-            // Upstash Redis has some issues with
-            services.AddHangfire(x => x
-                .UseSerilogLogProvider()
-                .UseRecommendedSerializerSettings()
-                .UseRedisStorage(redisConfig));
-
-            // redis lock
-            services
-                .AddSingleton(sp => RedLockFactory.Create(new List<RedLockMultiplexer>
-                {
-                new(ConnectionMultiplexer.Connect(redisConfig!))
-                }))
-                .AddTransient<ILock, RedisLock>();
-        }
-        else
-        {
-            // hangfire?
-            // Uses Sqlite for Hangfire storage
-            if (!Directory.Exists("App_Data"))
-                Directory.CreateDirectory("App_Data");
-
-            services.AddHangfire(x => x
-                .UseSerilogLogProvider()
-                .UseRecommendedSerializerSettings()
-                .UseSQLiteStorage("App_Data/Hangfire.db"));
-
-            // use in memory storage
-            services.AddTransient<IDataStore, DataStoreInMemory>();
-
-            // no-op lock
-            services.AddTransient<ILock, NoOpLock>();
-        }
+        // no-op lock
+        services.AddTransient<ILock, NoOpLock>();
 
         services.AddHangfireServer();
         services.AddHttpContextAccessor();
@@ -240,8 +213,9 @@ public class Program
         {
             DisplayStorageConnectionString = false,
             DashboardTitle = "Just An Email",
-            Authorization = new[] { new InsecureAuthFilter() }
+            Authorization = [new InsecureAuthFilter()]
         });
+        ConfigureHangfire(app);
 
         app.UseRouting();
 
@@ -249,4 +223,98 @@ public class Program
         app.MapHub<SecureLineHub>("/signalr/secure-line");
         app.MapControllers();
     }
+
+    public static void ConfigureHangfire(IApplicationBuilder app)
+    {
+        object automaticRetryAttribute = null;
+        foreach (var filter in GlobalJobFilters.Filters)
+        {
+            if (filter.Instance is Hangfire.AutomaticRetryAttribute)
+            {
+                automaticRetryAttribute = filter.Instance;
+                break;
+            }
+        }
+
+        if (automaticRetryAttribute == null)
+        {
+            throw new Exception("Didn't find hangfire automaticRetryAttribute");
+        }
+
+        // Remove the default and add your custom implementation
+        GlobalJobFilters.Filters.Remove(automaticRetryAttribute);
+        GlobalJobFilters.Filters.Add(new CustomExponentialBackoffWithJitterAttribute(app.ApplicationServices.GetService<ILogger<CustomExponentialBackoffWithJitterAttribute>>()!));
+    }
 }
+
+public class CustomExponentialBackoffWithJitterAttribute : JobFilterAttribute, IElectStateFilter
+{
+    private const int DefaultRetryAttempts = 10;
+    private int _attempts;
+    private readonly Random _random = new();
+    private readonly ILogger<CustomExponentialBackoffWithJitterAttribute> _logger;
+
+    public CustomExponentialBackoffWithJitterAttribute(ILogger<CustomExponentialBackoffWithJitterAttribute> logger)
+    {
+        Attempts = DefaultRetryAttempts;
+        LogEvents = true;
+        _logger = logger;
+    }
+
+    public int Attempts
+    {
+        get { return _attempts; }
+        set
+        {
+            if (value < 0)
+            {
+                throw new ArgumentOutOfRangeException("value", "Attempts value must be equal or greater than zero.");
+            }
+            _attempts = value;
+        }
+    }
+
+    public bool LogEvents { get; set; }
+
+    public void OnStateElection(ElectStateContext context)
+    {
+        var failedState = context.CandidateState as FailedState;
+        if (failedState == null)
+        {
+            return;
+        }
+
+        var retryAttempt = context.GetJobParameter<int>("RetryCount") + 1;
+        if (retryAttempt <= Attempts)
+        {
+            // Calculate delay with exponential backoff and jitter
+            var delay = TimeSpan.FromMilliseconds(CalculateDelayWithJitter(retryAttempt));
+
+            context.SetJobParameter("RetryCount", retryAttempt);
+            context.CandidateState = new ScheduledState(delay)
+            {
+                Reason = $"Retry attempt {retryAttempt} of {Attempts} in {delay}."
+            };
+
+            if (LogEvents)
+            {
+                _logger.LogError($"Failed to process the job '{context.BackgroundJob.Id}': an exception occurred. Retry attempt {retryAttempt} of {Attempts} will be performed in {delay}.");
+            }
+        }
+    }
+
+    // Exponential backoff with jitter calculation
+    private int CalculateDelayWithJitter(long retryCount)
+    {
+        // Base delay in milliseconds, starting with 10 seconds
+        // This ensures first 3 retries happen within 2 minutes
+        double baseDelay = Math.Pow(2, retryCount - 1) * 10000; // 10s, 20s, 40s...
+
+        int jitter = _random.Next(100, 900);
+
+        int delayMs = (int)Math.Min(baseDelay + jitter, 300000);
+
+        return delayMs;
+    }
+}
+

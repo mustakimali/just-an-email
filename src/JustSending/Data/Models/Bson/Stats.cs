@@ -12,6 +12,7 @@ namespace JustSending.Data.Models.Bson
 
         public int Devices { get; set; }
         public int Sessions { get; set; }
+        public int Version { get; set; }
 
         public DateTime DateCreatedUtc { get; set; }
 

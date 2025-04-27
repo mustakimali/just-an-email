@@ -87,6 +87,7 @@ namespace JustSending.Data
             Device,
             Message
         }
+
         public Task RecordBg(DateTime date, RecordType type, int inc)
         {
             return type switch
@@ -134,7 +135,21 @@ namespace JustSending.Data
 
         private async Task Upsert(Stats stats)
         {
-            await _connection.ExecuteAsync("INSERT OR REPLACE INTO Stats (Id, Messages, MessagesSizeBytes, Files, FilesSizeBytes, Devices, Sessions, DateCreatedUtc) VALUES (@Id, @Messages, @MessagesSizeBytes, @Files, @FilesSizeBytes, @Devices, @Sessions, @DateCreatedUtc)", stats);
+            stats.Version++;
+            var rows = await _connection.ExecuteAsync(@"
+                INSERT INTO Stats (Id, Messages, MessagesSizeBytes, Files, FilesSizeBytes, Devices, Sessions, DateCreatedUtc, Version)
+                VALUES (@Id, @Messages, @MessagesSizeBytes, @Files, @FilesSizeBytes, @Devices, @Sessions, @DateCreatedUtc, @Version)
+                ON CONFLICT(Id) DO UPDATE SET
+                    Messages = @Messages,
+                    MessagesSizeBytes = @MessagesSizeBytes,
+                    Files = @Files,
+                    FilesSizeBytes = @FilesSizeBytes,
+                    Devices = @Devices,
+                    Sessions = @Sessions,
+                    Version = @Version
+                WHERE Version = @Version - 1", stats);
+
+            if (rows == 0) throw new Exception("Optimistic concurrency error");
         }
 
         public async Task<Stats> StatsFindByDateOrNew(int? year, int? month = null, int? day = null)

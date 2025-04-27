@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Logging;
 using IOFile = System.IO.File;
 using OpenTelemetry.Trace;
+using Hangfire;
 
 namespace JustSending.Controllers
 {
@@ -59,7 +60,7 @@ namespace JustSending.Controllers
         {
             if (verifySessionExistance)
             {
-                var session = await _db.Get<Session>(id);
+                var session = await _db.GetSessionById(id);
                 if (session == null || session.IdVerification != id2)
                 {
                     return NotFound();
@@ -83,7 +84,7 @@ namespace JustSending.Controllers
                 || (id2 is { Length: not 32 }))
                 return BadRequest();
 
-            if (await _db.Exist<Session>(id))
+            if (await _db.GetSessionById(id) != null)
             {
                 return Ok();
             }
@@ -136,7 +137,7 @@ namespace JustSending.Controllers
         [RequestSizeLimit(2_147_483_648)]
         public async Task<IActionResult> PostFileFromCli([FromRoute] string sessionId, IFormFile? file)
         {
-            var session = await _db.Get<Session>(sessionId);
+            var session = await _db.GetSessionById(sessionId);
             if (session == null)
             {
                 return StatusCode(400, new
@@ -292,14 +293,12 @@ namespace JustSending.Controllers
         private async Task<IActionResult> SaveMessageAndReturnResponse(Message message, bool lite = false)
         {
             // validate
-            var session = await _db.GetSession(message.SessionId);
+            var session = await _db.GetSessionById(message.SessionId);
             if (session == null)
                 return BadRequest();
 
             await _db.MessagesInsert(message);
             _statDb.RecordMessageStats(message);
-
-            await ScheduleOrExtendSessionCleanup(message.SessionId, lite);
 
             await _hub.RequestReloadMessage(message.SessionId);
 
@@ -330,7 +329,7 @@ namespace JustSending.Controllers
         [Route("file/{id}/{sessionId}")]
         public async Task<IActionResult> DownloadFile(string id, string sessionId)
         {
-            var msg = await _db.Get<Message>(id);
+            var msg = await _db.GetMessagesById(id);
             if (msg == null || msg.SessionId != sessionId)
             {
                 // Chances of link forgery? 0%!
@@ -363,14 +362,14 @@ namespace JustSending.Controllers
                 return View(model);
             }
 
-            var shareToken = await _db.Get<ShareToken>(model.Token.ToString());
+            var shareToken = await _db.KvGet<ShareToken>(model.Token.ToString());
             if (shareToken == null)
             {
                 ModelState.AddModelError(nameof(model.Token), "Invalid PIN!");
                 return View(model);
             }
 
-            var session = await _db.Get<Session>(shareToken.SessionId);
+            var session = await _db.GetSessionById(shareToken.SessionId);
             if (session == null)
             {
                 ModelState.AddModelError(nameof(model.Token), "The Session does not exist!");
@@ -379,7 +378,7 @@ namespace JustSending.Controllers
 
             // Ready to join,
             // Delete the Token
-            await _db.Remove<ShareToken>(model.Token.ToString());
+            await _db.KvRemove<ShareToken>(model.Token.ToString());
 
             if (model.NoJs && !session.IsLiteSession)
             {
@@ -402,7 +401,7 @@ namespace JustSending.Controllers
         [Route("message-raw")]
         public async Task<IActionResult> GetMessage(string messageId, string sessionId)
         {
-            var msg = await _db.Get<Message>(messageId);
+            var msg = await _db.KvGet<Message>(messageId);
             if (msg == null || msg.SessionId != sessionId)
                 return NotFound();
 
@@ -428,7 +427,7 @@ namespace JustSending.Controllers
             var session = await _db.GetSession(id, id2);
             if (session == null) return;
             session.IsLiteSession = true;
-            await _db.Set(id, session);
+            await _db.AddOrUpdateSession(session);
 
             await _hub.RedirectTo(id, Url.Action(nameof(LiteSession), new { id1 = id, id2, r = "u" })!)
                 .ConfigureAwait(false);

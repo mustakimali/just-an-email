@@ -10,20 +10,11 @@ using Microsoft.Extensions.Logging;
 
 namespace JustSending.Services
 {
-    public class BackgroundJobScheduler
+    public class BackgroundJobScheduler(AppDbContext db, IWebHostEnvironment env, ILogger<BackgroundJobScheduler> logger)
     {
-        private readonly AppDbContext _db;
-        private readonly StatsDbContext _dbStats;
-        private readonly IWebHostEnvironment _env;
-        private readonly ILogger<BackgroundJobScheduler> _logger;
-
-        public BackgroundJobScheduler(AppDbContext db, StatsDbContext dbStats, IWebHostEnvironment env, ILogger<BackgroundJobScheduler> logger)
-        {
-            _db = db;
-            _dbStats = dbStats;
-            _env = env;
-            _logger = logger;
-        }
+        private readonly AppDbContext _db = db;
+        private readonly IWebHostEnvironment _env = env;
+        private readonly ILogger<BackgroundJobScheduler> _logger = logger;
 
         public async Task Erase(string sessionId) => await EraseSessionReturnConnectionIds(sessionId);
 
@@ -39,31 +30,23 @@ namespace JustSending.Services
                 BackgroundJob.Schedule(() => DeleteUploadedFiles(sessionId), TimeSpan.FromMinutes(5));
             }
 
-            var session = await _db.Get<Session>(sessionId);
-            if (session == null) return Array.Empty<string>();
+            var session = await _db.GetSessionById(sessionId);
+            if (session == null) return [];
 
-            var messageCount = await _db.Count<Message>(sessionId);
-            for (var i = 0; i <= messageCount; i++)
-            {
-                var id = $"{session.Id}-{i}";
-                var messageId = await _db.Get<string>(id);
-                if (messageId != null)
-                    await _db.Remove<Message>(messageId);
-                await _db.Remove<string>(id);
-            }
-
-            await _db.SetCount<Message>(sessionId, null);
+            // remove all messages
+            var count = await _db.DeleteAllMessagesBySession(sessionId);
+            _logger.LogInformation("Deleted {count} messages for session {sessionId}", count, sessionId);
 
             // remove all connections
             foreach (var connectionId in session.ConnectionIds)
-                await _db.Remove<SessionMetaByConnectionId>(connectionId);
+                await _db.KvRemove<SessionMetaByConnectionId>(connectionId);
 
             // remove share token
-            var sessionShareToken = await _db.Get<SessionShareToken>(sessionId);
+            var sessionShareToken = await _db.KvGet<SessionShareToken>(sessionId);
             if (sessionShareToken != null)
             {
-                await _db.Remove<ShareToken>(sessionShareToken.Token.ToString());
-                await _db.Remove<SessionShareToken>(sessionId);
+                await _db.KvRemove<ShareToken>(sessionShareToken.Token.ToString());
+                await _db.KvRemove<SessionShareToken>(sessionId);
             }
 
             var connectionIds = session.ConnectionIds;
@@ -71,9 +54,9 @@ namespace JustSending.Services
             if (!string.IsNullOrEmpty(session.CleanupJobId))
                 BackgroundJob.Delete(session.CleanupJobId);
 
-            await _db.Remove<Session>(sessionId);
+            await _db.DeleteSession(sessionId);
 
-            return connectionIds.ToArray();
+            return [.. connectionIds];
         }
 
         public void DeleteUploadedFiles(string sessionId)

@@ -1,94 +1,144 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
+using System.Text.Json;
 using System.Threading.Tasks;
+using Dapper;
 using JustSending.Data.Models;
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Configuration;
 using OpenTelemetry.Trace;
 
 namespace JustSending.Data
 {
-    public class AppDbContext
+    public class AppDbContext(ILock @lock, Tracer tracer, IConfiguration config)
     {
         private static readonly TimeSpan MessageTtl = TimeSpan.FromMinutes(15);
 
-        private readonly IDataStore _dataStore;
-        private readonly ILock _lock;
-        private readonly Random _random;
-        private readonly Tracer _tracer;
+        private readonly ILock _lock = @lock;
+        private readonly Random _random = new Random(DateTime.UtcNow.Millisecond);
+        private readonly Tracer _tracer = tracer;
+        private readonly SqliteConnection _connection = new SqliteConnection(config.GetConnectionString("StatsCs"));
 
-        public AppDbContext(IDataStore dataStore, ILock @lock, Tracer tracer)
-        {
-            _tracer = tracer;
-            _dataStore = dataStore;
-            _lock = @lock;
-            _random = new Random(DateTime.UtcNow.Millisecond);
-        }
+        #region KeyValue Store
 
-        #region Core Methods
-
-        public async Task<T?> Get<T>(string id)
+        public async Task<T?> KvGet<T>(string id)
         {
             using var span = _tracer.StartActiveSpan("get");
             span.SetAttribute("key", id);
 
-            return await _dataStore.Get<T>(id);
+            var e = await _connection.QueryFirstOrDefaultAsync<KvEntity>(
+                "SELECT * FROM Kv WHERE Id = @Id",
+                new { Id = id });
+            if (e == null) return default;
+
+            var data = JsonSerializer.Deserialize<T>(e.DataJson);
+            if (data == null) return default;
+
+            return data;
         }
 
-        public Task<T?> GetInternal<T>(string id) => _dataStore.Get<T>(id);
-
-        public async Task Set<T>(string id, T model, TimeSpan? ttl = null)
+        public async Task KvSet<T>(string id, T model, TimeSpan? ttl = null)
         {
             using var span = _tracer.StartActiveSpan("set");
             span.SetAttribute("key", id);
 
-            await _dataStore.Set(id, model, ttl ?? TimeSpan.FromHours(6));
+            var json = JsonSerializer.Serialize(model);
+            var entity = new KvEntity
+            {
+                Id = id,
+                DataJson = json
+            };
+            var changed = await _connection.ExecuteAsync(
+                "INSERT OR REPLACE INTO Kv (Id, DataJson) VALUES (@Id, @DataJson)",
+                entity);
         }
 
-
-        public async Task Remove<T>(string id)
+        public async Task KvRemove<T>(string id)
         {
             using var span = _tracer.StartActiveSpan("remove");
             span.SetAttribute("key", id);
 
-            await _dataStore.Remove<T>(id);
+            await _connection.ExecuteAsync(
+                "DELETE FROM Kv WHERE Id = @Id",
+                new { Id = id });
+        }
+
+        public async Task<bool> KvExists<TModel>(string id)
+        {
+            var count = await _connection.QueryFirstAsync<int>(
+                "SELECT COUNT(*) FROM Kv WHERE Id = @Id",
+                new { Id = id });
+            return count > 0;
         }
 
         #endregion
 
         public static string NewGuid() => Guid.NewGuid().ToString("N");
 
-        public async Task<bool> Exist<TModel>(string id)
+        public async Task<Message?> GetMessagesById(string id)
         {
-            var data = await _dataStore.Get<TModel>(id);
-            return data != null;
+            using var span = _tracer.StartActiveSpan("get-message-by-id");
+            span.SetAttribute("id", id);
+
+            var result = await _connection.QueryFirstOrDefaultAsync<Message>(
+                "SELECT * FROM Messages WHERE Id = @Id",
+                new { Id = id });
+            if (result == null) return null;
+
+            return result;
         }
 
-        public async Task<int> Count<TModel>(string id)
+        public async Task<Message[]?> GetMessagesBySession(string sessionId, int fromEpoch = -1)
         {
-            var key = $"{typeof(TModel).Name.ToLower()}-count-{id}";
-            return await Get<int>(key);
+            var result = await _connection.QueryMultipleAsync(
+                "SELECT * FROM Messages WHERE SessionId = @SessionId AND DateSentEpoch > @Seq ORDER BY DateSent DESC",
+                new { SessionId = sessionId, Seq = fromEpoch });
+            if (result == null) return null;
+
+            var messages = await result.ReadAsync<Message>();
+            if (messages == null) return null;
+
+            return [.. messages];
         }
 
-        public async Task SetCount<TModel>(string id, int? count, TimeSpan? ttl = null)
+        public async Task<int> DeleteAllMessagesBySession(string sessionId)
         {
-            var key = $"{typeof(TModel).Name.ToLower()}-count-{id}";
-            if (count == null)
-                await Remove<int>(key);
-            else
-                await Set(key, count.Value, ttl);
+            return await _connection.ExecuteAsync(
+                "DELETE FROM Messages WHERE SessionId = @SessionId",
+                new { SessionId = sessionId });
         }
 
         public async Task<Session?> GetSession(string id, string id2)
         {
-            var session = await GetSession(id);
+            var session = await GetSessionById(id);
+            if (session == null) return null;
+
             return session?.IdVerification == id2
                 ? session
                 : null;
         }
 
-        public Task<Session?> GetSession(string id)
+        public async Task DeleteSession(string id)
         {
-            return Get<Session>(id);
+            using var span = _tracer.StartActiveSpan("delete-session");
+            span.SetAttribute("session-id", id);
+
+            await _connection.ExecuteAsync(
+                "DELETE FROM Sessions WHERE Id = @Id",
+                new { Id = id });
+        }
+
+        public async Task<Session?> GetSessionById(string id)
+        {
+            var entity = await _connection.QueryFirstOrDefaultAsync<SessionEntity>(
+                "SELECT * FROM Sessions WHERE Id = @Id",
+                new { Id = id });
+            if (entity == null) return null;
+            var session = Session.FromEntity(entity);
+
+            return session;
         }
 
         private async Task<int> NewConnectionId()
@@ -103,7 +153,7 @@ namespace JustSending.Data
 
             var number = _random.Next(min, max - 1);
 
-            while (await Exist<ShareToken>(number.ToString()))
+            while (await KvExists<ShareToken>(number.ToString()))
             {
                 if (tries > (max - min) / 2)
                 {
@@ -126,15 +176,28 @@ namespace JustSending.Data
             span.SetAttribute("session-id", msg.SessionId);
             span.SetAttribute("session-id-2", msg.SessionIdVerification);
 
-            using var _ = await _lock.Acquire(msg.SessionId);
+            var parameters = new
+            {
+                msg.Id,
+                msg.SessionId,
+                msg.SessionIdVerification,
+                msg.SocketConnectionId,
+                msg.EncryptionPublicKeyAlias,
+                msg.Text,
+                msg.DateSent,
+                msg.HasFile,
+                msg.FileSizeBytes,
+                msg.IsNotification,
+                msg.DateSentEpoch
+            };
 
-            var count = await Count<Message>(msg.SessionId);
-            msg.SessionMessageSequence = ++count;
-
-            await Set(msg.Id, msg, MessageTtl);
-            // messageId by sequence number
-            await Set($"{msg.SessionId}-{count}", msg.Id, MessageTtl);
-            await SetCount<Message>(msg.SessionId, msg.SessionMessageSequence, MessageTtl);
+            await _connection.ExecuteAsync(
+                @"INSERT INTO Messages
+                    (Id, SessionId, SessionIdVerification,
+                        SocketConnectionId, EncryptionPublicKeyAlias, Text, DateSent, HasFile, FileSizeBytes, IsNotification, DateSentEpoch)
+                VALUES ( @Id, @SessionId, @SessionIdVerification,
+                        @SocketConnectionId, @EncryptionPublicKeyAlias, @Text, @DateSent, @HasFile, @FileSizeBytes, @IsNotification, @DateSentEpoch)",
+                parameters);
         }
 
         public async Task TrackClient(string sessionId, string connectionId)
@@ -143,16 +206,42 @@ namespace JustSending.Data
             span.SetAttribute("session-id", sessionId);
             span.SetAttribute("connection-id", connectionId);
 
-            // ToDo: lock
-            var session = await Get<Session>(sessionId);
-            if (session == null) return;
+            if (!await AddConnectionId(sessionId, connectionId)) return;
+            await KvSet(connectionId, new SessionMetaByConnectionId(sessionId));
+        }
 
-            if (session.ConnectionIds.Contains(connectionId))
-                return;
+        public async Task<bool> AddConnectionId(string sessionId, string connectionId)
+        {
+            using var span = _tracer.StartActiveSpan("add-connection-id");
+            span.SetAttribute("session-id", sessionId);
+            span.SetAttribute("connection-id", connectionId);
+
+            var session = await GetSessionById(sessionId);
+            if (session == null) return false;
 
             session.ConnectionIds.Add(connectionId);
-            await Set(sessionId, session);
-            await Set(connectionId, new SessionMetaByConnectionId(sessionId));
+            return await AddOrUpdateSession(session);
+        }
+
+        public async Task<bool> AddOrUpdateSession(Session session)
+        {
+            using var span = _tracer.StartActiveSpan("add-or-update-session");
+            span.SetAttribute("session-id", session.Id);
+            span.SetAttribute("id-verification", session.IdVerification);
+
+            var changed = await _connection.ExecuteAsync(
+                "INSERT OR REPLACE INTO Sessions (Id, IdVerification, DateCreated, IsLiteSession, CleanupJobId, ConnectionIdsJson) " +
+                "VALUES (@Id, @IdVerification, @DateCreated, @IsLiteSession, @CleanupJobId, @ConnectionIdsJson)",
+                new
+                {
+                    session.Id,
+                    session.IdVerification,
+                    session.DateCreated,
+                    session.IsLiteSession,
+                    session.CleanupJobId,
+                    ConnectionIdsJson = JsonSerializer.Serialize(session.ConnectionIds)
+                });
+            return changed > 0;
         }
 
         public async Task<string?> UntrackClientReturnSessionId(string connectionId)
@@ -160,15 +249,15 @@ namespace JustSending.Data
             using var span = _tracer.StartActiveSpan("untrack-client");
             span.SetAttribute("connection-id", connectionId);
 
-            var connectionIdSession = await Get<SessionMetaByConnectionId>(connectionId);
+            var connectionIdSession = await KvGet<SessionMetaByConnectionId>(connectionId);
             if (connectionIdSession == null) return null;
-            var session = await Get<Session>(connectionIdSession.SessionId);
+            var session = await GetSessionById(connectionIdSession.SessionId);
             if (session == null) return null;
             span.SetAttribute("session-id", session.Id);
 
             session.ConnectionIds.Remove(connectionId);
-            await Set(session.Id, session);
-            await Remove<SessionMetaByConnectionId>(connectionId);
+            await AddOrUpdateSession(session);
+            await KvRemove<SessionMetaByConnectionId>(connectionId);
 
             return connectionIdSession.SessionId;
         }
@@ -178,8 +267,8 @@ namespace JustSending.Data
             using var span = _tracer.StartActiveSpan("find-client");
             span.SetAttribute("session-id", sessionId);
 
-            var session = await Get<Session>(sessionId);
-            if (session == null) return Enumerable.Empty<string>();
+            var session = await GetSessionById(sessionId);
+            if (session == null) return [];
 
             return session.ConnectionIds;
         }
@@ -194,8 +283,8 @@ namespace JustSending.Data
                 Id = await NewConnectionId(),
                 SessionId = sessionId
             };
-            await Set(shareToken.Id.ToString(), shareToken);
-            await Set(sessionId, new SessionShareToken(shareToken.Id));
+            await KvSet(shareToken.Id.ToString(), shareToken);
+            await KvSet(sessionId, new SessionShareToken(shareToken.Id));
             return shareToken.Id;
         }
     }

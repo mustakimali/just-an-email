@@ -26,9 +26,9 @@ namespace JustSending.Services
         private readonly string _uploadFolder;
 
         public ConversationHub(
-            AppDbContext db, 
-            IServiceProvider serviceProvider, 
-            IWebHostEnvironment env, 
+            AppDbContext db,
+            IServiceProvider serviceProvider,
+            IWebHostEnvironment env,
             BackgroundJobScheduler jobScheduler,
             ILogger<ConversationHub> logger)
         {
@@ -82,14 +82,14 @@ namespace JustSending.Services
 
         private async Task<int> GetNumberOfDevices(string sessionId)
         {
-            var session = await _db.Get<Session>(sessionId);
+            var session = await _db.GetSessionById(sessionId);
             var numConnectedDevices = session?.ConnectionIds.Count ?? 0;
             return numConnectedDevices;
         }
 
         private async Task SignalREvent(string sessionId, string message, object? data = null)
         {
-            _logger.LogInformation("[SignaR Event] {message} ({@data})", message, data);
+            _logger.LogInformation("[SignalR Event] {message} ({@data})", message, data);
 
             try
             {
@@ -106,7 +106,7 @@ namespace JustSending.Services
 
         private async Task SignalREventToClients(string[] connectionIds, string message, object? data = null)
         {
-            _logger.LogInformation("[SignaR Event] {message} to {@connectionIds} ({@data})", message, connectionIds, data);
+            _logger.LogInformation("[SignalR Event] {message} to {@connectionIds} ({@data})", message, connectionIds, data);
             try
             {
                 if (data != null)
@@ -153,7 +153,7 @@ namespace JustSending.Services
             // Don't Erase session if this session had been converted
             // to a Lite Session in the mean time
             //
-            var session = await _db.Get<Session>(sessionId);
+            var session = await _db.GetSessionById(sessionId);
             if (session?.IsLiteSession ?? true) return;
 
             if (!string.IsNullOrEmpty(sessionId))
@@ -224,7 +224,7 @@ namespace JustSending.Services
             // enable end to end encryption
             //
             var newDeviceId = Context.ConnectionId;
-            var session = await _db.Get<Session>(sessionId);
+            var session = await _db.GetSessionById(sessionId);
             var firstDeviceId = session?.ConnectionIds.FirstOrDefault(cId => cId != newDeviceId);
             if (firstDeviceId == null) return;
 
@@ -289,7 +289,7 @@ namespace JustSending.Services
             //
 
             // Get session from connection
-            var sessionMeta = await _db.Get<SessionMetaByConnectionId>(Context.ConnectionId);
+            var sessionMeta = await _db.KvGet<SessionMetaByConnectionId>(Context.ConnectionId);
             if (sessionMeta != null)
             {
                 var devices = await _db.FindClient(sessionMeta.SessionId);
@@ -307,7 +307,7 @@ namespace JustSending.Services
 
         private async Task<bool> CheckIfShareTokenExists(string sessionId, bool notifyIfExist = true)
         {
-            var sessionShareToken = await _db.Get<SessionShareToken>(sessionId);
+            var sessionShareToken = await _db.KvGet<SessionShareToken>(sessionId);
             if (sessionShareToken != null)
             {
                 if (notifyIfExist)
@@ -332,7 +332,7 @@ namespace JustSending.Services
 
         private async Task<string?> GetSessionIdFromConnection()
         {
-            return (await _db.Get<SessionMetaByConnectionId>(Context.ConnectionId))?.SessionId;
+            return (await _db.KvGet<SessionMetaByConnectionId>(Context.ConnectionId))?.SessionId;
         }
 
         public async Task CancelShare()
@@ -348,11 +348,11 @@ namespace JustSending.Services
 
         public async Task<bool> CancelShareSessionBySessionId(string sessionId)
         {
-            var sessionShareToken = await _db.Get<SessionShareToken>(sessionId);
+            var sessionShareToken = await _db.KvGet<SessionShareToken>(sessionId);
             if (sessionShareToken != null)
             {
-                await _db.Remove<ShareToken>(sessionShareToken.Token.ToString());
-                await _db.Remove<SessionShareToken>(sessionId);
+                await _db.KvRemove<ShareToken>(sessionShareToken.Token.ToString());
+                await _db.KvRemove<SessionShareToken>(sessionId);
 
                 return true;
             }

@@ -20,12 +20,12 @@ namespace JustSending.Controllers
         public async Task<IActionResult> LiteSession(string id1, string id2)
         {
             int? token = null;
-            var session = await _db.Get<Session>(id1);
+            var session = await _db.GetSessionById(id1);
             if (session != null && session.IdVerification == id2)
             {
                 // Connected
                 _statDb.RecordStats(StatsDbContext.RecordType.Device);
-                token = (await _db.Get<SessionShareToken>(id1))?.Token;
+                token = (await _db.KvGet<SessionShareToken>(id1))?.Token;
             }
             else
             {
@@ -146,7 +146,7 @@ namespace JustSending.Controllers
         {
             var data = new LiteSessionStatus();
 
-            var token = (await _db.Get<SessionShareToken>(id))?.Token;
+            var token = (await _db.KvGet<SessionShareToken>(id))?.Token;
             var messages = await GetMessagesInternal(id, id2, from);
 
             data.HasToken = token != null;
@@ -163,20 +163,17 @@ namespace JustSending.Controllers
 
         private IActionResult RedirectToLiteSession(SessionModel model) => RedirectToAction(nameof(LiteSession), new { id1 = model.SessionId, id2 = model.SessionVerification });
 
-        private async Task ScheduleOrExtendSessionCleanup(string sessionId, bool isLiteSession)
+        [NonAction]
+        public async Task ScheduleSessionCleanup(Session session)
         {
-            // ToDo: lock
-            var session = await _db.Get<Session>(sessionId);
-            if (session == null) return;
-
-            // cleanup after 1 hour
-            var triggerAfter = TimeSpan.FromHours(1);
+            var triggerAfter = TimeSpan.FromHours(24);
 
             if (!string.IsNullOrEmpty(session.CleanupJobId))
-                BackgroundJob.Delete(session.CleanupJobId);
-            var id = BackgroundJob.Schedule<BackgroundJobScheduler>(b => b.Erase(sessionId), triggerAfter);
+                return;
+
+            var id = BackgroundJob.Schedule<BackgroundJobScheduler>(b => b.Erase(session.Id), triggerAfter);
             session.CleanupJobId = id;
-            await _db.Set(sessionId, session);
+            await _db.AddOrUpdateSession(session);
         }
     }
 }
