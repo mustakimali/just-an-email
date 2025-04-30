@@ -22,45 +22,45 @@
             JustSendingApp.goHome();
             return false;
         });
-        window.onbeforeunload = function(event) {
+        window.onbeforeunload = function (event) {
             JustSendingApp.goHome();
         };
     },
 
     initQrCode: function () {
         var qrEl = $("#qr-code");
-        if(qrEl.hasClass("done")) {
+        if (qrEl.hasClass("done")) {
             return;
         }
         new QRCode("qr-code", {
             text: window.location.href,
             width: 256,
             height: 256,
-            colorDark : "#000000",
-            colorLight : "#d9edf7",
-            correctLevel : QRCode.CorrectLevel.H
+            colorDark: "#000000",
+            colorLight: "#d9edf7",
+            correctLevel: QRCode.CorrectLevel.H
         });
         qrEl.addClass("done");
     },
-    
-    getOrGenId: function() {
+
+    getOrGenId: function () {
         var $id = $("#SessionId");
-        if ($id.val() === "") 
+        if ($id.val() === "")
             return this.generateGuid();
         else
-            return $id.val(); 
+            return $id.val();
     },
 
-    getOrGenId2: function() {
+    getOrGenId2: function () {
         var $id = $("#SessionVerification");
         if ($id.val() === "")
             return this.generateGuid();
         else
             return $id.val();
     },
-    
+
     generateGuid: function () {
-        function S4() { return Math.floor((1+Math.random())*0x10000).toString(16).substring(1); }
+        function S4() { return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1); }
         var guid = S4() + S4() + S4() + S4() + S4() + S4() + S4() + S4();
         return guid.toLowerCase();
     },
@@ -77,11 +77,14 @@
 
             id = hash.substr(0, 32);
             id2 = hash.substr(32, 32);
-            
-            if (hash.substr(64, 1) === "/") {
+            const next = hash.substr(64, 1);
+
+            if (next === "/") {
                 this.initialSecretToSend = atob(hash.substr(65));
                 history.replaceState(null, '', '/app#' + id + id2);
                 window.location.hash = id + id2;
+            } else if (next === ".") {
+                // encryption key
             }
         } else {
             history.replaceState(null, '', '/app');
@@ -269,7 +272,7 @@
         });
 
         $clearBtn.on("click",
-            function() {
+            function () {
                 $file.val("");
                 $clearBtn.hide();
                 $text.removeAttr("readonly");
@@ -288,7 +291,7 @@
         if (!$("#form").valid()) {
             return false;
         }
-        
+
         var hasFile = false;
 
         var replaceFormValue = function (name, factory) {
@@ -327,7 +330,7 @@
             JustSendingApp.finishedStreamingFile = false;
             formOptions.url += "/files-stream";
             hasFile = true;
-            
+
             /*var file = $("#file")[0].files[0];
 
             JustSendingApp.processFile(file, function () {
@@ -343,7 +346,7 @@
             return false;*/
 
         } else if (JustSendingApp.finishedStreamingFile) {
-            
+
             JustSendingApp.finishedStreamingFile = false;
             formOptions.url += "/files";
 
@@ -351,7 +354,7 @@
 
         JustSendingApp.showStatus("Sending, please wait...");
 
-        if(!hasFile)
+        if (!hasFile)
             replaceFormValue("ComposerText", function (v) { return EndToEndEncryption.encryptWithPrivateKey(v); });
 
         return true;
@@ -391,7 +394,7 @@
                         //
                         readBuffer(offset, bufferSize, file);
                     });
-                
+
                 self.showStatus("Encrypting...", parseInt(offset * 100 / fileSize));
 
             } else {
@@ -401,7 +404,7 @@
             }
             if (offset >= fileSize) {
                 Log("Done streaming file...");
-                
+
                 r.onload = null;
                 app_busy(false);
                 done(file.name)
@@ -409,7 +412,7 @@
             }
 
         }
-    
+
         var r = new FileReader();
         r.onload = load;
 
@@ -476,7 +479,7 @@
         var conn = ws;
         this.hub = ws;
 
-        conn.on("requestReloadMessage", function() {
+        conn.on("requestReloadMessage", function () {
             JustSendingApp.loadMessages();
         });
 
@@ -485,7 +488,7 @@
             JustSendingApp.switchView(true);
         });
 
-        conn.on("hideSharePanel", function() {
+        conn.on("hideSharePanel", function () {
             JustSendingApp.switchView(false);
         });
 
@@ -536,7 +539,7 @@
                 confirmButtonColor: "#d9534f",
                 confirmButtonText: "Erase everything!",
                 closeOnConfirm: false
-            }, function() {
+            }, function () {
                 window.onbeforeunload = null;
                 conn.send("eraseSession");
 
@@ -547,11 +550,11 @@
         });
 
         EndToEndEncryption.initKeyExchange(conn);
-        
-        var onConnected = function() {
+
+        var onConnected = function () {
             conn
                 .invoke("connect", $("#SessionId").val())
-                .then(function(socketConnectionId) {
+                .then(function (socketConnectionId) {
 
                     $("#SocketConnectionId").val(socketConnectionId);
 
@@ -559,7 +562,7 @@
                     $(".FilePostUrl").text(JustSendingApp.getPostFromCliPath());
 
                     app_busy(false);
-                    
+
                     if (JustSendingApp.initialSecretToSend !== "") {
                         $("#ComposerText").val(JustSendingApp.initialSecretToSend);
                         $("#form").submit();
@@ -577,12 +580,12 @@
         conn
             .start()
             .then(onConnected)
-            .catch(function(err) {
+            .catch(function (err) {
                 Log("Error: " + err.toString());
 
             });
 
-        conn.connection.onclose = function(msg) {
+        conn.connection.onclose = function (msg) {
             Log("Closing");
         };
 
@@ -591,14 +594,14 @@
         };
     },
 
-    goHome: function() {
+    goHome: function () {
         var dest = "/?ref=app";
         try {
             history.replaceState({}, "", dest);
         } catch (e) { }
         window.location.replace(dest);
     },
-    
+
     // 
     getPostFromCliPath: function () {
         var sessionId = $("#SessionId").val();
@@ -629,7 +632,7 @@
 
         this.loadingMessage = true;
         clearTimeout(this.loadMessageTimer);
-        
+
         var id = $("#SessionId").val();
         var id2 = $("#SessionVerification").val();
         var from = parseInt($(".msg-c:first").data("seq"));
@@ -645,9 +648,9 @@
 
                 $($.parseHTML(response))
                     .prependTo($("#conversation-list"));
-                    
+
                 JustSendingApp.decryptMessages();
-                
+
                 JustSendingApp.processTime();
                 JustSendingApp.initViewSource();
 
@@ -697,7 +700,7 @@
                     defaultProtocol: "https",
                     className: "linkified"
                 });
-                
+
                 $(itm).addClass("embedded");
             });
     }

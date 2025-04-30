@@ -225,7 +225,7 @@
             }
         }
 
-        function decryptFile(key) {
+        async function decryptFile(key) {
             const [keyBase64, ivBase64] = key.split('.');
             const iv = new Uint8Array(atob(ivBase64).split('').map(c => c.charCodeAt(0)));
 
