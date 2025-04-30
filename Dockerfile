@@ -39,4 +39,5 @@ COPY --from=build-env /app/src/JustSending/out .
 VOLUME ["App_Data/"]
 VOLUME ["wwwroot/uploads"]
 
+ENV ASPNETCORE_URLS=http://+:80
 ENTRYPOINT ["./JustSending"]
