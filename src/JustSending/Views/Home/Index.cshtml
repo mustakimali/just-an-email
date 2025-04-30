@@ -178,6 +178,30 @@
                 return;
             }
 
+            // Generate a random encryption key
+            const key = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt']
+            );
+
+            // Convert file to array buffer and encrypt it
+            const arrayBuffer = await file.arrayBuffer();
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const encryptedContent = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv },
+                key,
+                arrayBuffer
+            );
+
+            // Export key for later use
+            const exportedKey = await crypto.subtle.exportKey('raw', key);
+            const keyBase64 = btoa(String.fromCharCode.apply(null, new Uint8Array(exportedKey)));
+            const keyWithIv = `${keyBase64}.${btoa(String.fromCharCode.apply(null, iv))}`;
+
+            // Create new file with encrypted content
+            file = new File([encryptedContent], file.name, { type: 'application/octet-stream' });
+
             const formData = new FormData();
             formData.append('file', file);
 
@@ -194,11 +218,30 @@
                 }
 
                 const json = await response.json();
-                const path = `/app#${json.session_id}${json.session_idv}`;
+                const path = `/app#${json.session_id}${json.session_idv}.${keyBase64}`;
                 location.href = path;
             } catch (error) {
                 console.error('Upload error:', error);
             }
+        }
+
+        function decryptFile(key) {
+            const [keyBase64, ivBase64] = key.split('.');
+            const iv = new Uint8Array(atob(ivBase64).split('').map(c => c.charCodeAt(0)));
+
+            const decryptKey = await crypto.subtle.importKey(
+                'raw',
+                new Uint8Array(atob(keyBase64).split('').map(c => c.charCodeAt(0))),
+                'AES-GCM',
+                true,
+                ['decrypt']
+            );
+
+            return await crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv },
+                decryptKey,
+                encryptedContent
+            );
         }
     </script>
 }
