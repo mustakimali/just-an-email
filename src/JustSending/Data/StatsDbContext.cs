@@ -31,16 +31,16 @@ namespace JustSending.Data
 
         }
 
-        public IEnumerable<StatYear> GetAll()
+        public async Task<StatYear[]> GetAll()
         {
             using var span = _tracer.StartActiveSpan("get-all-stats");
 
-            return _connection.Query<Stats>("SELECT * FROM Stats WHERE Id > 1")
+            return [.. (await _connection.QueryAsync<Stats>("SELECT * FROM Stats WHERE Id > 1"))
                     .ToArray()
                     .GroupBy(x => x.Id.ToString()[..2])
                     .Select(x => new StatYear(x.Key, x
                         .GroupBy(y => y.Id.ToString().Substring(2, 2))
-                        .Select(dayData => new StatMonth(dayData.Key, dayData.ToArray()))));
+                        .Select(dayData => new StatMonth(dayData.Key, [.. dayData]))))];
         }
 
         public void RecordStats(RecordType type, int inc = 1)
