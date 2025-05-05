@@ -99,11 +99,25 @@ namespace JustSending.Data
             };
         }
 
-        public async Task RecordAlltimeStats(Action<Stats> update_fn, DateTime? date = null)
+        public async Task RecordHistoricStat(Stats stat)
         {
-            var allTime = await StatsFindByDateOrNew(null);
-            update_fn(allTime);
-            await Upsert(allTime);
+            await _connection.ExecuteAsync(@"
+                INSERT INTO Stats (Id, Messages, MessagesSizeBytes, Files, FilesSizeBytes, Devices, Sessions, DateCreatedUtc, Version)
+                VALUES (@Id, @Messages, @MessagesSizeBytes, @Files, @FilesSizeBytes, @Devices, @Sessions, @DateCreatedUtc, 0) ON CONFLICT(Id) DO NOTHING", stat);
+        }
+
+        public async Task UpdateHistoricStat(Stats stat)
+        {
+            await _connection.ExecuteAsync(@"
+                UPDATE Stats 
+                SET Messages = @Messages,
+                    MessagesSizeBytes = @MessagesSizeBytes,
+                    Files = @Files,
+                    FilesSizeBytes = @FilesSizeBytes,
+                    Devices = @Devices,
+                    Sessions = @Sessions,
+                    Version = @Version
+                WHERE Id = @Id AND Version < 1000", stat); // avoid updating more than once
         }
 
         private async Task RecordStats(Action<Stats> update, DateTime? date = null)

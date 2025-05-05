@@ -26,6 +26,9 @@ using FluentMigrator.Runner;
 using Hangfire.States;
 using Hangfire.Common;
 using Microsoft.Extensions.Logging;
+using JustSending.Controllers;
+using JustSending.Data.Models.Bson;
+using Newtonsoft.Json;
 
 public class Program
 {
@@ -169,6 +172,9 @@ public class Program
         {
             var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
             runner.MigrateUp();
+
+            var dbContext = scope.ServiceProvider.GetRequiredService<StatsDbContext>();
+            MigrateOldData(dbContext).Wait();
         }
 
         app.Use(async (ctx, next) =>
@@ -226,7 +232,7 @@ public class Program
 
     public static void ConfigureHangfire(IApplicationBuilder app)
     {
-        object automaticRetryAttribute = null;
+        object? automaticRetryAttribute = null;
         foreach (var filter in GlobalJobFilters.Filters)
         {
             if (filter.Instance is Hangfire.AutomaticRetryAttribute)
@@ -245,12 +251,57 @@ public class Program
         GlobalJobFilters.Filters.Remove(automaticRetryAttribute);
         GlobalJobFilters.Filters.Add(new CustomExponentialBackoffWithJitterAttribute(app.ApplicationServices.GetService<ILogger<CustomExponentialBackoffWithJitterAttribute>>()!));
     }
+
+    public static async Task MigrateOldData(StatsDbContext dbContext)
+    {
+        var file = Path.Combine(Directory.GetCurrentDirectory(), "stats.json");
+        var json = await File.ReadAllTextAsync(file);
+        var data = StatImport.Stat.FromJson(json) ?? throw new InvalidOperationException("faile");
+
+        var all = data.SelectMany(x => x.Months).SelectMany(x => x.Days)
+                .ToList();
+        var allTime = dbContext.StatsFindByIdOrNew(-1).Result;
+
+        Console.WriteLine($"Before: {JsonConvert.SerializeObject(allTime)}");
+
+        var sum = all.Aggregate(allTime, (c, n) =>
+        {
+            c.Devices += (int)n.Devices;
+            c.Sessions += (int)n.Sessions;
+            c.Messages += (int)n.Messages;
+            c.MessagesSizeBytes += (int)n.MessagesSizeBytes;
+            c.Files += (int)n.Files;
+            c.FilesSizeBytes += (int)n.FilesSizeBytes;
+            c.Version += 1;
+
+            return c;
+        });
+
+        Console.WriteLine($"After: {JsonConvert.SerializeObject(allTime)}");
+        Console.WriteLine($"Recording {all.Count} data points");
+        all.ForEach(stat =>
+            {
+                var s = new Stats
+                {
+                    Id = (int)stat.Id,
+                    Messages = (int)stat.Messages,
+                    MessagesSizeBytes = (int)stat.MessagesSizeBytes,
+                    Files = (int)stat.Files,
+                    FilesSizeBytes = stat.FilesSizeBytes,
+                    Devices = (int)stat.Devices,
+                    Sessions = (int)stat.Sessions,
+                    DateCreatedUtc = stat.DateCreatedUtc
+                };
+                dbContext.RecordHistoricStat(s).Wait();
+            });
+        dbContext.UpdateHistoricStat(sum).Wait();
+    }
 }
 
 public class CustomExponentialBackoffWithJitterAttribute : JobFilterAttribute, IElectStateFilter
 {
     private const int DefaultRetryAttempts = 10;
-    private int _attempts;
+    private long _attempts;
     private readonly Random _random = new();
     private readonly ILogger<CustomExponentialBackoffWithJitterAttribute> _logger;
 
@@ -261,7 +312,7 @@ public class CustomExponentialBackoffWithJitterAttribute : JobFilterAttribute, I
         _logger = logger;
     }
 
-    public int Attempts
+    public long Attempts
     {
         get { return _attempts; }
         set
@@ -318,3 +369,112 @@ public class CustomExponentialBackoffWithJitterAttribute : JobFilterAttribute, I
     }
 }
 
+namespace StatImport
+{
+    using System;
+    using System.Collections.Generic;
+
+    using System.Globalization;
+    using Newtonsoft.Json;
+    using Newtonsoft.Json.Converters;
+
+    public partial class Stat
+    {
+        [JsonProperty("year")]
+        [JsonConverter(typeof(ParseStringConverter))]
+        public long Year { get; set; }
+
+        [JsonProperty("months")]
+        public Month[] Months { get; set; }
+    }
+
+    public partial class Month
+    {
+        [JsonProperty("month")]
+        public string MonthMonth { get; set; }
+
+        [JsonProperty("days")]
+        public Day[] Days { get; set; }
+    }
+
+    public partial class Day
+    {
+        [JsonProperty("id")]
+        public long Id { get; set; }
+
+        [JsonProperty("messages")]
+        public long Messages { get; set; }
+
+        [JsonProperty("messagesSizeBytes")]
+        public long MessagesSizeBytes { get; set; }
+
+        [JsonProperty("files")]
+        public long Files { get; set; }
+
+        [JsonProperty("filesSizeBytes")]
+        public long FilesSizeBytes { get; set; }
+
+        [JsonProperty("devices")]
+        public long Devices { get; set; }
+
+        [JsonProperty("sessions")]
+        public long Sessions { get; set; }
+
+        [JsonProperty("dateCreatedUtc")]
+        public DateTime DateCreatedUtc { get; set; }
+    }
+
+    public partial class Stat
+    {
+        public static Stat[] FromJson(string json) => JsonConvert.DeserializeObject<Stat[]>(json, StatImport.Converter.Settings);
+    }
+
+    public static class Serialize
+    {
+        public static string ToJson(this Stat[] self) => JsonConvert.SerializeObject(self, StatImport.Converter.Settings);
+    }
+
+    internal static class Converter
+    {
+        public static readonly JsonSerializerSettings Settings = new JsonSerializerSettings
+        {
+            MetadataPropertyHandling = MetadataPropertyHandling.Ignore,
+            DateParseHandling = DateParseHandling.None,
+            Converters =
+            {
+                new IsoDateTimeConverter { DateTimeStyles = DateTimeStyles.AssumeUniversal }
+            },
+        };
+    }
+
+    internal class ParseStringConverter : JsonConverter
+    {
+        public override bool CanConvert(Type t) => t == typeof(long) || t == typeof(long?);
+
+        public override object ReadJson(JsonReader reader, Type t, object existingValue, JsonSerializer serializer)
+        {
+            if (reader.TokenType == JsonToken.Null) return null;
+            var value = serializer.Deserialize<string>(reader);
+            long l;
+            if (Int64.TryParse(value, out l))
+            {
+                return l;
+            }
+            throw new Exception("Cannot unmarshal type long");
+        }
+
+        public override void WriteJson(JsonWriter writer, object untypedValue, JsonSerializer serializer)
+        {
+            if (untypedValue == null)
+            {
+                serializer.Serialize(writer, null);
+                return;
+            }
+            var value = (long)untypedValue;
+            serializer.Serialize(writer, value.ToString());
+            return;
+        }
+
+        public static readonly ParseStringConverter Singleton = new ParseStringConverter();
+    }
+}
