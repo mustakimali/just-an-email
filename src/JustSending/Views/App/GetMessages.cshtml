@@ -37,11 +37,32 @@
                     @if (message.HasFile)
                     {
                         <div class="file">
-                            <i class="fa fa-2x fa-paperclip"></i> @message.Text
+                            <i class="fa fa-2x fa-paperclip"></i> 
+                            @if (string.IsNullOrEmpty(message.EncryptionPublicKeyAlias))
+                            {
+                                <span class="file-name">@message.Text</span>
+                            }
+                            else
+                            {
+                                <span class="file-name data" data-value="@message.Text">😕 Encrypted File</span>
+                            }
                             <br />
-                            <a class="btn btn-success download" asp-controller="App" asp-action="DownloadFile"
-                                asp-route-sessionId="@message.SessionId" asp-route-id="@message.Id" target="_blank"><i
-                                    class="fa fa-download"></i> Download (@Helper.ToFileSize(message.FileSizeBytes))</a>
+                            @if (string.IsNullOrEmpty(message.EncryptionPublicKeyAlias))
+                            {
+                                <a class="btn btn-success download" asp-controller="App" asp-action="DownloadFile"
+                                    asp-route-sessionId="@message.SessionId" asp-route-id="@message.Id" target="_blank"><i
+                                        class="fa fa-download"></i> Download (@Helper.ToFileSize(message.FileSizeBytes))</a>
+                            }
+                            else
+                            {
+                                <button class="btn btn-success download-encrypted" 
+                                        data-message-id="@message.Id"
+                                        data-session-id="@message.SessionId"
+                                        data-public-key-alias="@message.EncryptionPublicKeyAlias"
+                                        onclick="JustSendingApp.downloadAndDecryptFile('/app/file/@message.Id/@message.SessionId', '@message.Id', '@message.EncryptionPublicKeyAlias')">
+                                    <i class="fa fa-download"></i> Download & Decrypt (@Helper.ToFileSize(message.FileSizeBytes))
+                                </button>
+                            }
                         </div>
                     }
                     else

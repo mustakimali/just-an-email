@@ -326,30 +326,38 @@
         }
 
         if ($("#file")[0].files.length > 0) {
+            
+            // Check if file is already processed (to prevent infinite loop)
+            if (JustSendingApp.fileProcessed) {
+                JustSendingApp.fileProcessed = false;
+                formOptions.url += "/files-stream";
+                hasFile = true;
+            } else {
+                var file = $("#file")[0].files[0];
 
-            JustSendingApp.finishedStreamingFile = false;
-            formOptions.url += "/files-stream";
-            hasFile = true;
+                // For encrypted files, we'll process them and create a new encrypted file
+                // then use the regular HTTP upload instead of SignalR streaming
+                JustSendingApp.processFileForUpload(file, function (encryptedFile, encryptedFileName) {
+                    // Replace the original file input with the encrypted file
+                    var fileInput = $("#file")[0];
+                    var dt = new DataTransfer();
+                    dt.items.add(encryptedFile);
+                    fileInput.files = dt.files;
+                    
+                    // Store encrypted filename for server
+                    replaceFormValue("ComposerText", function (v) { return encryptedFileName; });
+                    
+                    // Mark file as processed and resubmit
+                    JustSendingApp.fileProcessed = true;
+                    $("#form").submit();
+                });
 
-            /*var file = $("#file")[0].files[0];
-
-            JustSendingApp.processFile(file, function () {
-                // Unselect file
-                //
-                $("#file").val("");
-                // Do normal post
-                //
-                JustSendingApp.finishedStreamingFile = true;
-                $("#form").submit();
-            });
-
-            return false;*/
+                return false;
+            }
 
         } else if (JustSendingApp.finishedStreamingFile) {
-
             JustSendingApp.finishedStreamingFile = false;
-            formOptions.url += "/files";
-
+            hasFile = true;
         }
 
         JustSendingApp.showStatus("Sending, please wait...");
@@ -362,7 +370,7 @@
 
     processFile: function (file, done) {
         var fileSize = file.size;
-        var bufferSize = 64 * 1024;
+        var bufferSize = 16 * 1024; // Reduced from 64KB to 16KB to fit within SignalR message limits
         var offset = 0;
         var sessionId = $("#SessionId").val();
         var self = this;
@@ -371,9 +379,18 @@
         var load = function (evt) {
 
             if (evt.target.error == null) {
-                offset += evt.target.result.length;
+                // Convert ArrayBuffer to base64 for encryption
+                var arrayBuffer = evt.target.result;
+                var uint8Array = new Uint8Array(arrayBuffer);
+                var binaryString = '';
+                for (var i = 0; i < uint8Array.length; i++) {
+                    binaryString += String.fromCharCode(uint8Array[i]);
+                }
+                var base64Data = btoa(binaryString);
+                
+                offset += arrayBuffer.byteLength;
 
-                var encData = EndToEndEncryption.encryptWithPrivateKey(evt.target.result);
+                var encData = EndToEndEncryption.encryptWithPrivateKey(base64Data);
                 if (pageOneSent) {
                     var j = JSON.parse(encData);
                     encData = JSON.stringify({
@@ -385,8 +402,7 @@
 
                 self
                     .hub
-                    .server
-                    .streamFile(sessionId, encData)
+                    .invoke("streamFile", sessionId, encData)
                     .then(function () {
                         pageOneSent = true;
 
@@ -407,7 +423,10 @@
 
                 r.onload = null;
                 app_busy(false);
-                done(file.name)
+                
+                // Return encrypted filename
+                var encryptedFileName = EndToEndEncryption.encryptWithPrivateKey(file.name);
+                done(encryptedFileName);
                 return;
             }
 
@@ -418,11 +437,157 @@
 
         var readBuffer = function (_offset, length, _file) {
             var blob = _file.slice(_offset, length + _offset);
-            r.readAsText(blob);
+            r.readAsArrayBuffer(blob); // Use ArrayBuffer instead of text for binary data
         }
 
         app_busy(true);
         readBuffer(offset, bufferSize, file);
+    },
+
+    processFileForUpload: function (file, done) {
+        var self = this;
+        var fileReader = new FileReader();
+        
+        self.showStatus("Encrypting file...");
+        
+        fileReader.onload = function(e) {
+            try {
+                // Convert file to base64
+                var arrayBuffer = e.target.result;
+                var uint8Array = new Uint8Array(arrayBuffer);
+                var binaryString = '';
+                for (var i = 0; i < uint8Array.length; i++) {
+                    binaryString += String.fromCharCode(uint8Array[i]);
+                }
+                var base64Data = btoa(binaryString);
+                
+                // For large files, encrypt in chunks to avoid memory issues
+                var chunkSize = 1024 * 1024; // 1MB chunks
+                var encryptedChunks = [];
+                
+                if (base64Data.length > chunkSize) {
+                    for (var i = 0; i < base64Data.length; i += chunkSize) {
+                        var chunk = base64Data.substr(i, chunkSize);
+                        var encryptedChunk = EndToEndEncryption.encryptWithPrivateKey(chunk);
+                        encryptedChunks.push(encryptedChunk);
+                    }
+                    var encryptedContent = encryptedChunks.join('\n');
+                } else {
+                    var encryptedContent = EndToEndEncryption.encryptWithPrivateKey(base64Data);
+                }
+                
+                // Encrypt the filename
+                var encryptedFileName = EndToEndEncryption.encryptWithPrivateKey(file.name);
+                
+                // Create a new file with encrypted content
+                var blob = new Blob([encryptedContent], { type: 'application/octet-stream' });
+                var encryptedFile = new File([blob], file.name + '.enc', { type: 'application/octet-stream' });
+                
+                self.showStatus("File encrypted successfully");
+                done(encryptedFile, encryptedFileName);
+                
+            } catch (error) {
+                console.error('Error encrypting file:', error);
+                self.showStatus("Error encrypting file: " + error.message);
+            }
+        };
+        
+        fileReader.onerror = function() {
+            console.error('Error reading file');
+            self.showStatus("Error reading file");
+        };
+        
+        fileReader.readAsArrayBuffer(file);
+    },
+
+    downloadAndDecryptFile: function (downloadUrl, messageId, publicKeyAlias) {
+        var self = this;
+        
+        // Show download status
+        self.showStatus("Downloading and decrypting file...");
+        
+        // Fetch the encrypted file
+        fetch(downloadUrl)
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.text();
+            })
+            .then(function(encryptedFileContent) {
+                try {
+                    var decryptedBase64;
+                    
+                    // Check if file was encrypted in chunks (contains newlines)
+                    if (encryptedFileContent.indexOf('\n') !== -1) {
+                        // Multi-chunk file
+                        var encryptedChunks = encryptedFileContent.split('\n');
+                        var decryptedChunks = [];
+                        
+                        for (var i = 0; i < encryptedChunks.length; i++) {
+                            var chunk = encryptedChunks[i].trim();
+                            if (chunk.length > 0) {
+                                var decryptedChunk = self.decryptMessageInternal(publicKeyAlias, chunk);
+                                if (!decryptedChunk) {
+                                    throw new Error('Failed to decrypt file chunk ' + (i + 1));
+                                }
+                                decryptedChunks.push(decryptedChunk);
+                            }
+                        }
+                        decryptedBase64 = decryptedChunks.join('');
+                    } else {
+                        // Single chunk file
+                        decryptedBase64 = self.decryptMessageInternal(publicKeyAlias, encryptedFileContent);
+                        if (!decryptedBase64) {
+                            throw new Error('Failed to decrypt file content');
+                        }
+                    }
+                    
+                    // Convert base64 back to binary
+                    var binaryString = atob(decryptedBase64);
+                    var bytes = new Uint8Array(binaryString.length);
+                    for (var i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    
+                    // Get the decrypted filename from the message
+                    var $msgEl = $(".msg[data-key='" + publicKeyAlias + "']");
+                    var $fileNameEl = $msgEl.find('.file-name.data');
+                    var encryptedFileName = $fileNameEl.attr('data-value');
+                    var decryptedFileName = 'decrypted_file';
+                    
+                    if (encryptedFileName) {
+                        var tempDecrypted = self.decryptMessageInternal(publicKeyAlias, encryptedFileName);
+                        if (tempDecrypted) {
+                            decryptedFileName = tempDecrypted;
+                        }
+                    }
+                    
+                    console.log('Encrypted filename:', encryptedFileName);
+                    console.log('Decrypted filename:', decryptedFileName);
+                    
+                    // Create and trigger download
+                    var blob = new Blob([bytes]);
+                    var url = URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.download = decryptedFileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    self.showStatus("File decrypted and downloaded successfully!");
+                    
+                } catch (error) {
+                    console.error('Error decrypting file:', error);
+                    self.showStatus("Error decrypting file: " + error.message);
+                }
+            })
+            .catch(function(error) {
+                console.error('Error downloading file:', error);
+                self.showStatus("Error downloading file: " + error.message);
+            });
     },
 
     decryptMessages: function () {
@@ -462,9 +627,15 @@
     decryptMessageInternal: function (pka, encryptedData) {
         var pk = EndToEndEncryption.keys_hash[pka];
         if (pk == null) {
+            console.warn('No private key found for alias:', pka);
             return null;
         }
-        return EndToEndEncryption.decrypt(encryptedData, pk);
+        try {
+            return EndToEndEncryption.decrypt(encryptedData, pk);
+        } catch (error) {
+            console.error('Decryption failed:', error, 'for data:', encryptedData ? encryptedData.substring(0, 100) + '...' : 'undefined');
+            return null;
+        }
     },
 
     initWebSocket: function () {
