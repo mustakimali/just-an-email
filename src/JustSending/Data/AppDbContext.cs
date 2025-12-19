@@ -184,6 +184,7 @@ namespace JustSending.Data
                 msg.SocketConnectionId,
                 msg.EncryptionPublicKeyAlias,
                 msg.Text,
+                msg.FileName,
                 msg.DateSent,
                 msg.HasFile,
                 msg.FileSizeBytes,
@@ -194,9 +195,9 @@ namespace JustSending.Data
             await _connection.ExecuteAsync(
                 @"INSERT INTO Messages
                     (Id, SessionId, SessionIdVerification,
-                        SocketConnectionId, EncryptionPublicKeyAlias, Text, DateSent, HasFile, FileSizeBytes, IsNotification, DateSentEpoch)
+                        SocketConnectionId, EncryptionPublicKeyAlias, Text, FileName, DateSent, HasFile, FileSizeBytes, IsNotification, DateSentEpoch)
                 VALUES ( @Id, @SessionId, @SessionIdVerification,
-                        @SocketConnectionId, @EncryptionPublicKeyAlias, @Text, @DateSent, @HasFile, @FileSizeBytes, @IsNotification, @DateSentEpoch)",
+                        @SocketConnectionId, @EncryptionPublicKeyAlias, @Text, @FileName, @DateSent, @HasFile, @FileSizeBytes, @IsNotification, @DateSentEpoch)",
                 parameters);
         }
 

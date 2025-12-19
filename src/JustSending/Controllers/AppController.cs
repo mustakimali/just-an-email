@@ -224,17 +224,26 @@ namespace JustSending.Controllers
             var uploadDir = Helper.GetUploadFolder(model.SessionId, _env.WebRootPath);
             if (!Directory.Exists(uploadDir)) Directory.CreateDirectory(uploadDir);
 
-            // Use original file name
-            var fileName = message.Text;
-            if (IOFile.Exists(Path.Combine(uploadDir, fileName)))
+            string diskFileName;
+            if (!string.IsNullOrEmpty(model.EncryptionPublicKeyAlias))
             {
-                // if exist then append digits from the session id
-                fileName = Path.GetFileNameWithoutExtension(message.Text) + "_" + message.Id.Substring(0, 6) + Path.GetExtension(message.Text);
+                // For encrypted files, use the message ID as disk filename to avoid
+                // issues with base64 characters (like /) in the encrypted filename
+                diskFileName = message.Id + ".enc";
+            }
+            else
+            {
+                // For unencrypted files, use the original filename
+                diskFileName = message.Text;
+                if (IOFile.Exists(Path.Combine(uploadDir, diskFileName)))
+                {
+                    diskFileName = Path.GetFileNameWithoutExtension(message.Text) + "_" + message.Id.Substring(0, 6) + Path.GetExtension(message.Text);
+                }
             }
 
-            var destUploadPath = Path.Combine(uploadDir, fileName);
+            var destUploadPath = Path.Combine(uploadDir, diskFileName);
 
-            message.Text = fileName;
+            message.FileName = diskFileName;
             message.HasFile = true;
             message.FileSizeBytes = fileInfo.Length;
 
@@ -376,11 +385,13 @@ namespace JustSending.Controllers
             }
 
             var uploadDir = Helper.GetUploadFolder(sessionId, _env.WebRootPath);
-            var path = Path.Combine(uploadDir, msg.Text);
+            // Use FileName if available, fall back to Text for backwards compatibility
+            var diskFileName = msg.FileName ?? msg.Text;
+            var path = Path.Combine(uploadDir, diskFileName);
             if (!IOFile.Exists(path))
                 return NotFound();
 
-            return PhysicalFile(path, "application/" + Path.GetExtension(path).Trim('.'), msg.Text);
+            return PhysicalFile(path, "application/octet-stream", diskFileName);
         }
 
         [Route("messages"), HttpPost]

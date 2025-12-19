@@ -19,11 +19,6 @@
                 <a id="connect" asp-action="Connect" asp-controller="App" style="opacity: 0.7"
                     class="btn btn-lg btn-primary btn-block">Connect</a>
                 <a asp-action="Password" style="opacity: 0.7" class="btn btn-block">Quickly share a password</a>
-
-                <div id="drop-zone" class="text-center" onclick="document.getElementById('file-input').click()">
-                    Drop a file here or tap to select
-                    <input type="file" id="file-input" style="display: none;" onchange="handleFileSelect(this)">
-                </div>
             </div>
             <noscript>
                 <p class="small">
@@ -124,7 +119,6 @@
             $("#new-session").css("display", "block");
 
             setTimeout(askForFeedback, 500);
-            initQuickUpload();
 
             function askForFeedback() {
                 if (location.search.indexOf("?ref=app") == 0) {
@@ -138,110 +132,6 @@
                         });;
                 }
             }
-
-            function initQuickUpload() {
-                const dropZone = document.getElementById('drop-zone');
-
-                dropZone.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    dropZone.style.borderColor = '#007bff';
-                });
-
-                dropZone.addEventListener('dragleave', (e) => {
-                    e.preventDefault();
-                    dropZone.style.borderColor = '#ccc';
-                });
-
-                dropZone.addEventListener('drop', async (e) => {
-                    e.preventDefault();
-                    dropZone.style.borderColor = '#ccc';
-
-                    const file = e.dataTransfer.files[0];
-                    await uploadFile(file);
-                });
-            }
         })(window.jQuery);
-
-        async function handleFileSelect(input) {
-            const file = input.files[0];
-            if (file) {
-                await uploadFile(file);
-            }
-        }
-
-        async function uploadFile(file) {
-            const maxSize = 80 * 1024 * 1024; // 80MB in bytes
-            const dropZone = document.getElementById('drop-zone');
-
-            if (file.size > maxSize) {
-                alert('File is too large. Maximum size allowed is 80MB.');
-                return;
-            }
-
-            // Generate a random encryption key
-            const key = await crypto.subtle.generateKey(
-                { name: 'AES-GCM', length: 256 },
-                true,
-                ['encrypt']
-            );
-
-            // Convert file to array buffer and encrypt it
-            const arrayBuffer = await file.arrayBuffer();
-            const iv = crypto.getRandomValues(new Uint8Array(12));
-            const encryptedContent = await crypto.subtle.encrypt(
-                { name: 'AES-GCM', iv },
-                key,
-                arrayBuffer
-            );
-
-            // Export key for later use
-            const exportedKey = await crypto.subtle.exportKey('raw', key);
-            const keyBase64 = btoa(String.fromCharCode.apply(null, new Uint8Array(exportedKey)));
-            const keyWithIv = `${keyBase64}.${btoa(String.fromCharCode.apply(null, iv))}`;
-
-            // Create new file with encrypted content
-            file = new File([encryptedContent], file.name, { type: 'application/octet-stream' });
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                dropZone.innerHTML = 'Uploading...';
-                dropZone.style.borderColor = '#ccc';
-                const response = await fetch('/app/post/quick-upload', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    throw new Error('Upload failed');
-                }
-
-                const json = await response.json();
-                const path = `/app#${json.session_id}${json.session_idv}.${keyBase64}`;
-                location.href = path;
-            } catch (error) {
-                console.error('Upload error:', error);
-            }
-        }
-
-        async function decryptFile(key) {
-            const [keyBase64, ivBase64] = key.split('.');
-            const iv = new Uint8Array(atob(ivBase64).split('').map(c => c.charCodeAt(0)));
-
-            const decryptKey = await crypto.subtle.importKey(
-                'raw',
-                new Uint8Array(atob(keyBase64).split('').map(c => c.charCodeAt(0))),
-                'AES-GCM',
-                true,
-                ['decrypt']
-            );
-
-            return await crypto.subtle.decrypt(
-                { name: 'AES-GCM', iv },
-                decryptKey,
-                encryptedContent
-            );
-        }
     </script>
 }

@@ -80,7 +80,7 @@
                 Click <strong>Connect another Device</strong> on the panel at the bottom of the screen to generate an unique PIN to let other device connect.
             </div>
             <div class="connect-instruction-panel">
-                
+
                 <div class="row">
                     <div class="col-sm-6">
                         <ul>
@@ -92,19 +92,19 @@
                             <li>Close this window from all devices to erase everything shared here.</li>
                         </ul>
                     </div>
-                    
+
                     <div class="col-sm-6">
                         <div class="qr-wrapper">
                             <div id="qr-code"></div>
                         </div>
                     </div>
                 </div>
-                
+
             </div>
             <hr />
             A PIN can be used to connect exactly one device. Generate multiple PIN to connect more devices.
         </div>
-        
+
         <div class="alert alert-success alert-dismissible" role="alert">
             <i class="fa fa-terminal"></i> Send files from command line
             <p style="font-family: monospace;">
@@ -139,7 +139,7 @@
     </div>
 </div>
 <noscript>
-    
+
     <div class="alert alert-danger">
         <p>
             Please use the lite version as your device isn't compatible with the rich experiences.
@@ -163,8 +163,6 @@
     <script src="~/js/JustEncrypt.js" asp-append-version="true"></script>
     <script src="~/js/JustSendingApp.js" asp-append-version="true"></script>
 
-    @* <script type="text/javascript" src="~/js/combined-session.min.js" asp-append-version="true" crossorigin="anonymous"></script> *@
-
     <script type="text/javascript">
         (function() {
             try {
@@ -179,7 +177,7 @@
                 var id2 = JustSendingApp.getOrGenId2();
 
                 var data = new FormData();
-                
+
                 data.append("id", id);
                 data.append("id2", id2);
 

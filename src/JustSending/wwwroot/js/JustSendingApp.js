@@ -83,8 +83,6 @@
                 this.initialSecretToSend = atob(hash.substr(65));
                 history.replaceState(null, '', '/app#' + id + id2);
                 window.location.hash = id + id2;
-            } else if (next === ".") {
-                // encryption key
             }
         } else {
             history.replaceState(null, '', '/app');
@@ -326,7 +324,7 @@
         }
 
         if ($("#file")[0].files.length > 0) {
-            
+
             // Check if file is already processed (to prevent infinite loop)
             if (JustSendingApp.fileProcessed) {
                 JustSendingApp.fileProcessed = false;
@@ -343,10 +341,10 @@
                     var dt = new DataTransfer();
                     dt.items.add(encryptedFile);
                     fileInput.files = dt.files;
-                    
-                    // Store encrypted filename for server
-                    replaceFormValue("ComposerText", function (v) { return encryptedFileName; });
-                    
+
+                    // Store encrypted filename in the actual form input
+                    $("#ComposerText").val(encryptedFileName);
+
                     // Mark file as processed and resubmit
                     JustSendingApp.fileProcessed = true;
                     $("#form").submit();
@@ -478,7 +476,7 @@
                 
                 // Encrypt the filename
                 var encryptedFileName = EndToEndEncryption.encryptWithPrivateKey(file.name);
-                
+
                 // Create a new file with encrypted content
                 var blob = new Blob([encryptedContent], { type: 'application/octet-stream' });
                 var encryptedFile = new File([blob], file.name + '.enc', { type: 'application/octet-stream' });
@@ -502,10 +500,10 @@
 
     downloadAndDecryptFile: function (downloadUrl, messageId, publicKeyAlias) {
         var self = this;
-        
+
         // Show download status
         self.showStatus("Downloading and decrypting file...");
-        
+
         // Fetch the encrypted file
         fetch(downloadUrl)
             .then(function(response) {
@@ -517,13 +515,13 @@
             .then(function(encryptedFileContent) {
                 try {
                     var decryptedBase64;
-                    
+
                     // Check if file was encrypted in chunks (contains newlines)
                     if (encryptedFileContent.indexOf('\n') !== -1) {
                         // Multi-chunk file
                         var encryptedChunks = encryptedFileContent.split('\n');
                         var decryptedChunks = [];
-                        
+
                         for (var i = 0; i < encryptedChunks.length; i++) {
                             var chunk = encryptedChunks[i].trim();
                             if (chunk.length > 0) {
@@ -542,30 +540,19 @@
                             throw new Error('Failed to decrypt file content');
                         }
                     }
-                    
+
                     // Convert base64 back to binary
                     var binaryString = atob(decryptedBase64);
                     var bytes = new Uint8Array(binaryString.length);
                     for (var i = 0; i < binaryString.length; i++) {
                         bytes[i] = binaryString.charCodeAt(i);
                     }
-                    
-                    // Get the decrypted filename from the message
-                    var $msgEl = $(".msg[data-key='" + publicKeyAlias + "']");
-                    var $fileNameEl = $msgEl.find('.file-name.data');
-                    var encryptedFileName = $fileNameEl.attr('data-value');
-                    var decryptedFileName = 'decrypted_file';
-                    
-                    if (encryptedFileName) {
-                        var tempDecrypted = self.decryptMessageInternal(publicKeyAlias, encryptedFileName);
-                        if (tempDecrypted) {
-                            decryptedFileName = tempDecrypted;
-                        }
-                    }
-                    
-                    console.log('Encrypted filename:', encryptedFileName);
-                    console.log('Decrypted filename:', decryptedFileName);
-                    
+
+                    // Get the decrypted filename from the message (already decrypted by decryptMessages)
+                    var $msgEl = $(".msg[data-id='" + messageId + "']");
+                    var $fileNameEl = $msgEl.find('.file-name');
+                    var decryptedFileName = $fileNameEl.text().trim() || 'decrypted_file';
+
                     // Create and trigger download
                     var blob = new Blob([bytes]);
                     var url = URL.createObjectURL(blob);
@@ -576,9 +563,10 @@
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
-                    
+
                     self.showStatus("File decrypted and downloaded successfully!");
-                    
+                    setTimeout(function() { self.showStatus(); }, 2000);
+
                 } catch (error) {
                     console.error('Error decrypting file:', error);
                     self.showStatus("Error decrypting file: " + error.message);

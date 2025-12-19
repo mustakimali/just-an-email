@@ -503,12 +503,3 @@ body.busy #overlay {
 #feedbackModal {
     z-index: 10000;
 }
-
-#drop-zone {
-    padding: 20px;
-    border: 2px dashed #ccc;
-    border-radius: 5px;
-    margin-top: 10px;
-    opacity: 0.5;
-    color: #fff;
-}

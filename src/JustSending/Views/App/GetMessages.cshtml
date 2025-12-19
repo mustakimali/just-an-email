@@ -23,7 +23,7 @@
         }
         else
         {
-            <div class="msg" data-key="@message.EncryptionPublicKeyAlias">
+            <div class="msg" data-id="@message.Id" data-key="@message.EncryptionPublicKeyAlias">
                 <div class="time" title="@message.DateSent.ToString("R")" data-val="@message.DateSent.ToString("u")">
                     <i class="fa fa-clock-o"></i> <span class="val h-nojs">@message.DateSent.ToString()</span><noscript><span
                             class="val">@(new DateTime(message.DateSent.Ticks).ToShortTimeString())</span></noscript>

@@ -101,3 +101,18 @@ public class MessagesTable : Migration
         Delete.Table("Messages");
     }
 }
+
+[Migration(202512190001)]
+public class AddFileNameToMessages : Migration
+{
+    public override void Up()
+    {
+        Alter.Table("Messages")
+            .AddColumn("FileName").AsString().Nullable();
+    }
+
+    public override void Down()
+    {
+        Delete.Column("FileName").FromTable("Messages");
+    }
+}
