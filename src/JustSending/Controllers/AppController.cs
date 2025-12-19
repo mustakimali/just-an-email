@@ -397,6 +397,118 @@ namespace JustSending.Controllers
         [Route("messages"), HttpPost]
         public Task<IActionResult> GetMessages(string id, string id2, int from) => GetMessagesViewInternal(id, id2, from);
 
+        public class SaveKeyRequest
+        {
+            public string SessionId { get; set; }
+            public string Alias { get; set; }
+            public string PublicKey { get; set; }
+        }
+
+        [Route("key")]
+        [HttpPost]
+        public async Task<IActionResult> SavePublicKey([FromBody] SaveKeyRequest request)
+        {
+            if (string.IsNullOrEmpty(request?.SessionId) ||
+                string.IsNullOrEmpty(request?.Alias) ||
+                string.IsNullOrEmpty(request?.PublicKey))
+            {
+                return BadRequest();
+            }
+
+            var session = await _db.GetSessionById(request.SessionId);
+            if (session == null)
+            {
+                return NotFound();
+            }
+
+            var publicKeyId = await _db.SavePublicKey(request.SessionId, request.Alias, request.PublicKey);
+            return Ok(new { id = publicKeyId });
+        }
+
+        [Route("/k/{id}")]
+        [HttpGet]
+        public async Task<IActionResult> GetPublicKey(string id)
+        {
+            var publicKey = await _db.GetPublicKeyById(id);
+            if (publicKey == null)
+            {
+                return NotFound(new { error = "Public key not found" });
+            }
+
+            return Content(publicKey.PublicKeyJson, "application/json");
+        }
+
+        [Route("/k/{id}/upload")]
+        [HttpGet]
+        public async Task<IActionResult> GetUploadScript(string id)
+        {
+            var publicKey = await _db.GetPublicKeyById(id);
+            if (publicKey == null)
+            {
+                return NotFound("# Error: Public key not found");
+            }
+
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+            var script = $@"#!/usr/bin/env python3
+# Usage: curl -s {baseUrl}/k/{id}/upload | python3 - file.txt
+import sys, json, base64, os
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.backends import default_backend
+import urllib.request
+
+if len(sys.argv) < 2:
+    print('Usage: curl -s {baseUrl}/k/{id}/upload | python3 - <file>', file=sys.stderr)
+    sys.exit(1)
+
+jwk = {publicKey.PublicKeyJson}
+n = int.from_bytes(base64.urlsafe_b64decode(jwk['n'] + '=='), 'big')
+e = int.from_bytes(base64.urlsafe_b64decode(jwk['e'] + '=='), 'big')
+pub = rsa.RSAPublicNumbers(e, n).public_key(default_backend())
+
+filepath = sys.argv[1]
+filename = os.path.basename(filepath)
+with open(filepath, 'rb') as f:
+    data = f.read()
+
+aes_key = os.urandom(32)
+iv = os.urandom(12)
+encrypted_data = AESGCM(aes_key).encrypt(iv, data, None)
+encrypted_key = pub.encrypt(aes_key, padding.OAEP(padding.MGF1(hashes.SHA256()), hashes.SHA256(), None))
+
+payload = base64.b64encode(json.dumps({{
+    'encryptedKey': base64.b64encode(encrypted_key).decode(),
+    'iv': base64.b64encode(iv).decode(),
+    'encryptedData': base64.b64encode(encrypted_data).decode()
+}}).encode()).decode()
+
+fn_iv = os.urandom(12)
+fn_encrypted = AESGCM(aes_key).encrypt(fn_iv, filename.encode(), None)
+fn_key_enc = pub.encrypt(aes_key, padding.OAEP(padding.MGF1(hashes.SHA256()), hashes.SHA256(), None))
+fn_payload = base64.b64encode(json.dumps({{
+    'encryptedKey': base64.b64encode(fn_key_enc).decode(),
+    'iv': base64.b64encode(fn_iv).decode(),
+    'encryptedData': base64.b64encode(fn_encrypted).decode()
+}}).encode()).decode()
+
+boundary = '----PythonFormBoundary'
+body = (
+    f'--{{boundary}}\r\nContent-Disposition: form-data; name=""SessionId""\r\n\r\n{publicKey.SessionId}\r\n'
+    f'--{{boundary}}\r\nContent-Disposition: form-data; name=""EncryptionPublicKeyAlias""\r\n\r\n{publicKey.Alias}\r\n'
+    f'--{{boundary}}\r\nContent-Disposition: form-data; name=""ComposerText""\r\n\r\n{{fn_payload}}\r\n'
+    f'--{{boundary}}\r\nContent-Disposition: form-data; name=""file""; filename=""{{filename}}.enc""\r\nContent-Type: application/octet-stream\r\n\r\n'
+).encode() + payload.encode() + f'\r\n--{{boundary}}--\r\n'.encode()
+
+req = urllib.request.Request('{baseUrl}/app/post/files-stream', body, {{
+    'Content-Type': f'multipart/form-data; boundary={{boundary}}'
+}})
+urllib.request.urlopen(req)
+print(f'Uploaded: {{filename}}')
+";
+            return Content(script, "text/plain");
+        }
+
         [Route("connect")]
         public IActionResult Connect()
         {

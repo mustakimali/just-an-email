@@ -37,6 +37,9 @@ namespace JustSending.Services
             var count = await _db.DeleteAllMessagesBySession(sessionId);
             _logger.LogInformation("Deleted {count} messages for session {sessionId}", count, sessionId);
 
+            // remove all public keys
+            await _db.DeletePublicKeysBySession(sessionId);
+
             // remove all connections
             foreach (var connectionId in session.ConnectionIds)
                 await _db.KvRemove<SessionMetaByConnectionId>(connectionId);

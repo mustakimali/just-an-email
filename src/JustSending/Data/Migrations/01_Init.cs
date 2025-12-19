@@ -116,3 +116,22 @@ public class AddFileNameToMessages : Migration
         Delete.Column("FileName").FromTable("Messages");
     }
 }
+
+[Migration(202512190002)]
+public class CreatePublicKeysTable : Migration
+{
+    public override void Up()
+    {
+        Create.Table("PublicKeys")
+            .WithColumn("Id").AsString().PrimaryKey()
+            .WithColumn("SessionId").AsString().NotNullable().Indexed()
+            .WithColumn("Alias").AsString().NotNullable()
+            .WithColumn("PublicKeyJson").AsString().NotNullable()
+            .WithColumn("DateCreated").AsDateTime().WithDefault(SystemMethods.CurrentDateTime);
+    }
+
+    public override void Down()
+    {
+        Delete.Table("PublicKeys");
+    }
+}

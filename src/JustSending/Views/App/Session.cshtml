@@ -111,6 +111,11 @@
                 http --form <span class="FilePostUrl">(loading...)</span> file@@/path/to/file.txt<br/>
                 curl <span class="FilePostUrl">(loading...)</span> -F 'file=@@/path/to/file.txt'
             </p>
+            <hr style="border-color: rgba(0,0,0,0.1); margin: 10px 0;" />
+            <i class="fa fa-lock"></i> Upload encrypted file (requires python3 + cryptography)
+            <p style="font-family: monospace;">
+                curl -s <span class="PublicKeyUrl">(available after first message)</span>/upload | python3 - <em>file.txt</em>
+            </p>
         </div>
     </div>
 </div>
