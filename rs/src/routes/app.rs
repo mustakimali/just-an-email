@@ -55,15 +55,15 @@ async fn create_session(
 
 #[derive(Deserialize)]
 pub struct PostMessageRequest {
-    #[serde(rename = "SessionId")]
+    #[serde(rename = "id")]
     pub session_id: String,
-    #[serde(rename = "SessionVerification")]
+    #[serde(rename = "id2")]
     pub session_verification: Option<String>,
-    #[serde(rename = "SocketConnectionId")]
+    #[serde(rename = "socketConnectionId")]
     pub socket_connection_id: Option<String>,
-    #[serde(rename = "EncryptionPublicKeyAlias")]
+    #[serde(rename = "pka")]
     pub encryption_public_key_alias: Option<String>,
-    #[serde(rename = "ComposerText")]
+    #[serde(rename = "text")]
     pub composer_text: String,
 }
 
