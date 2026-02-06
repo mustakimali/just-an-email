@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+:root {
+  --gradient: linear-gradient(120deg, #155799, #159957);
+  --accent: #4caf50;
+  --purple: #6d6a95;
+}
+
+body {
+  @apply m-0 font-sans text-gray-800 bg-white;
+}
+
+.gradient-bg {
+  background-image: var(--gradient);
+}
+
+.btn {
+  @apply px-4 py-2 text-sm font-medium text-white uppercase tracking-wide rounded-none cursor-pointer transition-all duration-200;
+  background-image: linear-gradient(120deg, rgba(0,0,0,0), rgba(0,0,0,0.15));
+}
+
+.btn:hover {
+  @apply opacity-90;
+}
+
+.btn-primary {
+  @apply bg-white/10 border border-white/20;
+}
+
+.btn-primary:hover {
+  @apply bg-white/20;
+}
+
+.btn-danger {
+  @apply bg-red-600 border border-red-700;
+}
+
+.btn-success {
+  @apply border border-white/20;
+  background-color: var(--accent);
+}
+
+.msg-notification {
+  @apply text-sm text-gray-500 italic py-2;
+}
+
+.msg-content {
+  @apply border-l-4 border-gray-200 pl-3 py-2;
+}
+
+.msg-content:hover {
+  @apply border-blue-400;
+}
+
+.encrypted-badge {
+  @apply text-red-500 text-sm;
+}
+
+.share-panel {
+  @apply p-6 text-center rounded-lg;
+  background-image: var(--gradient);
+}
+
+.share-panel h1 {
+  @apply text-white text-3xl font-bold mb-2;
+}
+
+.share-panel .token {
+  @apply text-white text-6xl font-mono font-bold tracking-widest;
+}
+
+textarea {
+  @apply resize-none;
+}

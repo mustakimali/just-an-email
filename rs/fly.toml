@@ -1,0 +1,42 @@
+app = "justaml"
+kill_signal = "SIGINT"
+kill_timeout = 5
+swap_size_mb = 1024
+
+[env]
+PORT = "8080"
+
+[[mounts]]
+destination = "/app/App_Data"
+source = "justaml_data"
+
+[[services]]
+internal_port = 8080
+protocol = "tcp"
+
+[services.concurrency]
+hard_limit = 25
+soft_limit = 20
+type = "connections"
+
+[[services.http_checks]]
+grace_period = "5s"
+interval = "10s"
+method = "get"
+path = "/api/test"
+protocol = "http"
+timeout = "2s"
+
+[[services.tcp_checks]]
+grace_period = "1s"
+interval = "15s"
+timeout = "2s"
+
+[[services.ports]]
+force_https = true
+handlers = ["http"]
+port = 80
+
+[[services.ports]]
+handlers = ["tls", "http"]
+port = 443
