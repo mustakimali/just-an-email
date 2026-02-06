@@ -270,3 +270,5 @@ out/
 **/appsettings.*.json
 
 post_message.sh
+rs/target
+rs/frontend/dist
