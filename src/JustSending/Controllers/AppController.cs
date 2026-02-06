@@ -400,6 +400,7 @@ namespace JustSending.Controllers
         public class SaveKeyRequest
         {
             public string SessionId { get; set; }
+            public string SessionVerification { get; set; }
             public string Alias { get; set; }
             public string PublicKey { get; set; }
         }
@@ -409,14 +410,32 @@ namespace JustSending.Controllers
         public async Task<IActionResult> SavePublicKey([FromBody] SaveKeyRequest request)
         {
             if (string.IsNullOrEmpty(request?.SessionId) ||
+                string.IsNullOrEmpty(request?.SessionVerification) ||
                 string.IsNullOrEmpty(request?.Alias) ||
                 string.IsNullOrEmpty(request?.PublicKey))
             {
                 return BadRequest();
             }
 
+            // Validate the public key is a well-formed RSA JWK
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(request.PublicKey);
+                var root = doc.RootElement;
+                if (root.GetProperty("kty").GetString() != "RSA" ||
+                    !root.TryGetProperty("n", out _) ||
+                    !root.TryGetProperty("e", out _))
+                {
+                    return BadRequest(new { error = "Invalid RSA public key" });
+                }
+            }
+            catch
+            {
+                return BadRequest(new { error = "Invalid public key format" });
+            }
+
             var session = await _db.GetSessionById(request.SessionId);
-            if (session == null)
+            if (session == null || session.IdVerification != request.SessionVerification)
             {
                 return NotFound();
             }
@@ -449,11 +468,17 @@ namespace JustSending.Controllers
             }
 
             var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
+            // Base64-encode all user-supplied values to prevent code injection
+            var jwkB64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(publicKey.PublicKeyJson));
+            var sessionIdB64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(publicKey.SessionId));
+            var aliasB64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(publicKey.Alias));
+
             var script = $@"#!/usr/bin/env python3
 # Usage: curl -s {baseUrl}/k/{id}/upload | python3 - file.txt
 import sys, json, base64, os
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
-from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.backends import default_backend
 import urllib.request
@@ -462,7 +487,10 @@ if len(sys.argv) < 2:
     print('Usage: curl -s {baseUrl}/k/{id}/upload | python3 - <file>', file=sys.stderr)
     sys.exit(1)
 
-jwk = {publicKey.PublicKeyJson}
+jwk = json.loads(base64.b64decode('{jwkB64}').decode())
+session_id = base64.b64decode('{sessionIdB64}').decode()
+alias = base64.b64decode('{aliasB64}').decode()
+
 n = int.from_bytes(base64.urlsafe_b64decode(jwk['n'] + '=='), 'big')
 e = int.from_bytes(base64.urlsafe_b64decode(jwk['e'] + '=='), 'big')
 pub = rsa.RSAPublicNumbers(e, n).public_key(default_backend())
@@ -494,8 +522,8 @@ fn_payload = base64.b64encode(json.dumps({{
 
 boundary = '----PythonFormBoundary'
 body = (
-    f'--{{boundary}}\r\nContent-Disposition: form-data; name=""SessionId""\r\n\r\n{publicKey.SessionId}\r\n'
-    f'--{{boundary}}\r\nContent-Disposition: form-data; name=""EncryptionPublicKeyAlias""\r\n\r\n{publicKey.Alias}\r\n'
+    f'--{{boundary}}\r\nContent-Disposition: form-data; name=""SessionId""\r\n\r\n{{session_id}}\r\n'
+    f'--{{boundary}}\r\nContent-Disposition: form-data; name=""EncryptionPublicKeyAlias""\r\n\r\n{{alias}}\r\n'
     f'--{{boundary}}\r\nContent-Disposition: form-data; name=""ComposerText""\r\n\r\n{{fn_payload}}\r\n'
     f'--{{boundary}}\r\nContent-Disposition: form-data; name=""file""; filename=""{{filename}}.enc""\r\nContent-Type: application/octet-stream\r\n\r\n'
 ).encode() + payload.encode() + f'\r\n--{{boundary}}--\r\n'.encode()

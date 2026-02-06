@@ -232,19 +232,17 @@ namespace JustSending.Services
             // Send shared p & g to both parties then
             // request the original device to initite key-exchange
             //
-            var p = Helper.GetPrime(1024, _env);
-            var g = Helper.GetPrime(2, _env);
             var pka = Guid.NewGuid().ToString("N");
 
             var initFirstDevice = Clients
                 .Client(firstDeviceId)
-                .SendAsync("startKeyExchange", newDeviceId, p, g, pka, false);
+                .SendAsync("startKeyExchange", newDeviceId, pka, false);
 
             await initFirstDevice.ContinueWith(async x =>
             {
                 await Clients
                     .Client(newDeviceId)
-                    .SendAsync("startKeyExchange", firstDeviceId, p, g, pka, true);
+                    .SendAsync("startKeyExchange", firstDeviceId, pka, true);
             });
 
         }
