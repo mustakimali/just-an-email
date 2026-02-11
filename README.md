@@ -29,12 +29,6 @@ Should be running in http://localhost:5050
 ## Building the code
 * Make sure you have latest version of [.NET Core SDK 9](https://www.microsoft.com/net/download/core) installed (you can use [this script](https://gist.github.com/mustakimali/1dd2a1f4ea22907760eb112a7cdd9c68) to install latest nightly build and use `dotnet-pre` instead of `dotnet` below)
 * Clone
-* Generate combined css & js files
-  * `make combine-all-scripts`
-  * `combine-all-css`
-  * Make sure you follow any warning to install any missing dependencies like uglifyjs, uglifycss etc.
-    * `apt install uglifyjs.terser`
-    * `npm install -g uglifycss`
 * `cd src\JustSending`
 * `dotnet run` or `dotnet watch run`
 * Should be running in http://localhost:5000
