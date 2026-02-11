@@ -169,10 +169,15 @@ namespace JustSending.Controllers
                 });
             }
 
+            // Read additional form fields for encrypted uploads
+            var encryptionAlias = Request.Form["EncryptionPublicKeyAlias"].FirstOrDefault();
+            var composerText = Request.Form["ComposerText"].FirstOrDefault();
+
             var model = new SessionModel
             {
                 SessionId = sessionId,
-                ComposerText = file.FileName
+                ComposerText = string.IsNullOrEmpty(composerText) ? file.FileName : composerText,
+                EncryptionPublicKeyAlias = encryptionAlias
             };
             var tmpFile = Path.GetTempFileName();
             await using (var f = System.IO.File.OpenWrite(tmpFile))
@@ -522,13 +527,12 @@ fn_payload = base64.b64encode(json.dumps({{
 
 boundary = '----PythonFormBoundary'
 body = (
-    f'--{{boundary}}\r\nContent-Disposition: form-data; name=""SessionId""\r\n\r\n{{session_id}}\r\n'
     f'--{{boundary}}\r\nContent-Disposition: form-data; name=""EncryptionPublicKeyAlias""\r\n\r\n{{alias}}\r\n'
     f'--{{boundary}}\r\nContent-Disposition: form-data; name=""ComposerText""\r\n\r\n{{fn_payload}}\r\n'
     f'--{{boundary}}\r\nContent-Disposition: form-data; name=""file""; filename=""{{filename}}.enc""\r\nContent-Type: application/octet-stream\r\n\r\n'
 ).encode() + payload.encode() + f'\r\n--{{boundary}}--\r\n'.encode()
 
-req = urllib.request.Request('{baseUrl}/app/post/files-stream', body, {{
+req = urllib.request.Request(f'{baseUrl}/f/{{session_id}}', body, {{
     'Content-Type': f'multipart/form-data; boundary={{boundary}}'
 }})
 urllib.request.urlopen(req)
