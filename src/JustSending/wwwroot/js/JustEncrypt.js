@@ -2,34 +2,21 @@
 
 var EndToEndEncryption = {
 
-    //
-    // Diffie-Hellman key exchange specific
-    //
-    p: null,    // public prime-base (server generated)
-    g: null,    // public prime-modulus (server generated)
+    // ECDH key pair (temporary, cleared after handshake)
+    ecdhKeyPair: null,
 
-    b: null,    // private 1
-    b_digits: 2,
-
-    a: null,    // private 2
-    a_digits: 2,
-
-    k: null,
-
-    //
-    // Application specific
-    ///
     hub: null,
     peerId: null,
-
-    // true - mean this device was in charge of
-    // initiating connection with a new device
-    //
     initiator: false,
 
-    private_key: null,
+    // RSA key pair for this session
+    publicKey: null,
+    privateKey: null,
+    publicKeyJwk: null,
+    privateKeyJwk: null,
     public_key_alias: null,
 
+    // Key store: maps alias -> { PublicKey, PrivateKey, PublicKeyJwk, PrivateKeyJwk, DhKey }
     keys: [],
     keys_hash: {},
 
@@ -37,43 +24,213 @@ var EndToEndEncryption = {
         return this.keys.length > 0;
     },
 
-    /**
-     * Initialise Key Exchance
-     * Listen for command from the server 
-     * @param {hub} hub 
-     */
-    initKeyExchange: function (hub) {
-        //
-        // Register event handler
-        this.initCallbacks(hub);
+    //
+    // RSA operations
+    //
 
-        //
-        // SERVER CALLS:
-        //   Start the key exchange
-        //
-        hub.on("startKeyExchange", function(peerId, p, g, pka, initiate) {
-            app_busy(true);
-
-            Log("Peer Id: " + peerId);
-
-            EndToEndEncryption.init(peerId, hub, p, g, pka, initiate);
-
-        });
-
+    generateRsaKeyPair: async function () {
+        return await crypto.subtle.generateKey(
+            {
+                name: "RSA-OAEP",
+                modulusLength: 2048,
+                publicExponent: new Uint8Array([1, 0, 1]),
+                hash: "SHA-256"
+            },
+            true,
+            ["encrypt", "decrypt"]
+        );
     },
 
-    /**
-     * Start the Key Exchange process
-     * 
-     * @param {string} peerId the ID of the other deive
-     * @param {any} hub 
-     * @param {string} p prime key (public key), 1024 digits
-     * @param {string} g prime base, 2 digits
-     * @param {string} pka the (much shorter) alias of the public key, to be used to identify message encrypted with associated private key
-     * @param {boolean} initiate true to start the computation, only one client will receive this 'true'
-     */
-    init: function (peerId, hub, p, g, pka, initiate) {
+    exportKeyToJwk: async function (key) {
+        return await crypto.subtle.exportKey("jwk", key);
+    },
 
+    importPublicKeyFromJwk: async function (jwk) {
+        return await crypto.subtle.importKey(
+            "jwk",
+            jwk,
+            { name: "RSA-OAEP", hash: "SHA-256" },
+            true,
+            ["encrypt"]
+        );
+    },
+
+    importPrivateKeyFromJwk: async function (jwk) {
+        return await crypto.subtle.importKey(
+            "jwk",
+            jwk,
+            { name: "RSA-OAEP", hash: "SHA-256" },
+            true,
+            ["decrypt"]
+        );
+    },
+
+    //
+    // Hybrid RSA+AES encrypt/decrypt (for messages and files)
+    //
+
+    hybridEncrypt: async function (data, publicKey) {
+        var aesKey = await crypto.subtle.generateKey(
+            { name: "AES-GCM", length: 256 },
+            true,
+            ["encrypt", "decrypt"]
+        );
+
+        var iv = crypto.getRandomValues(new Uint8Array(12));
+
+        var dataBytes = typeof data === 'string'
+            ? new TextEncoder().encode(data)
+            : data;
+
+        var encryptedData = await crypto.subtle.encrypt(
+            { name: "AES-GCM", iv: iv },
+            aesKey,
+            dataBytes
+        );
+
+        var aesKeyRaw = await crypto.subtle.exportKey("raw", aesKey);
+        var encryptedKey = await crypto.subtle.encrypt(
+            { name: "RSA-OAEP" },
+            publicKey,
+            aesKeyRaw
+        );
+
+        return {
+            encryptedKey: this.arrayBufferToBase64(encryptedKey),
+            iv: this.arrayBufferToBase64(iv),
+            encryptedData: this.arrayBufferToBase64(encryptedData)
+        };
+    },
+
+    hybridDecrypt: async function (encryptedObj, privateKey) {
+        var encryptedKey = this.base64ToArrayBuffer(encryptedObj.encryptedKey);
+        var iv = this.base64ToArrayBuffer(encryptedObj.iv);
+        var encryptedData = this.base64ToArrayBuffer(encryptedObj.encryptedData);
+
+        var aesKeyRaw = await crypto.subtle.decrypt(
+            { name: "RSA-OAEP" },
+            privateKey,
+            encryptedKey
+        );
+
+        var aesKey = await crypto.subtle.importKey(
+            "raw",
+            aesKeyRaw,
+            { name: "AES-GCM" },
+            false,
+            ["decrypt"]
+        );
+
+        return await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: iv },
+            aesKey,
+            encryptedData
+        );
+    },
+
+    //
+    // ECDH key exchange (replaces custom Diffie-Hellman)
+    //
+
+    generateEcdhKeyPair: async function () {
+        return await crypto.subtle.generateKey(
+            { name: "ECDH", namedCurve: "P-256" },
+            false,
+            ["deriveKey"]
+        );
+    },
+
+    exportEcdhPublicKey: async function (key) {
+        return await crypto.subtle.exportKey("jwk", key);
+    },
+
+    importEcdhPublicKey: async function (jwk) {
+        return await crypto.subtle.importKey(
+            "jwk",
+            jwk,
+            { name: "ECDH", namedCurve: "P-256" },
+            true,
+            []
+        );
+    },
+
+    deriveAesKeyFromEcdh: async function (ecdhPrivateKey, ecdhPublicKey) {
+        return await crypto.subtle.deriveKey(
+            { name: "ECDH", public: ecdhPublicKey },
+            ecdhPrivateKey,
+            { name: "AES-GCM", length: 256 },
+            false,
+            ["encrypt", "decrypt"]
+        );
+    },
+
+    //
+    // Symmetric encrypt/decrypt using ECDH-derived AES key (for key broadcast between peers)
+    //
+
+    encryptWithDhKey: async function (data, aesKey) {
+        var iv = crypto.getRandomValues(new Uint8Array(12));
+        var dataBytes = new TextEncoder().encode(data);
+        var encrypted = await crypto.subtle.encrypt(
+            { name: "AES-GCM", iv: iv },
+            aesKey,
+            dataBytes
+        );
+        return JSON.stringify({
+            iv: this.arrayBufferToBase64(iv),
+            data: this.arrayBufferToBase64(encrypted)
+        });
+    },
+
+    decryptWithDhKey: async function (encryptedStr, aesKey) {
+        var obj = JSON.parse(encryptedStr);
+        var iv = this.base64ToArrayBuffer(obj.iv);
+        var data = this.base64ToArrayBuffer(obj.data);
+        var decrypted = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: iv },
+            aesKey,
+            data
+        );
+        return new TextDecoder().decode(decrypted);
+    },
+
+    //
+    // Base64 helpers
+    //
+
+    arrayBufferToBase64: function (buffer) {
+        var bytes = new Uint8Array(buffer);
+        var binary = '';
+        for (var i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary);
+    },
+
+    base64ToArrayBuffer: function (base64) {
+        var binary = atob(base64);
+        var bytes = new Uint8Array(binary.length);
+        for (var i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes.buffer;
+    },
+
+    //
+    // Key exchange protocol
+    //
+
+    initKeyExchange: function (hub) {
+        this.initCallbacks(hub);
+
+        hub.on("startKeyExchange", function(peerId, pka, initiate) {
+            app_busy(true);
+            Log("Peer Id: " + peerId);
+            EndToEndEncryption.init(peerId, hub, pka, initiate);
+        });
+    },
+
+    init: function (peerId, hub, pka, initiate) {
         var that = EndToEndEncryption;
 
         that.showStatus("");
@@ -83,21 +240,18 @@ var EndToEndEncryption = {
         that.public_key_alias = pka;
         that.initiator = initiate;
 
-        that.setPrime(p, g);
-
         if (initiate) {
             setTimeout(function () {
-                that.computeA();
+                that.startEcdhExchange();
             }, 500);
-
         }
     },
+
     showStatus: function (msg) {
         if (msg == undefined) {
             JustSendingApp.showStatus();
             return;
         }
-
         JustSendingApp.showStatus("<i class=\"fa fa-lock\"></i> Establishing secure connection..." + msg);
     },
 
@@ -105,17 +259,16 @@ var EndToEndEncryption = {
         var that = EndToEndEncryption;
 
         hub.on("callback", function(method, data) {
-
             Log("Request received [" + method + "] -> Payload Size: " + data.length);
 
             var dataObj = JSON.parse(data);
             switch (method) {
-            case "ComputeB":
-                that.computeB(dataObj.A);
+            case "ExchangeKey":
+                that.handleExchangeKey(dataObj.publicKey);
                 break;
 
-            case "ComputeK":
-                that.computeK(dataObj.B);
+            case "DeriveSecret":
+                that.handleDeriveSecret(dataObj.publicKey);
                 break;
 
             case "broadcastKeys":
@@ -123,75 +276,46 @@ var EndToEndEncryption = {
                 that.receiveKeys(dataObj);
                 break;
             }
-
         });
 
         Log("Ready to shake hands.");
     },
 
-    setPrime: function (p, g) {
+    startEcdhExchange: async function () {
         var that = EndToEndEncryption;
+        Log("Starting ECDH key exchange...");
 
-        Log("p LEN " + p.length);
-        Log("g LEN " + g.length);
-
-        that.p = new BigNumber(p);
-        that.g = new BigNumber(g);
+        that.ecdhKeyPair = await that.generateEcdhKeyPair();
+        var pubJwk = await that.exportEcdhPublicKey(that.ecdhKeyPair.publicKey);
+        that.callPeer("ExchangeKey", { publicKey: pubJwk });
     },
 
-    //
-    // Generate a,
-    // return A
-    //
-    computeA: function () {
+    handleExchangeKey: async function (peerPublicKeyJwk) {
         var that = EndToEndEncryption;
+        Log("Received peer ECDH public key, deriving shared secret...");
 
-        Log("computeA: Working...");
+        that.ecdhKeyPair = await that.generateEcdhKeyPair();
 
-        that.a = PrimeHelper.randomNumberOfLength(that.a_digits);
-        var A = that.g.pow(that.a).mod(that.p);
+        var peerPublicKey = await that.importEcdhPublicKey(peerPublicKeyJwk);
+        var derivedKey = await that.deriveAesKeyFromEcdh(that.ecdhKeyPair.privateKey, peerPublicKey);
 
-        Log("Send A");
+        var pubJwk = await that.exportEcdhPublicKey(that.ecdhKeyPair.publicKey);
+        that.callPeer("DeriveSecret", { publicKey: pubJwk });
 
-        that.callPeer("ComputeB", { A: A.toString(10) });
+        that.ecdhKeyPair = null;
+        await that.onHandshakeDone(derivedKey);
     },
 
-    computeB: function (A) {
+    handleDeriveSecret: async function (peerPublicKeyJwk) {
         var that = EndToEndEncryption;
+        Log("Received peer ECDH public key, deriving shared secret...");
 
-        // compute B
-        this.b = new BigNumber(PrimeHelper.randomNumberOfLength(that.b_digits));
-        var B = that.g.pow(that.b).mod(that.p);
+        var peerPublicKey = await that.importEcdhPublicKey(peerPublicKeyJwk);
+        var derivedKey = await that.deriveAesKeyFromEcdh(that.ecdhKeyPair.privateKey, peerPublicKey);
 
-        Log("computeB: Computed, sending");
-        // send B
-        // ask peer to compute secret
-        that.callPeer("ComputeK", { B: B.toString(10) });
-
-        // generate my secret
-        that.computeK_withA(A);
+        that.ecdhKeyPair = null;
+        await that.onHandshakeDone(derivedKey);
     },
-
-    computeK: function (B) {
-        var that = EndToEndEncryption;
-        that.B = new BigNumber(B);
-
-        Log("Computing secret with B");
-
-        that.k = that.B.pow(that.a).mod(that.p);
-
-        this.onHandshakeDone();
-    },
-
-    computeK_withA: function (A) {
-        var that = EndToEndEncryption;
-
-        var A = new BigNumber(A);
-        that.k = A.pow(that.b).mod(that.p);
-
-        this.onHandshakeDone();
-    },
-
 
     callPeer: function (method, data) {
         this.callPeerInternal(this.peerId, method, data);
@@ -201,58 +325,58 @@ var EndToEndEncryption = {
         var that = EndToEndEncryption;
         Log("Calling peer '" + method + "' [" + peerId + "]");
 
-        that
-            .hub
+        that.hub
             .send("callPeer", peerId, method, JSON.stringify(data))
-            .catch(function(e) {
-                Log("ERROR: " + e);
-            })
-            .then(function(b, d, e) {
-                // Request sent
-            });
+            .catch(function(e) { Log("ERROR: " + e); })
+            .then(function() { });
     },
 
     callAllPeers: function (method, data) {
         this.callPeerInternal("ALL", method, data);
     },
 
-    onHandshakeDone: function () {
-
-        this.p = null;
-        this.g = null;
-        this.a = null;
-        this.b = null;
-        this.private_key = this.k.toString(10)
-        this.k = null;
-
+    onHandshakeDone: async function (dhKey) {
         $("#EncryptionPublicKeyAlias").val(this.public_key_alias);
 
-        this.keys.push({ Key: this.public_key_alias, Secret: this.private_key });
-        this.keys_hash[this.public_key_alias] = this.private_key;
+        var keyPair = await this.generateRsaKeyPair();
+        this.publicKey = keyPair.publicKey;
+        this.privateKey = keyPair.privateKey;
+        this.publicKeyJwk = await this.exportKeyToJwk(keyPair.publicKey);
+        this.privateKeyJwk = await this.exportKeyToJwk(keyPair.privateKey);
+
+        var keyEntry = {
+            Key: this.public_key_alias,
+            PublicKeyJwk: this.publicKeyJwk,
+            PrivateKeyJwk: this.privateKeyJwk,
+            DhKey: dhKey
+        };
+
+        this.keys.push(keyEntry);
+        this.keys_hash[this.public_key_alias] = keyEntry;
 
         console.clear();
-        Log("Handshake is done");
+        Log("Handshake is done - RSA key pair generated");
 
-        //
-        // Securely bradcast all keys with all peers
-        // Private Key Exchange! HOW!!
-        // For each private key, Encrypt the entire key store with the private key itself
-        // Each peer receiving thse must have at least one private key already known
-        // (identified by the public key alias which is also incuded in plaintext)
-        // to be able to decrypt them in order to receive all secrets.
-        // How cool is that? (:
-        //
+        this.uploadPublicKey(this.public_key_alias, this.publicKeyJwk);
+
         if (!this.initiator) {
             var encKeys = [];
-            var keysJson = JSON.stringify(this.keys);
-            for (var i in this.keys) {
-                var k = this.keys[i];
-                encKeys.push({
-                    // Pubilc Key Alias (unencrypted)
+            var keysJson = JSON.stringify(this.keys.map(function(k) {
+                return {
                     Key: k.Key,
-                    // Private Key (Encrypted)
-                    EncryptedSecrets: EndToEndEncryption.encrypt(keysJson, k.Secret)
-                });
+                    PublicKeyJwk: k.PublicKeyJwk,
+                    PrivateKeyJwk: k.PrivateKeyJwk
+                };
+            }));
+
+            for (var i = 0; i < this.keys.length; i++) {
+                var k = this.keys[i];
+                if (k.DhKey) {
+                    encKeys.push({
+                        Key: k.Key,
+                        EncryptedSecrets: await this.encryptWithDhKey(keysJson, k.DhKey)
+                    });
+                }
             }
 
             this.callAllPeers("broadcastKeys", encKeys);
@@ -263,76 +387,234 @@ var EndToEndEncryption = {
         app_busy(false);
     },
 
-    generateOwnPrivateKey: function (then) {
+    //
+    // Public key management
+    //
+
+    publicKeyId: null,
+
+    uploadPublicKey: function (alias, publicKeyJwk) {
+        var sessionId = $("#SessionId").val();
+        var sessionVerification = $("#SessionVerification").val();
+        if (!sessionId) return;
+
+        var self = this;
+        fetch('/app/key', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                sessionId: sessionId,
+                sessionVerification: sessionVerification,
+                alias: alias,
+                publicKey: JSON.stringify(publicKeyJwk)
+            })
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.id) {
+                self.publicKeyId = data.id;
+                $(".PublicKeyUrl").text(location.protocol + "//" + location.host + "/k/" + data.id);
+            }
+        })
+        .catch(function(e) {
+            console.error('Failed to upload public key:', e);
+        });
+    },
+
+    generateOwnPrivateKey: async function (then) {
         this.public_key_alias = PrimeHelper.randomNumberOfLength(32);
-        this.private_key = PrimeHelper.randomNumberOfLength(1026);
+
+        var keyPair = await this.generateRsaKeyPair();
+        this.publicKey = keyPair.publicKey;
+        this.privateKey = keyPair.privateKey;
+        this.publicKeyJwk = await this.exportKeyToJwk(keyPair.publicKey);
+        this.privateKeyJwk = await this.exportKeyToJwk(keyPair.privateKey);
 
         $("#EncryptionPublicKeyAlias").val(this.public_key_alias);
 
-        this.keys.push({ Key: this.public_key_alias, Secret: this.private_key });
-        this.keys_hash[this.public_key_alias] = this.private_key;
+        var keyEntry = {
+            Key: this.public_key_alias,
+            PublicKeyJwk: this.publicKeyJwk,
+            PrivateKeyJwk: this.privateKeyJwk
+        };
+
+        this.keys.push(keyEntry);
+        this.keys_hash[this.public_key_alias] = keyEntry;
+
+        this.uploadPublicKey(this.public_key_alias, this.publicKeyJwk);
 
         this.printKeyStoreStats();
-
         then(this.public_key_alias);
     },
 
-    receiveKeys: function (dataObj) {
-        for (var i in dataObj) {
+    //
+    // Key store management
+    //
+
+    receiveKeys: async function (dataObj) {
+        for (var i = 0; i < dataObj.length; i++) {
             var nk = dataObj[i];
 
-            for (var j in this.keys) {
+            for (var j = 0; j < this.keys.length; j++) {
                 var ik = this.keys[j];
 
-                if (ik.Key == nk.Key) {
-                    // I have the private key
+                if (ik.Key == nk.Key && ik.DhKey) {
                     console.clear();
                     Log("Decrypting incoming private keys using: \r\n\t\t" + ik.Key);
-
-                    this.updateKeyStore(ik.Secret, nk.EncryptedSecrets);
+                    await this.updateKeyStore(ik.DhKey, nk.EncryptedSecrets);
                     return;
                 }
             }
         }
     },
 
-    updateKeyStore: function (secret, data) {
-        var incomingKeyStore = JSON.parse(this.decrypt(data, secret));
+    updateKeyStore: async function (dhKey, encryptedData) {
+        var decryptedJson = await this.decryptWithDhKey(encryptedData, dhKey);
+        var incomingKeyStore = JSON.parse(decryptedJson);
 
-        this.keys = incomingKeyStore;
-        this.keys_hash = {};
         for (var i = 0; i < incomingKeyStore.length; i++) {
-            var c = incomingKeyStore[i];
-            this.keys_hash[c.Key] = c.Secret;
+            var k = incomingKeyStore[i];
+
+            var existing = this.keys_hash[k.Key];
+            if (existing) {
+                // Replace with the incoming key pair so all peers share the same keys
+                existing.PublicKeyJwk = k.PublicKeyJwk;
+                existing.PrivateKeyJwk = k.PrivateKeyJwk;
+                existing.PublicKey = null;
+                existing.PrivateKey = null;
+
+                if (k.Key == this.public_key_alias) {
+                    this.publicKeyJwk = k.PublicKeyJwk;
+                    this.privateKeyJwk = k.PrivateKeyJwk;
+                    this.publicKey = await this.importPublicKeyFromJwk(k.PublicKeyJwk);
+                    this.privateKey = await this.importPrivateKeyFromJwk(k.PrivateKeyJwk);
+                    this.uploadPublicKey(this.public_key_alias, k.PublicKeyJwk);
+                }
+                continue;
+            }
+
+            var keyEntry = {
+                Key: k.Key,
+                PublicKeyJwk: k.PublicKeyJwk,
+                PrivateKeyJwk: k.PrivateKeyJwk
+            };
+
+            if (k.PublicKeyJwk) {
+                keyEntry.PublicKey = await this.importPublicKeyFromJwk(k.PublicKeyJwk);
+            }
+            if (k.PrivateKeyJwk) {
+                keyEntry.PrivateKey = await this.importPrivateKeyFromJwk(k.PrivateKeyJwk);
+            }
+
+            this.keys.push(keyEntry);
+            this.keys_hash[k.Key] = keyEntry;
         }
+
         this.printKeyStoreStats();
     },
 
     printKeyStoreStats: function () {
         Log("Total Keys: " + this.keys.length);
-        Log("Known Keys: \r\n\t\t" + this.keys.map(function (t) { return t.Key + (t.Key == EndToEndEncryption.public_key_alias ? " (In Use)" : ""); }).join("\r\n\t\t"));
-
+        Log("Known Keys: \r\n\t\t" + this.keys.map(function (t) {
+            return t.Key + (t.Key == EndToEndEncryption.public_key_alias ? " (In Use)" : "");
+        }).join("\r\n\t\t"));
         this.showStatus();
     },
 
-    encrypt: function (data, secret) {
-        return CryptoJS.AES.encrypt(data, secret).toString();
+    //
+    // Public encryption API
+    //
+
+    encryptWithPublicKey: async function (data) {
+        if (!this.publicKey) {
+            throw new Error("No public key available");
+        }
+        var encrypted = await this.hybridEncrypt(data, this.publicKey);
+        return btoa(JSON.stringify(encrypted));
     },
 
-    encryptWithPrivateKey: function (data) {
-        return this.encrypt(data, this.private_key);
+    encryptWithKeyAlias: async function (data, alias) {
+        var keyEntry = this.keys_hash[alias];
+        if (!keyEntry) {
+            throw new Error("Key not found: " + alias);
+        }
+
+        var publicKey = keyEntry.PublicKey;
+        if (!publicKey && keyEntry.PublicKeyJwk) {
+            publicKey = await this.importPublicKeyFromJwk(keyEntry.PublicKeyJwk);
+            keyEntry.PublicKey = publicKey;
+        }
+
+        if (!publicKey) {
+            throw new Error("No public key for alias: " + alias);
+        }
+
+        var encrypted = await this.hybridEncrypt(data, publicKey);
+        return btoa(JSON.stringify(encrypted));
     },
 
-    decrypt: function (data, secret) {
-        return CryptoJS.AES.decrypt(data, secret).toString(CryptoJS.enc.Utf8);
+    decrypt: async function (encryptedBase64, alias) {
+        var keyEntry = this.keys_hash[alias];
+        if (!keyEntry) {
+            console.warn('No key found for alias:', alias);
+            return null;
+        }
+
+        var privateKey = keyEntry.PrivateKey;
+        if (!privateKey && keyEntry.PrivateKeyJwk) {
+            privateKey = await this.importPrivateKeyFromJwk(keyEntry.PrivateKeyJwk);
+            keyEntry.PrivateKey = privateKey;
+        }
+
+        if (!privateKey) {
+            console.warn('No private key for alias:', alias);
+            return null;
+        }
+
+        try {
+            var encryptedObj = JSON.parse(atob(encryptedBase64));
+            var decrypted = await this.hybridDecrypt(encryptedObj, privateKey);
+            return new TextDecoder().decode(decrypted);
+        } catch (error) {
+            console.error('Decryption failed:', error);
+            return null;
+        }
+    },
+
+    decryptFile: async function (encryptedBase64, alias) {
+        var keyEntry = this.keys_hash[alias];
+        if (!keyEntry) {
+            console.warn('No key found for alias:', alias);
+            return null;
+        }
+
+        var privateKey = keyEntry.PrivateKey;
+        if (!privateKey && keyEntry.PrivateKeyJwk) {
+            privateKey = await this.importPrivateKeyFromJwk(keyEntry.PrivateKeyJwk);
+            keyEntry.PrivateKey = privateKey;
+        }
+
+        if (!privateKey) {
+            console.warn('No private key for alias:', alias);
+            return null;
+        }
+
+        try {
+            var encryptedObj = JSON.parse(atob(encryptedBase64));
+            return await this.hybridDecrypt(encryptedObj, privateKey);
+        } catch (error) {
+            console.error('File decryption failed:', error);
+            return null;
+        }
     }
 }
 
 var PrimeHelper = {
 
     randomNumberSingle: function () {
-        return parseInt(Math.random() * 9);
-
+        var arr = new Uint8Array(1);
+        crypto.getRandomValues(arr);
+        return arr[0] % 10;
     },
 
     randomNumberOfLength: function (digit) {
@@ -341,35 +623,5 @@ var PrimeHelper = {
             s.push(this.randomNumberSingle());
         }
         return s.join("");
-    },
-
-    startFrom: new BigNumber(2),
-
-    isPrime: function (num) {
-        if (typeof (num) != "object")
-            num = new BigNumber(num);
-
-        for (var i = this.startFrom; i.lessThan(num.squareRoot()); i = i.add(1)) {
-            if (num.div(i).isInteger())
-                return false;
-        }
-        return num.greaterThan(1);
-    },
-
-    primeOfDigit: function (digit) {
-        return this.nextRandomPrimeAfter(this.randomNumberOfLength(digit));
-    },
-
-    nextRandomPrimeAfter: function (startFrom) {
-        if (typeof (startFrom) != "object")
-            startFrom = new BigNumber(startFrom);
-
-        var start = startFrom.add(1);
-
-        while (!this.isPrime(start)) {
-            start = start.add(1);
-        }
-
-        return start.toString(10);
     }
 }

@@ -19,11 +19,6 @@
                 <a id="connect" asp-action="Connect" asp-controller="App" style="opacity: 0.7"
                     class="btn btn-lg btn-primary btn-block">Connect</a>
                 <a asp-action="Password" style="opacity: 0.7" class="btn btn-block">Quickly share a password</a>
-
-                <div id="drop-zone" class="text-center" onclick="document.getElementById('file-input').click()">
-                    Drop a file here or tap to select
-                    <input type="file" id="file-input" style="display: none;" onchange="handleFileSelect(this)">
-                </div>
             </div>
             <noscript>
                 <p class="small">
@@ -76,7 +71,7 @@
                     <ul>
                         <li>Secure Encrypted connection.</li>
                         <li>Message is End to end encrypted. Perfect for sending passwords across devices.</li>
-                        <li>Files are not end to end encrypted.</li>
+                        <li>Files are end to end encrypted.</li>
                         <li>Everything is erased as soon as you close the window.</li>
                     </ul>
                 </div>
@@ -124,7 +119,6 @@
             $("#new-session").css("display", "block");
 
             setTimeout(askForFeedback, 500);
-            initQuickUpload();
 
             function askForFeedback() {
                 if (location.search.indexOf("?ref=app") == 0) {
@@ -138,67 +132,6 @@
                         });;
                 }
             }
-
-            function initQuickUpload() {
-                const dropZone = document.getElementById('drop-zone');
-
-                dropZone.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    dropZone.style.borderColor = '#007bff';
-                });
-
-                dropZone.addEventListener('dragleave', (e) => {
-                    e.preventDefault();
-                    dropZone.style.borderColor = '#ccc';
-                });
-
-                dropZone.addEventListener('drop', async (e) => {
-                    e.preventDefault();
-                    dropZone.style.borderColor = '#ccc';
-
-                    const file = e.dataTransfer.files[0];
-                    await uploadFile(file);
-                });
-            }
         })(window.jQuery);
-
-        async function handleFileSelect(input) {
-            const file = input.files[0];
-            if (file) {
-                await uploadFile(file);
-            }
-        }
-
-        async function uploadFile(file) {
-            const maxSize = 80 * 1024 * 1024; // 80MB in bytes
-            const dropZone = document.getElementById('drop-zone');
-
-            if (file.size > maxSize) {
-                alert('File is too large. Maximum size allowed is 80MB.');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                dropZone.innerHTML = 'Uploading...';
-                dropZone.style.borderColor = '#ccc';
-                const response = await fetch('/app/post/quick-upload', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    throw new Error('Upload failed');
-                }
-
-                const json = await response.json();
-                const path = `/app#${json.session_id}${json.session_idv}`;
-                location.href = path;
-            } catch (error) {
-                console.error('Upload error:', error);
-            }
-        }
     </script>
 }

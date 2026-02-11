@@ -169,10 +169,15 @@ namespace JustSending.Controllers
                 });
             }
 
+            // Read additional form fields for encrypted uploads
+            var encryptionAlias = Request.Form["EncryptionPublicKeyAlias"].FirstOrDefault();
+            var composerText = Request.Form["ComposerText"].FirstOrDefault();
+
             var model = new SessionModel
             {
                 SessionId = sessionId,
-                ComposerText = file.FileName
+                ComposerText = string.IsNullOrEmpty(composerText) ? file.FileName : composerText,
+                EncryptionPublicKeyAlias = encryptionAlias
             };
             var tmpFile = Path.GetTempFileName();
             await using (var f = System.IO.File.OpenWrite(tmpFile))
@@ -224,17 +229,26 @@ namespace JustSending.Controllers
             var uploadDir = Helper.GetUploadFolder(model.SessionId, _env.WebRootPath);
             if (!Directory.Exists(uploadDir)) Directory.CreateDirectory(uploadDir);
 
-            // Use original file name
-            var fileName = message.Text;
-            if (IOFile.Exists(Path.Combine(uploadDir, fileName)))
+            string diskFileName;
+            if (!string.IsNullOrEmpty(model.EncryptionPublicKeyAlias))
             {
-                // if exist then append digits from the session id
-                fileName = Path.GetFileNameWithoutExtension(message.Text) + "_" + message.Id.Substring(0, 6) + Path.GetExtension(message.Text);
+                // For encrypted files, use the message ID as disk filename to avoid
+                // issues with base64 characters (like /) in the encrypted filename
+                diskFileName = message.Id + ".enc";
+            }
+            else
+            {
+                // For unencrypted files, use the original filename
+                diskFileName = message.Text;
+                if (IOFile.Exists(Path.Combine(uploadDir, diskFileName)))
+                {
+                    diskFileName = Path.GetFileNameWithoutExtension(message.Text) + "_" + message.Id.Substring(0, 6) + Path.GetExtension(message.Text);
+                }
             }
 
-            var destUploadPath = Path.Combine(uploadDir, fileName);
+            var destUploadPath = Path.Combine(uploadDir, diskFileName);
 
-            message.Text = fileName;
+            message.FileName = diskFileName;
             message.HasFile = true;
             message.FileSizeBytes = fileInfo.Length;
 
@@ -376,15 +390,156 @@ namespace JustSending.Controllers
             }
 
             var uploadDir = Helper.GetUploadFolder(sessionId, _env.WebRootPath);
-            var path = Path.Combine(uploadDir, msg.Text);
+            // Use FileName if available, fall back to Text for backwards compatibility
+            var diskFileName = msg.FileName ?? msg.Text;
+            var path = Path.Combine(uploadDir, diskFileName);
             if (!IOFile.Exists(path))
                 return NotFound();
 
-            return PhysicalFile(path, "application/" + Path.GetExtension(path).Trim('.'), msg.Text);
+            return PhysicalFile(path, "application/octet-stream", diskFileName);
         }
 
         [Route("messages"), HttpPost]
         public Task<IActionResult> GetMessages(string id, string id2, int from) => GetMessagesViewInternal(id, id2, from);
+
+        public class SaveKeyRequest
+        {
+            public string SessionId { get; set; }
+            public string SessionVerification { get; set; }
+            public string Alias { get; set; }
+            public string PublicKey { get; set; }
+        }
+
+        [Route("key")]
+        [HttpPost]
+        public async Task<IActionResult> SavePublicKey([FromBody] SaveKeyRequest request)
+        {
+            if (string.IsNullOrEmpty(request?.SessionId) ||
+                string.IsNullOrEmpty(request?.SessionVerification) ||
+                string.IsNullOrEmpty(request?.Alias) ||
+                string.IsNullOrEmpty(request?.PublicKey))
+            {
+                return BadRequest();
+            }
+
+            // Validate the public key is a well-formed RSA JWK
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(request.PublicKey);
+                var root = doc.RootElement;
+                if (root.GetProperty("kty").GetString() != "RSA" ||
+                    !root.TryGetProperty("n", out _) ||
+                    !root.TryGetProperty("e", out _))
+                {
+                    return BadRequest(new { error = "Invalid RSA public key" });
+                }
+            }
+            catch
+            {
+                return BadRequest(new { error = "Invalid public key format" });
+            }
+
+            var session = await _db.GetSessionById(request.SessionId);
+            if (session == null || session.IdVerification != request.SessionVerification)
+            {
+                return NotFound();
+            }
+
+            var publicKeyId = await _db.SavePublicKey(request.SessionId, request.Alias, request.PublicKey);
+            return Ok(new { id = publicKeyId });
+        }
+
+        [Route("/k/{id}")]
+        [HttpGet]
+        public async Task<IActionResult> GetPublicKey(string id)
+        {
+            var publicKey = await _db.GetPublicKeyById(id);
+            if (publicKey == null)
+            {
+                return NotFound(new { error = "Public key not found" });
+            }
+
+            return Content(publicKey.PublicKeyJson, "application/json");
+        }
+
+        [Route("/k/{id}/upload")]
+        [HttpGet]
+        public async Task<IActionResult> GetUploadScript(string id)
+        {
+            var publicKey = await _db.GetPublicKeyById(id);
+            if (publicKey == null)
+            {
+                return NotFound("# Error: Public key not found");
+            }
+
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
+            // Base64-encode all user-supplied values to prevent code injection
+            var jwkB64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(publicKey.PublicKeyJson));
+            var sessionIdB64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(publicKey.SessionId));
+            var aliasB64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(publicKey.Alias));
+
+            var script = $@"#!/usr/bin/env python3
+# Usage: curl -s {baseUrl}/k/{id}/upload | python3 - file.txt
+import sys, json, base64, os
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.backends import default_backend
+import urllib.request
+
+if len(sys.argv) < 2:
+    print('Usage: curl -s {baseUrl}/k/{id}/upload | python3 - <file>', file=sys.stderr)
+    sys.exit(1)
+
+jwk = json.loads(base64.b64decode('{jwkB64}').decode())
+session_id = base64.b64decode('{sessionIdB64}').decode()
+alias = base64.b64decode('{aliasB64}').decode()
+
+n = int.from_bytes(base64.urlsafe_b64decode(jwk['n'] + '=='), 'big')
+e = int.from_bytes(base64.urlsafe_b64decode(jwk['e'] + '=='), 'big')
+pub = rsa.RSAPublicNumbers(e, n).public_key(default_backend())
+
+filepath = sys.argv[1]
+filename = os.path.basename(filepath)
+with open(filepath, 'rb') as f:
+    data = f.read()
+
+aes_key = os.urandom(32)
+iv = os.urandom(12)
+encrypted_data = AESGCM(aes_key).encrypt(iv, data, None)
+encrypted_key = pub.encrypt(aes_key, padding.OAEP(padding.MGF1(hashes.SHA256()), hashes.SHA256(), None))
+
+payload = base64.b64encode(json.dumps({{
+    'encryptedKey': base64.b64encode(encrypted_key).decode(),
+    'iv': base64.b64encode(iv).decode(),
+    'encryptedData': base64.b64encode(encrypted_data).decode()
+}}).encode()).decode()
+
+fn_iv = os.urandom(12)
+fn_encrypted = AESGCM(aes_key).encrypt(fn_iv, filename.encode(), None)
+fn_key_enc = pub.encrypt(aes_key, padding.OAEP(padding.MGF1(hashes.SHA256()), hashes.SHA256(), None))
+fn_payload = base64.b64encode(json.dumps({{
+    'encryptedKey': base64.b64encode(fn_key_enc).decode(),
+    'iv': base64.b64encode(fn_iv).decode(),
+    'encryptedData': base64.b64encode(fn_encrypted).decode()
+}}).encode()).decode()
+
+boundary = '----PythonFormBoundary'
+body = (
+    f'--{{boundary}}\r\nContent-Disposition: form-data; name=""EncryptionPublicKeyAlias""\r\n\r\n{{alias}}\r\n'
+    f'--{{boundary}}\r\nContent-Disposition: form-data; name=""ComposerText""\r\n\r\n{{fn_payload}}\r\n'
+    f'--{{boundary}}\r\nContent-Disposition: form-data; name=""file""; filename=""{{filename}}.enc""\r\nContent-Type: application/octet-stream\r\n\r\n'
+).encode() + payload.encode() + f'\r\n--{{boundary}}--\r\n'.encode()
+
+req = urllib.request.Request(f'{baseUrl}/f/{{session_id}}', body, {{
+    'Content-Type': f'multipart/form-data; boundary={{boundary}}'
+}})
+urllib.request.urlopen(req)
+print(f'Uploaded: {{filename}}')
+";
+            return Content(script, "text/plain");
+        }
 
         [Route("connect")]
         public IActionResult Connect()

@@ -80,7 +80,7 @@
                 Click <strong>Connect another Device</strong> on the panel at the bottom of the screen to generate an unique PIN to let other device connect.
             </div>
             <div class="connect-instruction-panel">
-                
+
                 <div class="row">
                     <div class="col-sm-6">
                         <ul>
@@ -92,24 +92,29 @@
                             <li>Close this window from all devices to erase everything shared here.</li>
                         </ul>
                     </div>
-                    
+
                     <div class="col-sm-6">
                         <div class="qr-wrapper">
                             <div id="qr-code"></div>
                         </div>
                     </div>
                 </div>
-                
+
             </div>
             <hr />
             A PIN can be used to connect exactly one device. Generate multiple PIN to connect more devices.
         </div>
-        
+
         <div class="alert alert-success alert-dismissible" role="alert">
             <i class="fa fa-terminal"></i> Send files from command line
             <p style="font-family: monospace;">
                 http --form <span class="FilePostUrl">(loading...)</span> file@@/path/to/file.txt<br/>
                 curl <span class="FilePostUrl">(loading...)</span> -F 'file=@@/path/to/file.txt'
+            </p>
+            <hr style="border-color: rgba(0,0,0,0.1); margin: 10px 0;" />
+            <i class="fa fa-lock"></i> Upload encrypted file (requires python3 + cryptography)
+            <p style="font-family: monospace;">
+                curl -s <span class="PublicKeyUrl">(available after first message)</span>/upload | python3 - <em>file.txt</em>
             </p>
         </div>
     </div>
@@ -139,7 +144,7 @@
     </div>
 </div>
 <noscript>
-    
+
     <div class="alert alert-danger">
         <p>
             Please use the lite version as your device isn't compatible with the rich experiences.
@@ -150,22 +155,16 @@
 </noscript>
 @section Scripts
 {
-    @*
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.14.0/jquery.validate.min.js" integrity="sha256-Lj47JmDL+qxf6/elCzHQSUFZmJYmqEECssN5LP/ifRM=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/3.2.6/jquery.validate.unobtrusive.min.js" integrity="sha256-g1QKGxqsp+x5JkuN/JjHl96je2wztgS5Wo4h4c7gm9M=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.2.2/jquery.form.min.js" integrity="sha256-2Pjr1OlpZMY6qesJM68t2v39t+lMLvxwpa8QlRjJroA=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jQuery-linkify/2.1.9/linkify.min.js" integrity="sha256-b8aRDYEOoOLGpyaXMI3N2nWUbjSeQ2QxzKjmPnCa4yA=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jQuery-linkify/2.1.9/linkify-jquery.min.js" integrity="sha256-F70q7AGz3CYOo2UIkomPSg5xAnO52dJ646kytZ7lSEQ=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/autosize.js/4.0.0/autosize.min.js" integrity="sha256-F7Bbc+3hGv34D+obsHHsSm3ZKRBudWR7e2H0fS0beok=" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bignumber.js/4.0.4/bignumber.min.js" integrity="sha256-MomdVZFkolQP//Awk1YjBtrVF1Dehp9OlWj5au4owVo=" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js" integrity="sha512-nOQuvD9nKirvxDdvQ9OMqe2dgapbPB7vYAMrzJihw5m+aNcf0dX53m6YxM4LgA9u8e9eg9QX+/+mPu8kCNpV2A==" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.0-preview.3.21201.13/signalr.min.js" integrity="sha512-B2I0CEJulYRRsHNOFdRMou2+JKmHlduFiyn0YpwwYJa69KEKtBtfQGSGvzaNedIqd42DsT0kzOOA94JR7AqFAg==" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha256-xUHvBjJ4hahBW8qN9gceFBibSFUzbe9PNttUvehITzY=" crossorigin="anonymous"></script>
     <script src="~/js/JustEncrypt.js" asp-append-version="true"></script>
     <script src="~/js/JustSendingApp.js" asp-append-version="true"></script>
-    *@
-
-    <script type="text/javascript" src="~/js/combined-session.min.js" asp-append-version="true" crossorigin="anonymous"></script>
 
     <script type="text/javascript">
         (function() {
@@ -181,7 +180,7 @@
                 var id2 = JustSendingApp.getOrGenId2();
 
                 var data = new FormData();
-                
+
                 data.append("id", id);
                 data.append("id2", id2);
 

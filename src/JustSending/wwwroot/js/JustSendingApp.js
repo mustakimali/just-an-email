@@ -22,45 +22,45 @@
             JustSendingApp.goHome();
             return false;
         });
-        window.onbeforeunload = function(event) {
+        window.onbeforeunload = function (event) {
             JustSendingApp.goHome();
         };
     },
 
     initQrCode: function () {
         var qrEl = $("#qr-code");
-        if(qrEl.hasClass("done")) {
+        if (qrEl.hasClass("done")) {
             return;
         }
         new QRCode("qr-code", {
             text: window.location.href,
             width: 256,
             height: 256,
-            colorDark : "#000000",
-            colorLight : "#d9edf7",
-            correctLevel : QRCode.CorrectLevel.H
+            colorDark: "#000000",
+            colorLight: "#d9edf7",
+            correctLevel: QRCode.CorrectLevel.H
         });
         qrEl.addClass("done");
     },
-    
-    getOrGenId: function() {
+
+    getOrGenId: function () {
         var $id = $("#SessionId");
-        if ($id.val() === "") 
+        if ($id.val() === "")
             return this.generateGuid();
         else
-            return $id.val(); 
+            return $id.val();
     },
 
-    getOrGenId2: function() {
+    getOrGenId2: function () {
         var $id = $("#SessionVerification");
         if ($id.val() === "")
             return this.generateGuid();
         else
             return $id.val();
     },
-    
+
     generateGuid: function () {
-        function S4() { return Math.floor((1+Math.random())*0x10000).toString(16).substring(1); }
+        function S4() { return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1); }
         var guid = S4() + S4() + S4() + S4() + S4() + S4() + S4() + S4();
         return guid.toLowerCase();
     },
@@ -77,8 +77,9 @@
 
             id = hash.substr(0, 32);
             id2 = hash.substr(32, 32);
-            
-            if (hash.substr(64, 1) === "/") {
+            const next = hash.substr(64, 1);
+
+            if (next === "/") {
                 this.initialSecretToSend = atob(hash.substr(65));
                 history.replaceState(null, '', '/app#' + id + id2);
                 window.location.hash = id + id2;
@@ -195,10 +196,9 @@
                 messageId: id,
                 sessionId: sid
             };
-            ajax_service.sendPostRequest("/app/message-raw", data, function (data) {
-                // Decrypt
+            ajax_service.sendPostRequest("/app/message-raw", data, async function (data) {
                 var pka = $this.parents(".msg").data("key");
-                var decrypted = JustSendingApp.decryptMessageInternal(pka, data.content);
+                var decrypted = await JustSendingApp.decryptMessageInternal(pka, data.content);
                 if (decrypted != null)
                     data.content = decrypted;
 
@@ -269,7 +269,7 @@
         });
 
         $clearBtn.on("click",
-            function() {
+            function () {
                 $file.val("");
                 $clearBtn.hide();
                 $text.removeAttr("readonly");
@@ -288,149 +288,168 @@
         if (!$("#form").valid()) {
             return false;
         }
-        
+
         var hasFile = false;
 
-        var replaceFormValue = function (name, factory) {
+        var replaceFormValue = function (name, value) {
             for (var i = 0; i < formData.length; i++) {
                 if (formData[i].name == name) {
-                    var newValue = factory(formData[i].value);
-                    if (newValue != null) {
-                        formData[i].value = newValue;
-                        return true;
-                    }
+                    formData[i].value = value;
+                    return true;
                 }
             }
-
             return false;
         }
 
         if (!EndToEndEncryption.isEstablished()) {
-            // no client has been connected yet,
-            // generate a secret key
-            // Which then be transmitted to peer
-            //
             EndToEndEncryption.generateOwnPrivateKey(function (pka) {
-                // the form was serialized before generating the key,
-                // so i need to make sure this public key is included in this post
-                //
-                replaceFormValue("EncryptionPublicKeyAlias", function (v) { return pka; });
-
+                replaceFormValue("EncryptionPublicKeyAlias", pka);
                 $("#form").submit();
             });
-
             return false;
         }
 
         if ($("#file")[0].files.length > 0) {
-
-            JustSendingApp.finishedStreamingFile = false;
-            formOptions.url += "/files-stream";
-            hasFile = true;
-            
-            /*var file = $("#file")[0].files[0];
-
-            JustSendingApp.processFile(file, function () {
-                // Unselect file
-                //
-                $("#file").val("");
-                // Do normal post
-                //
-                JustSendingApp.finishedStreamingFile = true;
-                $("#form").submit();
-            });
-
-            return false;*/
-
+            if (JustSendingApp.fileProcessed) {
+                JustSendingApp.fileProcessed = false;
+                formOptions.url += "/files-stream";
+                hasFile = true;
+            } else {
+                var file = $("#file")[0].files[0];
+                JustSendingApp.processFileForUpload(file, function (encryptedFile, encryptedFileName) {
+                    var fileInput = $("#file")[0];
+                    var dt = new DataTransfer();
+                    dt.items.add(encryptedFile);
+                    fileInput.files = dt.files;
+                    $("#ComposerText").val(encryptedFileName);
+                    JustSendingApp.fileProcessed = true;
+                    $("#form").submit();
+                });
+                return false;
+            }
         } else if (JustSendingApp.finishedStreamingFile) {
-            
             JustSendingApp.finishedStreamingFile = false;
-            formOptions.url += "/files";
+            hasFile = true;
+        }
 
+        if (!hasFile) {
+            var text = $("#ComposerText").val();
+            EndToEndEncryption.encryptWithPublicKey(text).then(function(encrypted) {
+                $("#ComposerText").val(encrypted);
+                JustSendingApp.showStatus("Sending, please wait...");
+                JustSendingApp.submitFormDirectly();
+            }).catch(function(err) {
+                console.error('Encryption failed:', err);
+                JustSendingApp.showStatus("Encryption failed: " + err.message);
+            });
+            return false;
         }
 
         JustSendingApp.showStatus("Sending, please wait...");
-
-        if(!hasFile)
-            replaceFormValue("ComposerText", function (v) { return EndToEndEncryption.encryptWithPrivateKey(v); });
-
         return true;
     },
 
-    processFile: function (file, done) {
-        var fileSize = file.size;
-        var bufferSize = 64 * 1024;
-        var offset = 0;
-        var sessionId = $("#SessionId").val();
-        var self = this;
-        var pageOneSent = false;
+    submitFormDirectly: function() {
+        var $form = $("#form");
+        var formData = new FormData($form[0]);
 
-        var load = function (evt) {
-
-            if (evt.target.error == null) {
-                offset += evt.target.result.length;
-
-                var encData = EndToEndEncryption.encryptWithPrivateKey(evt.target.result);
-                if (pageOneSent) {
-                    var j = JSON.parse(encData);
-                    encData = JSON.stringify({
-                        iv: j.iv,
-                        ct: j.ct
-                    });
-                    j = null;
-                }
-
-                self
-                    .hub
-                    .server
-                    .streamFile(sessionId, encData)
-                    .then(function () {
-                        pageOneSent = true;
-
-                        // read the next block
-                        //
-                        readBuffer(offset, bufferSize, file);
-                    });
-                
-                self.showStatus("Encrypting...", parseInt(offset * 100 / fileSize));
-
-            } else {
-                Log("Read error: " + evt.target.error);
+        $.ajax({
+            url: $form.attr('action'),
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function() {
+                JustSendingApp.onSendComplete();
+                JustSendingApp.showStatus();
                 app_busy(false);
-                return;
+            },
+            error: function(xhr, status, error) {
+                console.error('Submit failed:', error);
+                JustSendingApp.showStatus("Send failed: " + error);
             }
-            if (offset >= fileSize) {
-                Log("Done streaming file...");
-                
-                r.onload = null;
-                app_busy(false);
-                done(file.name)
-                return;
-            }
-
-        }
-    
-        var r = new FileReader();
-        r.onload = load;
-
-        var readBuffer = function (_offset, length, _file) {
-            var blob = _file.slice(_offset, length + _offset);
-            r.readAsText(blob);
-        }
-
-        app_busy(true);
-        readBuffer(offset, bufferSize, file);
+        });
     },
 
-    decryptMessages: function () {
+    processFileForUpload: async function (file, done) {
+        var self = this;
+
+        self.showStatus("Encrypting file...");
+
+        try {
+            var arrayBuffer = await file.arrayBuffer();
+            var uint8Array = new Uint8Array(arrayBuffer);
+
+            var encryptedContent = await EndToEndEncryption.hybridEncrypt(uint8Array, EndToEndEncryption.publicKey);
+            var encryptedContentStr = btoa(JSON.stringify(encryptedContent));
+
+            var encryptedFileName = await EndToEndEncryption.encryptWithPublicKey(file.name);
+
+            var blob = new Blob([encryptedContentStr], { type: 'application/octet-stream' });
+            var encryptedFile = new File([blob], file.name + '.enc', { type: 'application/octet-stream' });
+
+            self.showStatus("File encrypted successfully");
+            done(encryptedFile, encryptedFileName);
+
+        } catch (error) {
+            console.error('Error encrypting file:', error);
+            self.showStatus("Error encrypting file: " + error.message);
+        }
+    },
+
+    downloadAndDecryptFile: async function (downloadUrl, messageId, publicKeyAlias) {
+        var self = this;
+
+        self.showStatus("Downloading and decrypting file...");
+
+        try {
+            var response = await fetch(downloadUrl);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            var encryptedFileContent = await response.text();
+
+            var encryptedObj = JSON.parse(atob(encryptedFileContent));
+            var decryptedArrayBuffer = await EndToEndEncryption.decryptFile(btoa(JSON.stringify(encryptedObj)), publicKeyAlias);
+
+            if (!decryptedArrayBuffer) {
+                throw new Error('Failed to decrypt file content');
+            }
+
+            var bytes = new Uint8Array(decryptedArrayBuffer);
+
+            var $msgEl = $(".msg[data-id='" + messageId + "']");
+            var $fileNameEl = $msgEl.find('.file-name');
+            var decryptedFileName = $fileNameEl.text().trim() || 'decrypted_file';
+
+            var blob = new Blob([bytes]);
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = decryptedFileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            self.showStatus("File decrypted and downloaded successfully!");
+            setTimeout(function() { self.showStatus(); }, 2000);
+
+        } catch (error) {
+            console.error('Error downloading/decrypting file:', error);
+            self.showStatus("Error: " + error.message);
+        }
+    },
+
+    decryptMessages: async function () {
         var $msgEls = $(".msg");
-        $.each($msgEls, function (idx, itm) {
-            var $itm = $(itm);
-            if ($itm.hasClass("decrypted")) return;
+        for (var idx = 0; idx < $msgEls.length; idx++) {
+            var $itm = $($msgEls[idx]);
+            if ($itm.hasClass("decrypted")) continue;
 
             var $data = $itm.find(".data");
-
-            if (!$data.length) return;
+            if (!$data.length) continue;
 
             var encryptedData = $data.attr("data-value");
             var pka = $itm.data("key");
@@ -439,29 +458,33 @@
             if (pka == null) {
                 decryptedData = encryptedData;
             } else {
-                decryptedData = JustSendingApp.decryptMessageInternal(pka, encryptedData);
+                decryptedData = await JustSendingApp.decryptMessageInternal(pka, encryptedData);
 
                 if (decryptedData == null) {
                     $data.html("<span class='text-danger'><i class='fa fa-lock'></i> Encrypted</span>");
-                    return;
+                    continue;
                 }
             }
 
             $data.text(decryptedData);
-
             $data.removeAttr("data-value");
             $itm.addClass("decrypted");
-
-            JustSendingApp.convertLinks();
-        });
+        }
+        JustSendingApp.convertLinks();
     },
 
-    decryptMessageInternal: function (pka, encryptedData) {
+    decryptMessageInternal: async function (pka, encryptedData) {
         var pk = EndToEndEncryption.keys_hash[pka];
         if (pk == null) {
+            console.warn('No private key found for alias:', pka);
             return null;
         }
-        return EndToEndEncryption.decrypt(encryptedData, pk);
+        try {
+            return await EndToEndEncryption.decrypt(encryptedData, pka);
+        } catch (error) {
+            console.error('Decryption failed:', error);
+            return null;
+        }
     },
 
     initWebSocket: function () {
@@ -476,7 +499,7 @@
         var conn = ws;
         this.hub = ws;
 
-        conn.on("requestReloadMessage", function() {
+        conn.on("requestReloadMessage", function () {
             JustSendingApp.loadMessages();
         });
 
@@ -485,7 +508,7 @@
             JustSendingApp.switchView(true);
         });
 
-        conn.on("hideSharePanel", function() {
+        conn.on("hideSharePanel", function () {
             JustSendingApp.switchView(false);
         });
 
@@ -527,31 +550,18 @@
         });
 
         $("#deleteBtn").on("click", function () {
-
-            swal({
-                title: "Are you sure?",
-                text: "This will destroy this sharing session and erase everything you've shared here!",
-                type: "warning",
-                showCancelButton: true,
-                confirmButtonColor: "#d9534f",
-                confirmButtonText: "Erase everything!",
-                closeOnConfirm: false
-            }, function() {
-                window.onbeforeunload = null;
-                conn.send("eraseSession");
-
-                swal("Erasing...", "You will be taken to the homepage when it's done.", "success");
-            });
-
-            return false;
+          window.onbeforeunload = null;
+          conn.send("eraseSession");
+          swal("Erasing...", "You will be taken to the homepage when it's done.", "success");
+          return false;
         });
 
         EndToEndEncryption.initKeyExchange(conn);
-        
-        var onConnected = function() {
+
+        var onConnected = function () {
             conn
                 .invoke("connect", $("#SessionId").val())
-                .then(function(socketConnectionId) {
+                .then(function (socketConnectionId) {
 
                     $("#SocketConnectionId").val(socketConnectionId);
 
@@ -559,7 +569,7 @@
                     $(".FilePostUrl").text(JustSendingApp.getPostFromCliPath());
 
                     app_busy(false);
-                    
+
                     if (JustSendingApp.initialSecretToSend !== "") {
                         $("#ComposerText").val(JustSendingApp.initialSecretToSend);
                         $("#form").submit();
@@ -577,12 +587,12 @@
         conn
             .start()
             .then(onConnected)
-            .catch(function(err) {
+            .catch(function (err) {
                 Log("Error: " + err.toString());
 
             });
 
-        conn.connection.onclose = function(msg) {
+        conn.connection.onclose = function (msg) {
             Log("Closing");
         };
 
@@ -591,15 +601,14 @@
         };
     },
 
-    goHome: function() {
+    goHome: function () {
         var dest = "/?ref=app";
         try {
             history.replaceState({}, "", dest);
         } catch (e) { }
         window.location.replace(dest);
     },
-    
-    // 
+
     getPostFromCliPath: function () {
         var sessionId = $("#SessionId").val();
         return location.protocol + "//" + location.host + "/f/" + sessionId;
@@ -629,7 +638,7 @@
 
         this.loadingMessage = true;
         clearTimeout(this.loadMessageTimer);
-        
+
         var id = $("#SessionId").val();
         var id2 = $("#SessionVerification").val();
         var from = parseInt($(".msg-c:first").data("seq"));
@@ -645,9 +654,9 @@
 
                 $($.parseHTML(response))
                     .prependTo($("#conversation-list"));
-                    
+
                 JustSendingApp.decryptMessages();
-                
+
                 JustSendingApp.processTime();
                 JustSendingApp.initViewSource();
 
@@ -697,7 +706,7 @@
                     defaultProtocol: "https",
                     className: "linkified"
                 });
-                
+
                 $(itm).addClass("embedded");
             });
     }

@@ -184,6 +184,7 @@ namespace JustSending.Data
                 msg.SocketConnectionId,
                 msg.EncryptionPublicKeyAlias,
                 msg.Text,
+                msg.FileName,
                 msg.DateSent,
                 msg.HasFile,
                 msg.FileSizeBytes,
@@ -194,9 +195,9 @@ namespace JustSending.Data
             await _connection.ExecuteAsync(
                 @"INSERT INTO Messages
                     (Id, SessionId, SessionIdVerification,
-                        SocketConnectionId, EncryptionPublicKeyAlias, Text, DateSent, HasFile, FileSizeBytes, IsNotification, DateSentEpoch)
+                        SocketConnectionId, EncryptionPublicKeyAlias, Text, FileName, DateSent, HasFile, FileSizeBytes, IsNotification, DateSentEpoch)
                 VALUES ( @Id, @SessionId, @SessionIdVerification,
-                        @SocketConnectionId, @EncryptionPublicKeyAlias, @Text, @DateSent, @HasFile, @FileSizeBytes, @IsNotification, @DateSentEpoch)",
+                        @SocketConnectionId, @EncryptionPublicKeyAlias, @Text, @FileName, @DateSent, @HasFile, @FileSizeBytes, @IsNotification, @DateSentEpoch)",
                 parameters);
         }
 
@@ -286,6 +287,46 @@ namespace JustSending.Data
             await KvSet(shareToken.Id.ToString(), shareToken);
             await KvSet(sessionId, new SessionShareToken(shareToken.Id));
             return shareToken.Id;
+        }
+
+        public async Task<string> SavePublicKey(string sessionId, string alias, string publicKeyJson)
+        {
+            using var span = _tracer.StartActiveSpan("save-public-key");
+            span.SetAttribute("session-id", sessionId);
+            span.SetAttribute("alias", alias);
+
+            var id = NewGuid();
+            await _connection.ExecuteAsync(
+                "INSERT INTO PublicKeys (Id, SessionId, Alias, PublicKeyJson, DateCreated) VALUES (@Id, @SessionId, @Alias, @PublicKeyJson, @DateCreated)",
+                new
+                {
+                    Id = id,
+                    SessionId = sessionId,
+                    Alias = alias,
+                    PublicKeyJson = publicKeyJson,
+                    DateCreated = DateTime.UtcNow
+                });
+            return id;
+        }
+
+        public async Task<PublicKey?> GetPublicKeyById(string id)
+        {
+            using var span = _tracer.StartActiveSpan("get-public-key-by-id");
+            span.SetAttribute("id", id);
+
+            return await _connection.QueryFirstOrDefaultAsync<PublicKey>(
+                "SELECT * FROM PublicKeys WHERE Id = @Id",
+                new { Id = id });
+        }
+
+        public async Task DeletePublicKeysBySession(string sessionId)
+        {
+            using var span = _tracer.StartActiveSpan("delete-public-keys");
+            span.SetAttribute("session-id", sessionId);
+
+            await _connection.ExecuteAsync(
+                "DELETE FROM PublicKeys WHERE SessionId = @SessionId",
+                new { SessionId = sessionId });
         }
     }
 }

@@ -18,6 +18,8 @@ namespace JustSending.Data.Models
         public string? EncryptionPublicKeyAlias { get; set; }
         public string Text { get; set; }
 
+        public string? FileName { get; set; }
+
         public DateTime DateSent { get; set; }
         public bool HasFile { get; set; }
         public long? FileSizeBytes { get; set; }
