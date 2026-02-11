@@ -595,7 +595,7 @@ print(f'Uploaded: {{filename}}')
         [Route("message-raw")]
         public async Task<IActionResult> GetMessage(string messageId, string sessionId)
         {
-            var msg = await _db.KvGet<Message>(messageId);
+            var msg = await _db.GetMessagesById(messageId);
             if (msg == null || msg.SessionId != sessionId)
                 return NotFound();
 

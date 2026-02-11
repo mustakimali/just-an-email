@@ -550,23 +550,10 @@
         });
 
         $("#deleteBtn").on("click", function () {
-
-            swal({
-                title: "Are you sure?",
-                text: "This will destroy this sharing session and erase everything you've shared here!",
-                type: "warning",
-                showCancelButton: true,
-                confirmButtonColor: "#d9534f",
-                confirmButtonText: "Erase everything!",
-                closeOnConfirm: false
-            }, function () {
-                window.onbeforeunload = null;
-                conn.send("eraseSession");
-
-                swal("Erasing...", "You will be taken to the homepage when it's done.", "success");
-            });
-
-            return false;
+          window.onbeforeunload = null;
+          conn.send("eraseSession");
+          swal("Erasing...", "You will be taken to the homepage when it's done.", "success");
+          return false;
         });
 
         EndToEndEncryption.initKeyExchange(conn);
