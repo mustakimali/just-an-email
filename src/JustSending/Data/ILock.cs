@@ -1,9 +1,7 @@
 using System;
+using System.Collections.Concurrent;
+using System.Threading;
 using System.Threading.Tasks;
-using JustSending.Services;
-using Microsoft.Extensions.Logging;
-using OpenTelemetry.Trace;
-using RedLockNet.SERedis;
 
 namespace JustSending.Data
 {
@@ -12,56 +10,24 @@ namespace JustSending.Data
         Task<IDisposable> Acquire(string id);
     }
 
-    public class RedisLock : ILock
+    public class SemaphoreLock : ILock
     {
-        private readonly RedLockFactory _lock;
-        private readonly ILogger<RedisLock> _logger;
-        private readonly Tracer _tracer;
-
-        public RedisLock(RedLockFactory @lock, ILogger<RedisLock> logger, Tracer tracer)
-        {
-            _tracer = tracer;
-            _lock = @lock;
-            _logger = logger;
-        }
+        private readonly ConcurrentDictionary<string, SemaphoreSlim> _semaphores = new();
 
         public async Task<IDisposable> Acquire(string id)
         {
-            using var span = _tracer.StartActiveSpan("acquire-lock");
-            span.SetAttribute("key", id);
-
-            _logger.LogInformation("Lock acquiring for {key}", id);
-            var started = DateTime.UtcNow;
-            var result = await _lock.CreateLockAsync(id.ToSha1(), TimeSpan.FromHours(6));
-            var elapsed = DateTime.UtcNow - started;
-            _logger.LogInformation("Lock acquired for {key} in {time}ms", id, elapsed.TotalMilliseconds);
-            return new Lock(id, result, DateTime.UtcNow, _logger);
+            var semaphore = _semaphores.GetOrAdd(id, _ => new SemaphoreSlim(1, 1));
+            await semaphore.WaitAsync();
+            return new SemaphoreReleaser(semaphore);
         }
 
-        private record Lock(string Id, IDisposable Inner, DateTime LockAcquired, ILogger Logger) : IDisposable
+        private class SemaphoreReleaser : IDisposable
         {
-            public void Dispose()
-            {
-                Inner.Dispose();
-                var elapsed = DateTime.UtcNow - LockAcquired;
-                Logger.LogInformation("Lock {id} dropped after {time}ms", Id, elapsed.TotalMilliseconds);
-            }
+            private readonly SemaphoreSlim _semaphore;
+
+            public SemaphoreReleaser(SemaphoreSlim semaphore) => _semaphore = semaphore;
+
+            public void Dispose() => _semaphore.Release();
         }
-    }
-
-    public class NoOpLock : ILock
-    {
-        public class NoOp : IDisposable
-        {
-            internal NoOp()
-            {
-
-            }
-            public void Dispose()
-            {
-            }
-        }
-
-        public Task<IDisposable> Acquire(string id) => Task.FromResult((IDisposable)new NoOp());
     }
 }

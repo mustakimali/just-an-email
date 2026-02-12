@@ -132,8 +132,7 @@ public class Program
 
         services.AddTransient<IDataStore, DataStoreSqlite>();
 
-        // no-op lock
-        services.AddTransient<ILock, NoOpLock>();
+        services.AddSingleton<ILock, SemaphoreLock>();
 
         services.AddHangfireServer();
         services.AddHttpContextAccessor();
