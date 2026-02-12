@@ -208,7 +208,6 @@ namespace JustSending.Data
             span.SetAttribute("connection-id", connectionId);
 
             if (!await AddConnectionId(sessionId, connectionId)) return;
-            await KvSet(connectionId, new SessionMetaByConnectionId(sessionId));
         }
 
         public async Task<bool> AddConnectionId(string sessionId, string connectionId)
@@ -223,7 +222,10 @@ namespace JustSending.Data
             if (session == null) return false;
 
             session.ConnectionIds.Add(connectionId);
-            return await AddOrUpdateSession(session);
+            if (!await AddOrUpdateSession(session)) return false;
+
+            await KvSet(connectionId, new SessionMetaByConnectionId(sessionId));
+            return true;
         }
 
         public async Task<bool> AddOrUpdateSession(Session session)
