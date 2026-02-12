@@ -255,27 +255,28 @@ var EndToEndEncryption = {
         JustSendingApp.showStatus("<i class=\"fa fa-lock\"></i> Establishing secure connection..." + msg);
     },
 
+    _callbackQueue: Promise.resolve(),
+
     initCallbacks: function (hub) {
         var that = EndToEndEncryption;
 
         hub.on("callback", function(method, data) {
-            Log("Request received [" + method + "] -> Payload Size: " + data.length);
+            that._callbackQueue = that._callbackQueue.then(function () {
+                Log("Request received [" + method + "] -> Payload Size: " + data.length);
 
-            var dataObj = JSON.parse(data);
-            switch (method) {
-            case "ExchangeKey":
-                that.handleExchangeKey(dataObj.publicKey);
-                break;
+                var dataObj = JSON.parse(data);
+                switch (method) {
+                case "ExchangeKey":
+                    return that.handleExchangeKey(dataObj.publicKey);
 
-            case "DeriveSecret":
-                that.handleDeriveSecret(dataObj.publicKey);
-                break;
+                case "DeriveSecret":
+                    return that.handleDeriveSecret(dataObj.publicKey);
 
-            case "broadcastKeys":
-                that.showStatus("Decrypting keys");
-                that.receiveKeys(dataObj);
-                break;
-            }
+                case "broadcastKeys":
+                    that.showStatus("Decrypting keys");
+                    return that.receiveKeys(dataObj);
+                }
+            });
         });
 
         Log("Ready to shake hands.");

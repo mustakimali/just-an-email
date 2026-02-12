@@ -558,7 +558,7 @@
 
         EndToEndEncryption.initKeyExchange(conn);
 
-        var onConnected = function () {
+        var rejoinSession = function () {
             conn
                 .invoke("connect", $("#SessionId").val())
                 .then(function (socketConnectionId) {
@@ -569,32 +569,45 @@
                     $(".FilePostUrl").text(JustSendingApp.getPostFromCliPath());
 
                     app_busy(false);
-
-                    if (JustSendingApp.initialSecretToSend !== "") {
-                        $("#ComposerText").val(JustSendingApp.initialSecretToSend);
-                        $("#form").submit();
-                        JustSendingApp.initialSecretToSend = "";
-
-                        swal({
-                            title: "Password sent! now connect another device...",
-                            text: "To retrieve this from another device, use the QR code or the code displayed below to securely connect to this session.",
-                            type: "success"
-                        });
-                    }
                 });
         };
+
+        var onConnected = function () {
+            rejoinSession();
+
+            if (JustSendingApp.initialSecretToSend !== "") {
+                $("#ComposerText").val(JustSendingApp.initialSecretToSend);
+                $("#form").submit();
+                JustSendingApp.initialSecretToSend = "";
+
+                swal({
+                    title: "Password sent! now connect another device...",
+                    text: "To retrieve this from another device, use the QR code or the code displayed below to securely connect to this session.",
+                    type: "success"
+                });
+            }
+        };
+
+        conn.onreconnecting(function () {
+            Log("Connection lost. Reconnecting...");
+            app_busy(true);
+        });
+
+        conn.onreconnected(function () {
+            Log("Reconnected.");
+            rejoinSession();
+        });
+
+        conn.onclose(function () {
+            Log("Connection closed.");
+        });
 
         conn
             .start()
             .then(onConnected)
             .catch(function (err) {
                 Log("Error: " + err.toString());
-
             });
-
-        conn.connection.onclose = function (msg) {
-            Log("Closing");
-        };
 
         window.onbeforeunload = function (e) {
             JustSendingApp.hub.stop();

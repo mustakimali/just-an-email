@@ -208,7 +208,6 @@ namespace JustSending.Data
             span.SetAttribute("connection-id", connectionId);
 
             if (!await AddConnectionId(sessionId, connectionId)) return;
-            await KvSet(connectionId, new SessionMetaByConnectionId(sessionId));
         }
 
         public async Task<bool> AddConnectionId(string sessionId, string connectionId)
@@ -217,11 +216,16 @@ namespace JustSending.Data
             span.SetAttribute("session-id", sessionId);
             span.SetAttribute("connection-id", connectionId);
 
+            using var _ = await _lock.Acquire($"session-{sessionId}");
+
             var session = await GetSessionById(sessionId);
             if (session == null) return false;
 
             session.ConnectionIds.Add(connectionId);
-            return await AddOrUpdateSession(session);
+            if (!await AddOrUpdateSession(session)) return false;
+
+            await KvSet(connectionId, new SessionMetaByConnectionId(sessionId));
+            return true;
         }
 
         public async Task<bool> AddOrUpdateSession(Session session)
@@ -252,6 +256,9 @@ namespace JustSending.Data
 
             var connectionIdSession = await KvGet<SessionMetaByConnectionId>(connectionId);
             if (connectionIdSession == null) return null;
+
+            using var _ = await _lock.Acquire($"session-{connectionIdSession.SessionId}");
+
             var session = await GetSessionById(connectionIdSession.SessionId);
             if (session == null) return null;
             span.SetAttribute("session-id", session.Id);
