@@ -73,9 +73,12 @@
                 <span id="screen-share-relay-badge" class="badge" style="display:none; background:#f0ad4e;">relay</span>
                 <button id="screen-share-fullscreen-btn" title="Toggle fullscreen" style="margin-left:auto; background:none; border:none; color:#fff; cursor:pointer; padding:0 4px; font-size:14px; opacity:0.8;"><i class="fa fa-expand"></i></button>
             </div>
-            <video id="screen-share-video" autoplay playsinline style="width:100%; display:block; max-height:70vh; object-fit:contain; background:#000;"></video>
+            <video id="screen-share-video" autoplay playsinline muted style="width:100%; display:block; max-height:70vh; object-fit:contain; background:#000;"></video>
             <img id="screen-share-relay-img" style="width:100%; display:none; max-height:70vh; object-fit:contain; background:#000;" alt="" />
         </div>
+    </div>
+    <div id="screen-share-unsupported" class="alert alert-warning" style="display:none;">
+        <i class="fa fa-exclamation-triangle"></i> This device can't share a screen, but can still view a screen share started from another device.
     </div>
     <div id="please-wait" style="display: none;">
         <div class="alert alert-danger">

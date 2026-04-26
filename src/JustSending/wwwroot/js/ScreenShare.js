@@ -4,6 +4,8 @@ var ScreenShare = {
     isViewing: false,
     usingRelay: false,
     _initialized: false,
+    _canShare: false,
+    _deviceCount: 0,
     _peerConnection: null,
     _localStream: null,
     _pendingCandidates: [],
@@ -25,12 +27,18 @@ var ScreenShare = {
         if (this._initialized) return;
         this._initialized = true;
         this.hub = hub;
+        this._canShare = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
         this._setupRelayCanvas();
         this._registerHubEvents();
-        $("#screenShareBtn").on("click", function () { ScreenShare.startSharing(); return false; });
-        $("#screenShareStopBtn").on("click", function () { ScreenShare.stopSharing(); return false; });
-        $("#screen-share-fullscreen-btn").on("click", function () { ScreenShare._toggleFullscreen(); return false; });
-        document.addEventListener("fullscreenchange", function () { ScreenShare._onFullscreenChange(); });
+        if (this._canShare) {
+            $("#screenShareBtn").on("click", function () { ScreenShare.startSharing(); return false; });
+            $("#screenShareStopBtn").on("click", function () { ScreenShare.stopSharing(); return false; });
+            $("#screen-share-fullscreen-btn").on("click", function () { ScreenShare._toggleFullscreen(); return false; });
+            document.addEventListener("fullscreenchange", function () { ScreenShare._onFullscreenChange(); });
+        } else {
+            $("#screen-share-unsupported").show();
+        }
+        this._updateUI();
     },
 
     _setupRelayCanvas: function () {
@@ -268,7 +276,7 @@ var ScreenShare = {
     },
 
     _updateUI: function () {
-        var peerPresent = $("#connectedDevices").is(":visible");
+        var canShowBtn = this._canShare && this._deviceCount === 2;
 
         if (this.isSharing) {
             $("#screenShareBtn").hide();
@@ -277,7 +285,16 @@ var ScreenShare = {
         } else {
             $("#screenShareStopBtn").hide();
             $("#screenShareIndicator").hide();
-            $("#screenShareBtn").toggle(peerPresent);
+            if (canShowBtn) {
+                var $shareActions = $("#screenShareBtn").closest(".share-actions");
+                if (!$shareActions.is(":visible")) {
+                    $shareActions.stop(true, true).show();
+                    $shareActions.siblings(".connect-instruction-panel").stop(true, true).hide();
+                }
+                $("#screenShareBtn").show();
+            } else {
+                $("#screenShareBtn").hide();
+            }
         }
 
         $("#screen-share-relay-badge").toggle(this.usingRelay);
