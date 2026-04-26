@@ -522,8 +522,11 @@
             if (num > 1) {
                 $("#connectedDevices span").text(num - 1);
                 $el.css("display", "inline-block");
+                if (!ScreenShare.isSharing) $("#screenShareBtn").show();
             } else {
                 $el.css("display", "none");
+                $("#screenShareBtn").hide();
+                if (ScreenShare.isSharing) ScreenShare.stopSharing();
 
                 if (!$(".connect-instruction-panel").is(":visible")) {
                     swal({
@@ -569,6 +572,7 @@
                     $(".FilePostUrl").text(JustSendingApp.getPostFromCliPath());
 
                     app_busy(false);
+                    ScreenShare.init(conn);
                 });
         };
 

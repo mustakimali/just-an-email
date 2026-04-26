@@ -371,5 +371,35 @@ namespace JustSending.Services
             var cIds = await _jobScheduler.EraseSessionReturnConnectionIds(sessionId);
             await NotifySessionDeleted(cIds);
         }
+
+        #region ScreenShare Signaling
+
+        private async Task RtcSignalPeers(string message, object? data = null)
+        {
+            var sessionId = await GetSessionIdFromConnection();
+            if (sessionId == null) return;
+
+            _logger.LogInformation("[RTC] {message}", message);
+            try
+            {
+                var proxy = await GetClientsBySessionId(sessionId, except: Context.ConnectionId);
+                if (data != null)
+                    await proxy.SendAsync(message, data);
+                else
+                    await proxy.SendAsync(message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[RTC/{message}] {errorMessage}", message, ex.GetBaseException().Message);
+            }
+        }
+
+        public async Task RtcOffer(string offerSdp) => await RtcSignalPeers("rtcOffer", offerSdp);
+        public async Task RtcAnswer(string answerSdp) => await RtcSignalPeers("rtcAnswer", answerSdp);
+        public async Task RtcIceCandidate(string candidateJson) => await RtcSignalPeers("rtcIceCandidate", candidateJson);
+        public async Task RtcStop() => await RtcSignalPeers("rtcStop");
+        public async Task RtcRelayFrame(string frameBase64) => await RtcSignalPeers("rtcRelayFrame", frameBase64);
+
+        #endregion
     }
 }
