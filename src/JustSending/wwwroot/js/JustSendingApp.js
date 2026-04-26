@@ -519,11 +519,15 @@
         conn.on("setNumberOfDevices", function (num) {
             var $el = $("#connectedDevices");
 
+            ScreenShare._deviceCount = num;
+
             if (num > 1) {
                 $("#connectedDevices span").text(num - 1);
                 $el.css("display", "inline-block");
+                if (num > 2 && ScreenShare.isSharing) ScreenShare.stopSharing();
             } else {
                 $el.css("display", "none");
+                if (ScreenShare.isSharing) ScreenShare.stopSharing();
 
                 if (!$(".connect-instruction-panel").is(":visible")) {
                     swal({
@@ -533,6 +537,8 @@
                     });
                 }
             }
+
+            ScreenShare._updateUI();
         });
 
         conn.on("redirect", function (url) {
@@ -569,6 +575,7 @@
                     $(".FilePostUrl").text(JustSendingApp.getPostFromCliPath());
 
                     app_busy(false);
+                    ScreenShare.init(conn);
                 });
         };
 
