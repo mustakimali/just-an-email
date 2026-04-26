@@ -29,6 +29,8 @@ var ScreenShare = {
         this._registerHubEvents();
         $("#screenShareBtn").on("click", function () { ScreenShare.startSharing(); return false; });
         $("#screenShareStopBtn").on("click", function () { ScreenShare.stopSharing(); return false; });
+        $("#screen-share-fullscreen-btn").on("click", function () { ScreenShare._toggleFullscreen(); return false; });
+        document.addEventListener("fullscreenchange", function () { ScreenShare._onFullscreenChange(); });
     },
 
     _setupRelayCanvas: function () {
@@ -266,6 +268,8 @@ var ScreenShare = {
     },
 
     _updateUI: function () {
+        var peerPresent = $("#connectedDevices").is(":visible");
+
         if (this.isSharing) {
             $("#screenShareBtn").hide();
             $("#screenShareStopBtn").show();
@@ -273,12 +277,28 @@ var ScreenShare = {
         } else {
             $("#screenShareStopBtn").hide();
             $("#screenShareIndicator").hide();
+            $("#screenShareBtn").toggle(peerPresent);
         }
 
-        if (this.usingRelay) {
-            $("#screen-share-relay-badge").show();
+        $("#screen-share-relay-badge").toggle(this.usingRelay);
+    },
+
+    _toggleFullscreen: function () {
+        var panel = document.getElementById("screen-share-panel");
+        if (!panel) return;
+        if (!document.fullscreenElement) {
+            panel.requestFullscreen().catch(function (e) { Log("[RTC] Fullscreen failed: " + e); });
         } else {
-            $("#screen-share-relay-badge").hide();
+            document.exitFullscreen();
+        }
+    },
+
+    _onFullscreenChange: function () {
+        var icon = $("#screen-share-fullscreen-btn i");
+        if (document.fullscreenElement) {
+            icon.removeClass("fa-expand").addClass("fa-compress");
+        } else {
+            icon.removeClass("fa-compress").addClass("fa-expand");
         }
     }
 };

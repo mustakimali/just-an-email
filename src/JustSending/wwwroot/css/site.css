@@ -511,3 +511,6 @@ body.busy #overlay {
 @media (max-width: 767px) {
     #screen-share-panel video, #screen-share-panel img { max-height: 50vh; }
 }
+#screen-share-panel:fullscreen { background: #000; display: flex !important; flex-direction: column; }
+#screen-share-panel:fullscreen video,
+#screen-share-panel:fullscreen img { flex: 1; max-height: none; }

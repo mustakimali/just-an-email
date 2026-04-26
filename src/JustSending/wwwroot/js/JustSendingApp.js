@@ -522,10 +522,8 @@
             if (num > 1) {
                 $("#connectedDevices span").text(num - 1);
                 $el.css("display", "inline-block");
-                if (!ScreenShare.isSharing) $("#screenShareBtn").show();
             } else {
                 $el.css("display", "none");
-                $("#screenShareBtn").hide();
                 if (ScreenShare.isSharing) ScreenShare.stopSharing();
 
                 if (!$(".connect-instruction-panel").is(":visible")) {
@@ -536,6 +534,8 @@
                     });
                 }
             }
+
+            ScreenShare._updateUI();
         });
 
         conn.on("redirect", function (url) {

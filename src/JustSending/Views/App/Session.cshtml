@@ -43,11 +43,11 @@
         <div class="container">
             <div class="share-actions">
                 <a id="shareBtn" href="#" class="btn btn-success pull-left">Connect another Device</a>
+                <a id="screenShareBtn" href="#" class="btn btn-info pull-left" style="display:none;" title="Share Screen"><i class="fa fa-share-square-o"></i></a>
                 <a id="deleteBtn" href="#" class="btn btn-danger pull-right" title="Finish and Erase Everything"><i class="fa fa-trash-o"></i></a>
                 <span id="connectedDevices" class="btn btn-warning" title="Number of devices connected"><span class="badge">2</span></span>
-                <a id="screenShareBtn" href="#" class="btn btn-info" style="display:none;" title="Share your screen with the connected device"><i class="fa fa-desktop"></i> Screen Share</a>
-                <span id="screenShareIndicator" class="btn btn-warning" style="display:none;" title="You are sharing your screen"><i class="fa fa-circle" style="color:red;"></i> Sharing</span>
-                <a id="screenShareStopBtn" href="#" class="btn btn-danger" style="display:none;" title="Stop sharing your screen"><i class="fa fa-stop"></i> Stop Share</a>
+                <span id="screenShareIndicator" class="btn btn-warning" style="display:none;" title="Sharing your screen"><i class="fa fa-circle" style="color:red;"></i></span>
+                <a id="screenShareStopBtn" href="#" class="btn btn-danger" style="display:none;" title="Stop sharing"><i class="fa fa-stop"></i></a>
                 <div class="clearfix"></div>
             </div>
             <div class="connect-instruction-panel row" style="display: none;">
@@ -68,9 +68,10 @@
 <div id="conversation">
     <div id="screen-share-panel" style="display:none; margin-bottom:10px;">
         <div style="background:#1a1a1a; border-radius:4px; overflow:hidden;">
-            <div style="padding:6px 12px; background:#155799; color:#fff; font-size:11px; text-transform:uppercase; letter-spacing:1px;">
+            <div style="padding:6px 12px; background:#155799; color:#fff; font-size:11px; text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:8px;">
                 <i class="fa fa-desktop"></i> Screen Share
-                <span id="screen-share-relay-badge" class="badge" style="display:none; background:#f0ad4e; margin-left:6px;">relay</span>
+                <span id="screen-share-relay-badge" class="badge" style="display:none; background:#f0ad4e;">relay</span>
+                <button id="screen-share-fullscreen-btn" title="Toggle fullscreen" style="margin-left:auto; background:none; border:none; color:#fff; cursor:pointer; padding:0 4px; font-size:14px; opacity:0.8;"><i class="fa fa-expand"></i></button>
             </div>
             <video id="screen-share-video" autoplay playsinline style="width:100%; display:block; max-height:70vh; object-fit:contain; background:#000;"></video>
             <img id="screen-share-relay-img" style="width:100%; display:none; max-height:70vh; object-fit:contain; background:#000;" alt="" />
