@@ -35,6 +35,7 @@ RUN ls -lsah out/
 FROM mcr.microsoft.com/dotnet/runtime-deps:8.0
 WORKDIR /app
 COPY --from=build-env /app/src/JustSending/out .
+COPY src/JustSending/stats.json .
 
 VOLUME ["App_Data/"]
 VOLUME ["wwwroot/uploads"]
